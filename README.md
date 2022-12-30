@@ -1,6 +1,7 @@
 # composite-actions
 
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-%23FE5196?logo=conventionalcommits&logoColor=white)](https://conventionalcommits.org)
+[![Super-Linter](https://github.com/oslokommune/composite-actions/actions/workflows/superlinter.yml/badge.svg)](https://github.com/oslokommune/composite-actions/actions/workflows/superlinter.yml)
 
 Composite building blocks for GitHub Actions workflows.
 
