@@ -1,0 +1,40 @@
+name: Super-Linter
+
+"on":
+
+  pull_request: {}
+
+  push: {}
+
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+
+  build:
+
+    name: Lint Code Base
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read  # for actions/checkout to fetch code
+      statuses: write # for github/super-linter/slim to mark status of each linter run
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v3.2.0
+        with:
+          fetch-depth: 0
+
+
+      - name: Lint Code Base
+        uses: github/super-linter/slim@bb2d833b08b6c288608686672b93a8a4589cdc49 # v4.9.7
+        env:
+          VALIDATE_ALL_CODEBASE: ${{ github.event_name == 'workflow_dispatch' }}
+          DEFAULT_BRANCH: main
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          VALIDATE_JSCPD: false
