@@ -1,3 +1,5 @@
+# Permissions
+
 Required permissions:
 
 ```yml
