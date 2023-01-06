@@ -17,6 +17,7 @@ jobs:
       - name: Run optimize-apt-get composite action
         uses: oslokommune/composite-actions/optimize-apt-get@main
 
+
       - name: Install age
         run: |
           sudo apt-get update
