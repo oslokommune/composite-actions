@@ -31,7 +31,10 @@ runs:
       id: c
       uses: actions/cache@4723a57e26efda3a62cbde1812113b730952852d # v3.2.2
       with:
-        path: /var/cache/apt/archives
+        path: |
+          /var/cache/apt/archives/**.deb
+          !/var/cache/apt/archives/partial
+          !/var/cache/apt/archives/lock
         key: ${{ github.workflow }}-${{ runner.os }}-${{ steps.d.outputs.date }}-apt-${{ inputs.version }}
 
 
