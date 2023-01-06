@@ -10,3 +10,13 @@ updates:
     directory: "/disallow-same-approver"
     schedule:
       interval: "daily"
+
+  - package-ecosystem: "github-actions"
+    directory: "/cached-apt-get-install"
+    schedule:
+      interval: "daily"
+
+  - package-ecosystem: "github-actions"
+    directory: "/optimize-apt-get"
+    schedule:
+      interval: "daily"
