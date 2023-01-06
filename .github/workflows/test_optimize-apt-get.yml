@@ -1,0 +1,23 @@
+name: Test optimize-apt-get
+
+on:
+
+  workflow_dispatch:
+
+jobs:
+
+  test:
+
+    name: Test optimize-apt-get
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Run optimize-apt-get composite action
+        uses: oslokommune/composite-actions/optimize-apt-get@main
+
+      - name: Install age
+        run: |
+          sudo apt-get update
+          sudo apt-get install age
