@@ -1,0 +1,20 @@
+name: Test cached-apt-get-install
+
+on:
+
+  workflow_dispatch:
+
+jobs:
+
+  test:
+
+    name: Test cached-apt-get-install
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Run cached-apt-get-install composite action
+        uses: oslokommune/composite-actions/cached-apt-get-install@main
+        with:
+          packages: age

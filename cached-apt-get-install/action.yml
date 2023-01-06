@@ -1,0 +1,48 @@
+name: Cached apt-get install
+
+description: This action installs a specified list of packages using the Advanced Packaging Tool (apt) on a Linux-based system. It also utilizes daily caching to speed up the installation process. The version parameter allows the user to specify a version of the cache to load, with each version having its own cache. The packages parameter specifies the list of packages to be installed, which are space-delimited.
+
+inputs:
+
+  version:
+    description: 'Version of cache to load. Use this to invalidate the cache after changing the list of packages.'
+    required: false
+    default: ''
+
+  packages:
+    description: 'Space delimited list of packages to install.'
+    required: true
+    default: ''
+
+runs:
+
+  using: composite
+
+  steps:
+
+    - name: Add output parameter for the current date
+      id: d
+      shell: bash
+      run: |
+        echo "DATE=$(date -u "+%Y%W")" >> "$GITHUB_OUTPUT"
+
+
+    - name: Cache apt packages
+      id: c
+      uses: actions/cache@4723a57e26efda3a62cbde1812113b730952852d # v3.2.2
+      with:
+        path: /var/cache/apt/archives
+        key: ${{ github.workflow }}-${{ runner.os }}-${{ steps.d.outputs.date }}-apt-${{ inputs.version }}
+
+
+    - name: Download apt packages
+      if: steps.c.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install --download-only -y --no-install-recommends '${{ inputs.packages }}'
+
+
+    - name: Install downloaded packages
+      shell: bash
+      run: sudo dpkg -i /var/cache/apt/archives/*.deb
