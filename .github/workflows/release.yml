@@ -32,11 +32,12 @@ jobs:
           command: manifest
 
 
-      - name: Checkout
+      - if: ${{ steps.release.outputs.release_created }}
+        name: Checkout
         uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v3.2.0
 
 
-      - if: ${{ steps.r.outputs.disallow-same-approver--release_created }}
+      - if: ${{ steps.release.outputs.release_created }}
         name: Import okctl-bot GPG key
         uses: crazy-max/ghaction-import-gpg@111c56156bcc6918c056dbef52164cfa583dc549 # 5.2.0
         with:
@@ -50,11 +51,37 @@ jobs:
 
 
       - if: ${{ steps.r.outputs.disallow-same-approver--release_created }}
-        name: Tag major and minor versions
+        name: Tag major and minor versions for disallow-same-approver
         env:
           COMPONENT: disallow-same-approver
           MAJOR: ${{ steps.r.outputs.disallow-same-approver--major }}
           MINOR: ${{ steps.r.outputs.disallow-same-approver--minor }}
+        run: |
+          tags=("${COMPONENT}-v${MAJOR}" "${COMPONENT}-v${MAJOR}.${MINOR}")
+
+          for tag in "${tags[@]}"; do
+
+            # Delete old tag
+            git tag -d "${tag}" || true
+
+            # Push the tag deletion
+            git push origin :"${tag}" || true
+
+            # Add new tag
+            git tag -s -a "${tag}" -m "Release ${tag}"
+
+            # Push new tag
+            git push origin "${tag}"
+
+          done
+
+
+      - if: ${{ steps.r.outputs.optimize-apt-get--release_created }}
+        name: Tag major and minor versions for optimize-apt-get
+        env:
+          COMPONENT: optimize-apt-get
+          MAJOR: ${{ steps.r.outputs.optimize-apt-get--major }}
+          MINOR: ${{ steps.r.outputs.optimize-apt-get--minor }}
         run: |
           tags=("${COMPONENT}-v${MAJOR}" "${COMPONENT}-v${MAJOR}.${MINOR}")
 
