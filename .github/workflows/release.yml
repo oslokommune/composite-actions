@@ -36,7 +36,7 @@ jobs:
         uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v3.2.0
 
 
-      - if: ${{ steps.r.outputs.disallow-same-approper--release_created }}
+      - if: ${{ steps.r.outputs.disallow-same-approver--release_created }}
         name: Import okctl-bot GPG key
         uses: crazy-max/ghaction-import-gpg@111c56156bcc6918c056dbef52164cfa583dc549 # 5.2.0
         with:
@@ -60,10 +60,10 @@ jobs:
           for tag in "${tags[@]}"; do
 
             # Delete old tag
-            git tag -d "${tag}"
+            git tag -d "${tag}" || true
 
             # Push the tag deletion
-            git push origin :"${tag}"
+            git push origin :"${tag}" || true
 
             # Add new tag
             git tag -a "${tag}" -m "Release ${tag}"
