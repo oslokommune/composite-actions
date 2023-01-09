@@ -67,7 +67,7 @@ jobs:
             git push origin :"${tag}" || true
 
             # Add new tag
-            git tag -a "${tag}" -m "Release ${tag}"
+            git tag -s -a "${tag}" -m "Release ${tag}"
 
             # Push new tag
             git push origin "${tag}"
