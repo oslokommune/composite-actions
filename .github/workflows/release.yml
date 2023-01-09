@@ -33,12 +33,12 @@ jobs:
           commit-search-depth: 100
 
 
-      - if: ${{ steps.release.outputs.releases_created }}
+      - if: ${{ steps.r.outputs.releases_created }}
         name: Checkout
         uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v3.2.0
 
 
-      - if: ${{ steps.release.outputs.releases_created }}
+      - if: ${{ steps.r.outputs.releases_created }}
         name: Import okctl-bot GPG key
         uses: crazy-max/ghaction-import-gpg@111c56156bcc6918c056dbef52164cfa583dc549 # 5.2.0
         with:
