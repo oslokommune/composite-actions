@@ -52,10 +52,11 @@ jobs:
       - if: ${{ steps.r.outputs.disallow-same-approver--release_created }}
         name: Tag major and minor versions
         env:
-          MAJOR: disallow-same-approver-v${{ steps.r.outputs.disallow-same-approver--major }}
-          MINOR: disallow-same-approver-v${{ steps.r.outputs.disallow-same-approver--minor }}
+          COMPONENT: disallow-same-approver
+          MAJOR: ${{ steps.r.outputs.disallow-same-approver--major }}
+          MINOR: ${{ steps.r.outputs.disallow-same-approver--minor }}
         run: |
-          tags=("${MAJOR}" "${MAJOR}.${MINOR}")
+          tags=("${COMPONENT}-v${MAJOR}" "${COMPONENT}-v${MAJOR}.${MINOR}")
 
           for tag in "${tags[@]}"; do
 
