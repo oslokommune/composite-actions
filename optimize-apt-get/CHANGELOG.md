@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/oslokommune/composite-actions/compare/optimize-apt-get-v1.2.0...optimize-apt-get-v1.3.0) (2023-01-09)
+
+
+### Features
+
+* Initial release ([5147978](https://github.com/oslokommune/composite-actions/commit/5147978fd220f8cdfb8c73f1293db79aca3a3b6a))
+
 ## [1.2.0](https://github.com/oslokommune/composite-actions/compare/optimize-apt-get-v1.1.0...optimize-apt-get-v1.2.0) (2023-01-09)
 
 
