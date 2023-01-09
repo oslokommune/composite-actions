@@ -1,3 +1,3 @@
 # optimize-apt-get
 
-Hi there!
+Hi!
