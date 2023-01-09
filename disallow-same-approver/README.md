@@ -1,6 +1,6 @@
 # Permissions
 
-Required permissions:
+Requirements:
 
 ```yml
 permissions:
