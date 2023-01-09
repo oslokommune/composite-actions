@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/oslokommune/composite-actions/compare/disallow-same-approver-v1.0.0...disallow-same-approver-v1.1.0) (2023-01-09)
+
+
+### Features
+
+* Initial release ([e1b489b](https://github.com/oslokommune/composite-actions/commit/e1b489b880355cb5ccba017e5a8737b707b4fdb7))
+
 ## 1.0.0 (2023-01-09)
 
 
