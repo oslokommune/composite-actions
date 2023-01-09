@@ -1,0 +1,14 @@
+{
+  "release-type": "simple",
+  "separate-pull-requests": false,
+  "packages": {
+    "optimize-apt-get": {
+      "component": "optimize-apt-get",
+      "release-type": "simple"
+    },
+    "disallow-same-approper": {
+      "component": "disallow-same-approver",
+      "release-type": "simple"
+    }
+  }
+}
