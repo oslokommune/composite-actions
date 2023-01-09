@@ -30,6 +30,7 @@ jobs:
         id: r
         with:
           command: manifest
+          commit-search-depth: 100
 
 
       - if: ${{ steps.release.outputs.release_created }}
