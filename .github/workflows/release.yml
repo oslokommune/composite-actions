@@ -52,8 +52,8 @@ jobs:
       - if: ${{ steps.r.outputs.disallow-same-approver--release_created }}
         name: Tag major and minor versions
         env:
-          MAJOR: ${{ steps.r.outputs.disallow-same-approver--major }}
-          MINOR: ${{ steps.r.outputs.disallow-same-approver--minor }}
+          MAJOR: disallow-same-approver-${{ steps.r.outputs.disallow-same-approver--major }}
+          MINOR: disallow-same-approver-${{ steps.r.outputs.disallow-same-approver--minor }}
         run: |
           tags=("v${MAJOR}" "v${MAJOR}.${MINOR}")
 
