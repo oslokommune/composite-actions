@@ -6,7 +6,7 @@
       "component": "optimize-apt-get",
       "release-type": "simple"
     },
-    "disallow-same-approper": {
+    "disallow-same-approver": {
       "component": "disallow-same-approver",
       "release-type": "simple"
     }
