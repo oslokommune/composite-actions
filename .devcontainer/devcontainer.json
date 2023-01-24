@@ -1,0 +1,14 @@
+{
+    "build": { "dockerfile": "Dockerfile" },
+    "customizations": {
+      "vscode": {
+        "extensions": [
+          "esbenp.prettier-vscode",
+          "DavidAnson.vscode-markdownlint",
+          "redhat.vscode-yaml",
+          "errata-ai.vale-server",
+          "ms-azuretools.vscode-docker"
+        ]
+      }
+    }
+  }
