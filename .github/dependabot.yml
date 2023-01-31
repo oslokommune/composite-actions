@@ -5,18 +5,26 @@ updates:
     directory: "/.github/workflows"
     schedule:
       interval: "daily"
+    commit-message:
+      prefix: deps
 
   - package-ecosystem: "github-actions"
     directory: "/disallow-same-approver"
     schedule:
       interval: "daily"
+    commit-message:
+      prefix: deps
 
   - package-ecosystem: "github-actions"
     directory: "/cached-apt-get-install"
     schedule:
       interval: "daily"
+    commit-message:
+      prefix: deps
 
   - package-ecosystem: "github-actions"
     directory: "/optimize-apt-get"
     schedule:
       interval: "daily"
+    commit-message:
+      prefix: deps
