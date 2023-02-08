@@ -49,6 +49,8 @@ runs:
       shell: bash
       run: |
         curl \
+        --silent \
+        --show-error \
         --request POST \
         --header "Accept: application/vnd.github.v3+json" \
         --header "Authorization: token ${{ inputs.token }}" \
