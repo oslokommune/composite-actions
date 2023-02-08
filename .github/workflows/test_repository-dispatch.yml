@@ -17,8 +17,8 @@ jobs:
       - name: Run repository-dispatch composite action
         uses: oslokommune/composite-actions/repository-dispatch@main
         with:
-          event-type: something
-          client-payload: >
+          event_type: something
+          client_payload: >
             {
               "id": "something",
               "sender_repository": "${{ github.repository }}",
