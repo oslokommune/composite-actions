@@ -1,0 +1,62 @@
+name: 'Repository Dispatch'
+
+description: 'Create a repository dispatch event'
+
+inputs:
+
+  token:
+    description: 'GITHUB_TOKEN or a `repo` scoped Personal Access Token (PAT)'
+    default: ${{ github.token }}
+
+  repository:
+    description: 'The full name of the repository to send the dispatch.'
+    default: ${{ github.repository }}
+
+  event_type:
+    description: 'A custom webhook event name.'
+    required: true
+
+  client_payload:
+    description: 'JSON payload with extra information about the webhook event that your action or worklow may use.'
+    default: '{}'
+
+runs:
+
+  using: composite
+
+  steps:
+
+    - name: Create JSON payload as a file
+      shell: bash
+      env:
+        EVENT_TYPE: ${{ inputs.event_type }}
+        CLIENT_PAYLOAD: ${{ inputs.client_payload }}
+      run: |
+        jq --null-input \
+           --arg event_type "$EVENT_TYPE" \
+           --argjson client_payload "$CLIENT_PAYLOAD" \
+           '{"event_type": $event_type, "client_payload": $client_payload}' \
+        > payload.json
+
+
+    - name: Print the payload
+      shell: bash
+      run: |
+        cat payload.json | jq .
+
+
+    - name: Send dispatch event with payload
+      shell: bash
+      run: |
+        curl \
+        --request POST \
+        --header "Accept: application/vnd.github.v3+json" \
+        --header "Authorization: token ${{ inputs.token }}" \
+        --data @payload.json \
+        'https://api.github.com/repos/${{ inputs.repository }}/dispatches' \
+
+
+    - name: Delete JSON payload file
+      shell: bash
+      run: |
+        rm payload.json
