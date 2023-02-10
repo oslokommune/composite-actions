@@ -9,6 +9,14 @@
     "disallow-same-approver": {
       "component": "disallow-same-approver",
       "release-type": "simple"
+    },
+    "delete-release": {
+      "component": "delete-release",
+      "release-type": "simple"
+    },
+    "verify-created-release": {
+      "component": "verify-created-release",
+      "release-type": "simple"
     }
   }
 }
