@@ -5,8 +5,9 @@ inputs:
   release:
     description: The name of the release to verify
     required: true
-  github-token:
-    description: A GitHub token
+  token:
+    description: 'GITHUB_TOKEN or a `repo` scoped Personal Access Token (PAT)'
+    default: ${{ github.token }}
     required: true
 
 
@@ -18,7 +19,7 @@ runs:
 
     - name: Verify the new release
       env:
-        GH_TOKEN: ${{ inputs.github-token }}
+        GH_TOKEN: ${{ inputs.token }} # Needed by gh
         RELEASE: ${{ inputs.release }}
       # We need "bash {0}" to be able to catch errors without failing the step.
       # https://stackoverflow.com/questions/73066461/github-actions-why-an-intermediate-command-failure-in-shell-script-would-cause
