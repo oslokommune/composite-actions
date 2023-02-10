@@ -1,0 +1,50 @@
+name: "Delete release"
+description: Delete a GitHub release if it exists
+
+inputs:
+  release:
+    description: The name of the release to delete
+    required: true
+  token:
+    description: 'GITHUB_TOKEN or a `repo` scoped Personal Access Token (PAT)'
+    default: ${{ github.token }}
+    required: true
+
+
+runs:
+
+  using: composite
+
+  steps:
+
+    - name: Delete release
+      env:
+        GH_TOKEN: ${{ inputs.token }} # Needed by gh
+        RELEASE: ${{ inputs.release }}
+      shell: bash
+      run: |
+        echo "Deleting release $RELEASE if it exists"
+        gh release delete "$RELEASE" --cleanup-tag --yes || true
+
+        echo "Deleting local tag $RELEASE if it exists"
+        git tag --delete "$RELEASE" || true
+
+
+    - name: Verify that release was deleted
+      env:
+        GH_TOKEN: ${{ inputs.token }} # Needed by gh
+        RELEASE: $${{ inputs.release }}
+      # We need "bash {0}" to be able to catch errors without failing the step.
+      # https://stackoverflow.com/questions/73066461/github-actions-why-an-intermediate-command-failure-in-shell-script-would-cause
+      shell: bash {0}
+      run: |
+        RELEASE_EXISTS=$(gh release view "$RELEASE")
+        SUCCESS=$?
+        
+        # If release exists, it means it was not deleted
+        if [[ $SUCCESS -eq 0 ]]; then 
+          echo "Was not able to delete release $RELEASE."
+          exit 5
+        fi
+        
+        echo "Release '$RELEASE' was successfully deleted."
