@@ -52,7 +52,7 @@ jobs:
 
 
       - if: ${{ steps.r.outputs.disallow-same-approver--release_created }}
-        name: Tag major and minor versions for disallow-same-approver
+        name: "[Release: disallow-same-approver] Tag major and minor versions"
         env:
           COMPONENT: disallow-same-approver
           MAJOR: ${{ steps.r.outputs.disallow-same-approver--major }}
@@ -78,7 +78,7 @@ jobs:
 
 
       - if: ${{ steps.r.outputs.optimize-apt-get--release_created }}
-        name: Tag major and minor versions for optimize-apt-get
+        name: "[Release: optimize-apt-get] Tag major and minor versions"
         env:
           COMPONENT: optimize-apt-get
           MAJOR: ${{ steps.r.outputs.optimize-apt-get--major }}
@@ -101,3 +101,59 @@ jobs:
             git push origin "${tag}"
 
           done
+
+
+      - if: ${{ steps.r.outputs.delete-release--release_created }}
+        name: "[Release: delete-release] Tag major and minor versions"
+        env:
+          COMPONENT: delete-release
+          MAJOR: ${{ steps.r.outputs.delete-release--major }}
+          MINOR: ${{ steps.r.outputs.delete-release--minor }}
+        run: |
+          tags=("${COMPONENT}-v${MAJOR}" "${COMPONENT}-v${MAJOR}.${MINOR}")
+
+          for tag in "${tags[@]}"; do
+
+            # Delete old tag
+            git tag -d "${tag}" || true
+
+            # Push the tag deletion
+            git push origin :"${tag}" || true
+
+            # Add new tag
+            git tag -s -a "${tag}" -m "Release ${tag}"
+
+            # Push new tag
+            git push origin "${tag}"
+
+          done
+
+
+
+
+      - if: ${{ steps.r.outputs.verify-created-release--release_created }}
+        name: "[Release: verify-created-release] Tag major and minor versions"
+        env:
+          COMPONENT: verify-created-release
+          MAJOR: ${{ steps.r.outputs.verify-created-release--major }}
+          MINOR: ${{ steps.r.outputs.verify-created-release--minor }}
+        run: |
+          tags=("${COMPONENT}-v${MAJOR}" "${COMPONENT}-v${MAJOR}.${MINOR}")
+
+          for tag in "${tags[@]}"; do
+
+            # Delete old tag
+            git tag -d "${tag}" || true
+
+            # Push the tag deletion
+            git push origin :"${tag}" || true
+
+            # Add new tag
+            git tag -s -a "${tag}" -m "Release ${tag}"
+
+            # Push new tag
+            git push origin "${tag}"
+
+          done
+
+
