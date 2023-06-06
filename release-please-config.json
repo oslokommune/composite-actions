@@ -17,6 +17,10 @@
     "verify-created-release": {
       "component": "verify-created-release",
       "release-type": "simple"
+    },
+    "ecs-update-and-deploy-task-definition": {
+      "component": "ecs-update-and-deploy-task-definition",
+      "release-type": "simple"
     }
   }
 }
