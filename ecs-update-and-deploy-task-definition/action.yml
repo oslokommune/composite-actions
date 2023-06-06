@@ -1,0 +1,82 @@
+name: "Update and deploy ECS task definition"
+
+description: "Downloads an existing ECS task definition, updates the image URI, and deploys the updated task definition to the specified ECS service."
+
+inputs:
+
+  aws-region:
+    description: "The AWS region to use."
+    required: true
+
+  aws-role-arn:
+    description: "The ARN of the IAM role to assume."
+    required: true
+
+  cluster-name:
+    description: "The name of the ECS service's cluster."
+    required: true
+
+  service-name:
+    description: "The name of the ECS service to deploy to."
+    required: true
+
+  container-name:
+    description: "The name of the container defined in the containerDefinitions section of the ECS task definition."
+    required: true
+
+  image-repository:
+    description: "The name of the ECR repository where the image is stored."
+    required: true
+
+  image-tag:
+    description: "The tag of the image."
+    required: true
+
+  task-defininition-name:
+    description: "The name of the task definition."
+    required: true
+
+runs:
+
+  using: composite
+
+  steps:
+
+    - name: Configure AWS credentials using the OpenID Connect (OIDC) provider 🔑
+      uses: aws-actions/configure-aws-credentials@e1e17a757e536f70e52b5a12b2e8d1d1c60e04ef # v2.0.0
+      with:
+        aws-region: "${{ inputs.aws-region }}"
+        role-to-assume: "${{ inputs.AWS_ROLE_ARN }}"
+        role-session-name: "${{ github.event.repository.name }}-gha-${{ github.run_id }}"
+
+
+    - name: Login to Elastic Container Registry (ECR) 🔑
+      id: ecr-login
+      uses: aws-actions/amazon-ecr-login@2f9f10ea3fa2eed41ac443fee8bfbd059af2d0a4 # v1.6.0
+
+
+    - name: Download existing ECS task definition ⚙️
+      shell: bash
+      run: |
+        aws ecs describe-task-definition \
+          --task-definition "${{ inputs.task-definition-name }}" \
+          --query taskDefinition \
+          | jq 'del(.registeredAt, .registeredBy)' >  "task-definition.json"
+
+
+    - name: Update ECS task definition with new image URI ⚙️
+      id: update-task-definition
+      uses: aws-actions/amazon-ecs-render-task-definition@61b0c00c3743b70987a73a1faf577f0d167d1574 # v1.1.3
+      with:
+        task-definition: "task-definition.json"
+        container-name: "${{ inputs.container-name"
+        image: "${{ steps.ecr-login.outputs.registry }}/${{ inputs.image-repository }}:${{ inputs.image-tag }}"
+
+
+    - name: Deploy container 🚀
+      uses: aws-actions/amazon-ecs-deploy-task-definition@df9643053eda01f169e64a0e60233aacca83799a # v1.4.11
+      with:
+        task-definition: "${{ steps.update-task-definition.outputs.task-definition }}"
+        service: "${{ inputs.service-name }}"
+        cluster: "${{ inputs.cluster-name }}"
+        wait-for-service-stability: true
