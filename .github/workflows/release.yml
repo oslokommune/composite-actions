@@ -105,7 +105,6 @@ jobs:
 
           done
 
-<<<<<<< Updated upstream
 
       - if: ${{ steps.r.outputs.delete-release--release_created }}
         name: "[Release: delete-release] Tag major and minor versions"
@@ -133,8 +132,6 @@ jobs:
           done
 
 
-
-
       - if: ${{ steps.r.outputs.verify-created-release--release_created }}
         name: "[Release: verify-created-release] Tag major and minor versions"
         env:
@@ -159,7 +156,3 @@ jobs:
             git push origin "${tag}"
 
           done
-
-
-=======
->>>>>>> Stashed changes
