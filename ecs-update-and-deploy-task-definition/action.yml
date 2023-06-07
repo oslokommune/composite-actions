@@ -46,7 +46,7 @@ runs:
       uses: aws-actions/configure-aws-credentials@e1e17a757e536f70e52b5a12b2e8d1d1c60e04ef # v2.0.0
       with:
         aws-region: "${{ inputs.aws-region }}"
-        role-to-assume: "${{ inputs.AWS_ROLE_ARN }}"
+        role-to-assume: "${{ inputs.aws-role-arn }}"
         role-session-name: "${{ github.event.repository.name }}-gha-${{ github.run_id }}"
 
 
