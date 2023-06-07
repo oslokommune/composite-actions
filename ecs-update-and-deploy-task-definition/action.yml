@@ -32,7 +32,7 @@ inputs:
     description: "The tag of the image."
     required: true
 
-  task-defininition-name:
+  task-definition-name:
     description: "The name of the task definition."
     required: true
 
