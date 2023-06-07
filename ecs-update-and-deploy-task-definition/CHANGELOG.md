@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/oslokommune/composite-actions/compare/ecs-update-and-deploy-task-definition-v1.0.0...ecs-update-and-deploy-task-definition-v1.0.1) (2023-06-07)
+
+
+### Bug Fixes
+
+* Syntax error ([6c01e1c](https://github.com/oslokommune/composite-actions/commit/6c01e1c9e412e18f087857d2e36364541ccb96bb))
+
 ## 1.0.0 (2023-06-06)
 
 

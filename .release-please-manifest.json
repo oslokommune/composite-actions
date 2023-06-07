@@ -3,5 +3,5 @@
   "optimize-apt-get": "1.3.0",
   "delete-release": "1.0.0",
   "verify-created-release": "1.0.0",
-  "ecs-update-and-deploy-task-definition": "1.0.0"
+  "ecs-update-and-deploy-task-definition": "1.0.1"
 }
