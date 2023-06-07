@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.2](https://github.com/oslokommune/composite-actions/compare/ecs-update-and-deploy-task-definition-v1.0.1...ecs-update-and-deploy-task-definition-v1.0.2) (2023-06-07)
+
+
+### Bug Fixes
+
+* Wrong AWS role ARN input ([bae6792](https://github.com/oslokommune/composite-actions/commit/bae679287456bea8e49f79e4ccbd658241b01d61))
+
 ## [1.0.1](https://github.com/oslokommune/composite-actions/compare/ecs-update-and-deploy-task-definition-v1.0.0...ecs-update-and-deploy-task-definition-v1.0.1) (2023-06-07)
 
 
