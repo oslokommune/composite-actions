@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/oslokommune/composite-actions/compare/ecs-update-and-deploy-task-definition-v1.0.3...ecs-update-and-deploy-task-definition-v1.1.0) (2023-06-07)
+
+
+### Features
+
+* Deploy can now be toggled ([8ce70e0](https://github.com/oslokommune/composite-actions/commit/8ce70e04f1ea75ac876cb797797f697470aae2ea))
+
 ## [1.0.3](https://github.com/oslokommune/composite-actions/compare/ecs-update-and-deploy-task-definition-v1.0.2...ecs-update-and-deploy-task-definition-v1.0.3) (2023-06-07)
 
 
