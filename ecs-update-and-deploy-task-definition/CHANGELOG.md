@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.3](https://github.com/oslokommune/composite-actions/compare/ecs-update-and-deploy-task-definition-v1.0.2...ecs-update-and-deploy-task-definition-v1.0.3) (2023-06-07)
+
+
+### Bug Fixes
+
+* Wrong input variable name ([b11f405](https://github.com/oslokommune/composite-actions/commit/b11f4059cc4605e3c9fc966f5ea1d825b5244fe5))
+
 ## [1.0.2](https://github.com/oslokommune/composite-actions/compare/ecs-update-and-deploy-task-definition-v1.0.1...ecs-update-and-deploy-task-definition-v1.0.2) (2023-06-07)
 
 
