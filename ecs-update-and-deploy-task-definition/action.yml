@@ -40,6 +40,10 @@ inputs:
     description: "The name of the task definition file."
     default: "task-definition.json"
 
+  download-existing-task-definition:
+    description: "Download the existing task definition from AWS."
+    required: true
+
   deploy:
     description: "Deploy the task definition. Can be either \"true\" or \"false\"."
     required: true
@@ -47,7 +51,7 @@ inputs:
 outputs:
 
   task-definition-file-name:
-    description: "The name of the task definition file."
+    description: "The path to the rendered task definition file."
     value: "${{ steps.update-task-definition.outputs.task-definition }}"
 
 runs:
@@ -69,7 +73,8 @@ runs:
       uses: aws-actions/amazon-ecr-login@2f9f10ea3fa2eed41ac443fee8bfbd059af2d0a4 # v1.6.0
 
 
-    - name: Download existing ECS task definition ⚙️
+    - if: inputs.download-existing-task-definition == 'true'
+      name: Download existing ECS task definition ⚙️
       shell: bash
       run: |
         aws ecs describe-task-definition \
@@ -87,7 +92,7 @@ runs:
         image: "${{ steps.ecr-login.outputs.registry }}/${{ inputs.image-repository }}:${{ inputs.image-tag }}"
 
 
-    - if: inputs.deploy == "true"
+    - if: inputs.deploy == 'true'
       name: Deploy container 🚀
       uses: aws-actions/amazon-ecs-deploy-task-definition@df9643053eda01f169e64a0e60233aacca83799a # v1.4.11
       with:
