@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/oslokommune/composite-actions/compare/ecs-update-and-deploy-task-definition-v1.1.0...ecs-update-and-deploy-task-definition-v1.2.0) (2023-06-08)
+
+
+### Features
+
+* Toggle for downloading existing task definition ([02241c5](https://github.com/oslokommune/composite-actions/commit/02241c545cde980007acd36c2535909f04bb9fa1))
+
 ## [1.1.0](https://github.com/oslokommune/composite-actions/compare/ecs-update-and-deploy-task-definition-v1.0.3...ecs-update-and-deploy-task-definition-v1.1.0) (2023-06-07)
 
 
