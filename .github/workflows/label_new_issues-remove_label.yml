@@ -1,0 +1,88 @@
+name: Label new issues 🏷️ - Cleanup 🧹
+run-name: Removing label 'new' from issues older than 15 days 🧹
+
+on:
+  workflow_dispatch:
+
+    inputs:
+
+      remove_for_all_issues:
+        description: >
+          Remove label on all issues, regardless of their age.
+        required: false
+        default: false
+        type: boolean
+
+      date:
+        description: >
+          The ISO date to use for filtering issues. Example: "2023-03-26"
+          Does not apply if "Remove label on all issues" is set.
+        required: false
+        type: string
+
+  schedule:
+    - cron: '0 3 * * *' # Every day at 3am
+
+jobs:
+
+  remove_label_on_issues:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout ⚙️
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+
+
+      - env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REMOVE_LABEL_ON_ALL_ISSUES=${{ github.event.inputs.remove_for_all_issues }}
+          DATE_INPUT=${{ github.event.inputs.date }}
+          
+          echo "# Inputs" >> "$GITHUB_STEP_SUMMARY"
+          echo "remove_for_all_issues: $REMOVE_LABEL_ON_ALL_ISSUES" >> "$GITHUB_STEP_SUMMARY"
+          echo "date: $DATE_INPUT" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "# Run details" >> "$GITHUB_STEP_SUMMARY"
+          
+          if [[ $REMOVE_LABEL_ON_ALL_ISSUES == "true" ]]; then
+            echo "Removing label \`new\` from all issues with label 'new'" >> "$GITHUB_STEP_SUMMARY"
+
+            ISSUES=$(\
+              gh issue list \
+              --limit 500 \
+              --search "label:new" \
+              --json number \
+              --jq '.[] .number'
+            )
+          else
+            if [[ -z $DATE_INPUT ]]; then
+              # DATE=$(date -d "15 days ago" --iso-8601)
+              DATE=$(date -d "0 days ago" --iso-8601)
+            else
+              DATE="$DATE_INPUT"
+            fi
+
+            echo "Removing label \`new\` from all issues with label \`new\` created before ${DATE}" >> "$GITHUB_STEP_SUMMARY"
+
+            ISSUES=$(\
+              gh issue list \
+              --limit 500 \
+              --search "created:<${DATE} label:new" \
+              --json number \
+              --jq '.[] .number'
+            )
+          fi
+
+          echo "Issues: $ISSUES" >> "$GITHUB_STEP_SUMMARY"
+
+          for issue in $ISSUES
+          do
+            gh issue edit "$issue" --remove-label "new"
+            echo "❌ Removed label \`new\` from issue #${issue}" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+          echo
+          echo Done 👌
