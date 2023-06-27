@@ -58,8 +58,7 @@ jobs:
             )
           else
             if [[ -z $DATE_INPUT ]]; then
-              # DATE=$(date -d "15 days ago" --iso-8601)
-              DATE=$(date -d "0 days ago" --iso-8601)
+              DATE=$(date -d "15 days ago" --iso-8601)
             else
               DATE="$DATE_INPUT"
             fi
