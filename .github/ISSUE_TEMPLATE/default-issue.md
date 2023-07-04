@@ -14,5 +14,5 @@ team at present time and in the future. -->
 
 # Motivation
 
-<!-- Why do we want to do what the issue describes? This is essential when we want to understand our
-decisions in the future. -->
+<!-- Why do we want to do what the issue describes? This is essential when team members, or people from
+other teams, want to understand our decisions in the future. -->
