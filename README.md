@@ -5,6 +5,10 @@
 
 Composite building blocks for GitHub Actions workflows.
 
+<p align="center">
+  <img align="middle" src="https://github.com/oslokommune/composite-actions/assets/1691190/cc37a83a-4a3a-4948-b259-3f6df67116fd" width=40%>
+</p>
+
 Composite Actions allow you to combine multiple tasks and operations into a single step that can be used repeatedly within a job. This can reduce unecessary noise in workflows and make them easier to follow. It's also a way to reduce duplication in workflows.
 
 ## Learn about Composite Actions
