@@ -33,7 +33,7 @@ runs:
     - name: Verify that release was deleted
       env:
         GH_TOKEN: ${{ inputs.token }} # Needed by gh
-        RELEASE: $${{ inputs.release }}
+        RELEASE: ${{ inputs.release }}
       # We need "bash {0}" to be able to catch errors without failing the step.
       # https://stackoverflow.com/questions/73066461/github-actions-why-an-intermediate-command-failure-in-shell-script-would-cause
       shell: bash {0}
