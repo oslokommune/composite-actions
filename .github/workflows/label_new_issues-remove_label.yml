@@ -21,7 +21,7 @@ on:
         type: string
 
   schedule:
-    - cron: '0 3 * * *' # Every day at 3am
+    - cron: '0 3 * * SUN' # Sundays at 3am
 
 jobs:
 
