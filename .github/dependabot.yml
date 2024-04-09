@@ -28,3 +28,10 @@ updates:
       interval: "daily"
     commit-message:
       prefix: deps
+  
+  - package-ecosystem: "github-actions"
+      directory: "/ecs-update-and-deploy-task-definition"
+      schedule:
+        interval: "daily"
+      commit-message:
+        prefix: deps
