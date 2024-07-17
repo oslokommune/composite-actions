@@ -1,0 +1,18 @@
+name: Test setup-boilerplate
+
+on:
+
+  workflow_dispatch:
+
+jobs:
+
+  test:
+
+    name: Test setup-boilerplate
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Run setup-boilerplate composite action
+        uses: oslokommune/composite-actions/setup-boilerplate@main

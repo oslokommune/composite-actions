@@ -1,0 +1,32 @@
+name: 'Setup and install Boilerplate'
+
+description: 'Setup and install the Boilerplate CLI tool'
+
+inputs:
+
+  version:
+    description: 'Version of Boilerplate to install'
+    required: true
+    default: '0.5.16'
+
+runs:
+
+  using: "composite"
+
+  steps:
+
+    - name: Setup and install Boilerplate
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        BIN_DIR="$HOME/.local/bin"
+        mkdir -p "$BIN_DIR"
+
+        gh release download v${{ inputs.version }} \
+          --repo "gruntwork-io/boilerplate" \
+          --pattern 'boilerplate_linux_amd64' \
+          --output "$BIN_DIR/boilerplate"
+
+        chmod +x "$BIN_DIR/boilerplate"
+        echo "$BIN_DIR" >> "$GITHUB_PATH"
