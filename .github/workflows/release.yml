@@ -13,6 +13,7 @@ on:
       - "verify-created-release/*"
       - "delete-release/*"
       - "ecs-update-and-deploy-task-definition/*"
+      - "setup-boilerplate/*"
 
 
 jobs:
