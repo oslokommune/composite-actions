@@ -5,6 +5,7 @@ description: 'Setup and install the Boilerplate CLI tool'
 inputs:
 
   version:
+
     description: 'Version of Boilerplate to install'
     required: true
     default: '0.5.16'
