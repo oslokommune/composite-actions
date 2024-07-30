@@ -6,18 +6,18 @@ inputs:
   aws-region:
     description: "AWS region"
     required: true
-  ghcr_login:
+  ghcr-login:
     description: Login to the GitHub Container Registry (GHCR).
     required: false
     default: "false"
-  aws_ecr_login:
+  aws-ecr-login:
     description: Log into AWS Elastic Container Registry (ECR).
     required: false
     default: "true"
-  source_image:
+  source-image:
     description: "Source image"
     required: true
-  destination_image:
+  destination-image:
     description: "Destination image"
     required: true
 
