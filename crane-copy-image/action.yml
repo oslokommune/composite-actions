@@ -6,6 +6,9 @@ inputs:
   aws-region:
     description: "AWS region"
     required: true
+  aws-account-id:
+    description: "AWS account ID"
+    required: false
   ghcr-login:
     description: Login to the GitHub Container Registry (GHCR).
     required: false
