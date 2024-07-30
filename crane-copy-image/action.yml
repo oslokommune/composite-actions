@@ -1,0 +1,69 @@
+name: "Crane copy image"
+
+description: Copy a container image from one registry to another using Crane
+
+inputs:
+  aws-region:
+    description: "AWS region"
+    required: true
+  ghcr_login:
+    description: Login to the GitHub Container Registry (GHCR).
+    required: false
+    default: "false"
+  aws_ecr_login:
+    description: Log into AWS Elastic Container Registry (ECR).
+    required: false
+    default: "true"
+  source_image:
+    description: "Source image"
+    required: true
+  destination_image:
+    description: "Destination image"
+    required: true
+
+runs:
+
+  using: "composite"
+
+  steps:
+
+    - name: Add Homebrew to PATH
+      shell: bash
+      run: |
+        echo "/home/linuxbrew/.linuxbrew/bin" >> "$GITHUB_PATH"
+
+
+    - name: Install crane
+      shell: bash
+      run: |
+        brew install crane
+
+
+    - if: inputs.aws_ecr_login
+      shell: bash
+      name: Login to Elastic Container Registry (ECR) 🔑
+      run: |
+        aws ecr get-login-password --region ${{ inputs.aws-region }} | \
+          crane auth login \
+            ${{ inputs.aws-account-id }}.dkr.ecr.${{ inputs.aws-region }}.amazonaws.com \
+            --username AWS \
+            --password-stdin
+
+
+    - if: inputs.ghcr_login
+      name: Login to GHCR 🔑
+      shell: bash
+      run: |
+        echo ${{ secrets.GITHUB_TOKEN }} | \
+          crane auth login \
+            ghcr.io \
+            --username ${{ github.actor }} \
+            --password-stdin
+
+
+    - name: Copy image from source to destination
+      shell: bash
+      run: |
+        crane copy \
+          ${{ inputs.source_image }} \
+          ${{ inputs.destination_image }}
