@@ -42,7 +42,7 @@ runs:
         brew install crane
 
 
-    - if: inputs.aws_ecr_login
+    - if: inputs.aws-ecr-login
       shell: bash
       name: Login to Elastic Container Registry (ECR) 🔑
       run: |
@@ -53,7 +53,7 @@ runs:
             --password-stdin
 
 
-    - if: inputs.ghcr_login
+    - if: inputs.ghcr-login
       name: Login to GHCR 🔑
       shell: bash
       run: |
