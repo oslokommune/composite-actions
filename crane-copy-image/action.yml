@@ -10,6 +10,9 @@ inputs:
     description: Login to the GitHub Container Registry (GHCR).
     required: false
     default: "false"
+  token:
+    description: "GitHub token"
+    required: false
   aws-ecr-login:
     description: Log into AWS Elastic Container Registry (ECR).
     required: false
@@ -54,7 +57,7 @@ runs:
       name: Login to GHCR 🔑
       shell: bash
       run: |
-        echo ${{ secrets.GITHUB_TOKEN }} | \
+        echo ${{ inputs.token }} | \
           crane auth login \
             ghcr.io \
             --username ${{ github.actor }} \
