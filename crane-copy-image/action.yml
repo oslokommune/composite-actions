@@ -68,5 +68,5 @@ runs:
       shell: bash
       run: |
         crane copy \
-          ${{ inputs.source_image }} \
-          ${{ inputs.destination_image }}
+          ${{ inputs.source-image }} \
+          ${{ inputs.destination-image }}
