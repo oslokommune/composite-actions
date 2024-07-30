@@ -66,7 +66,8 @@ runs:
 
     - name: Copy image from source to destination
       shell: bash
+      env:
+        SOURCE_IMAGE: ${{ inputs.source-image }}
+        DESTINATION_IMAGE: ${{ inputs.destination-image }}
       run: |
-        crane copy \
-          ${{ inputs.source-image }} \
-          ${{ inputs.destination-image }}
+        crane copy "$SOURCE_IMAGE" "$DESTINATION_IMAGE"
