@@ -85,7 +85,7 @@ runs:
 
     - name: Update ECS task definition with new image URI ⚙️
       id: update-task-definition
-      uses: aws-actions/amazon-ecs-render-task-definition@0ae3bf578ea7b3c073260b3c4096016813d401ab # v1.4.0
+      uses: aws-actions/amazon-ecs-render-task-definition@3c975f1cb22919a28755c6541b4ca2656a690f49 # v1.5.1
       with:
         task-definition: "${{ inputs.task-definition-file-name }}"
         container-name: "${{ inputs.container-name }}"
