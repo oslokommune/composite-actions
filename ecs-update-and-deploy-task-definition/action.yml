@@ -94,7 +94,7 @@ runs:
 
     - if: inputs.deploy == 'true'
       name: Deploy container 🚀
-      uses: aws-actions/amazon-ecs-deploy-task-definition@06703f1be1bf4df74075222214d21baae72cf3a1 # v2.1.1
+      uses: aws-actions/amazon-ecs-deploy-task-definition@135af6c0ea24f888dcaad892bce3b31cc9e5da64 # v2.1.2
       with:
         task-definition: "${{ steps.update-task-definition.outputs.task-definition }}"
         service: "${{ inputs.service-name }}"
