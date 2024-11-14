@@ -22,11 +22,13 @@ runs:
         GH_TOKEN: ${{ github.token }}
       run: |
         BIN_DIR="$HOME/.local/bin"
+        PLATFORM=$(uname | tr '[:upper:]' '[:lower:]')
+
         mkdir -p "$BIN_DIR"
 
         gh release download v${{ inputs.version }} \
           --repo "gruntwork-io/boilerplate" \
-          --pattern 'boilerplate_linux_amd64' \
+          --pattern "boilerplate_${PLATFORM}_amd64" \
           --output "$BIN_DIR/boilerplate"
 
         chmod +x "$BIN_DIR/boilerplate"
