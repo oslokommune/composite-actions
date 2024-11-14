@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/oslokommune/composite-actions/compare/setup-boilerplate-v1.0.0...setup-boilerplate-v1.1.0) (2024-11-14)
+
+
+### Features
+
+* **setup-boilerplate:** Support cross-platform install ([93d215e](https://github.com/oslokommune/composite-actions/commit/93d215ec76f91213898b55814ecd9c6cb08da764))
+
 ## 1.0.0 (2024-07-17)
 
 
