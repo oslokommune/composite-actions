@@ -25,6 +25,10 @@
     "setup-boilerplate": {
       "component": "setup-boilerplate",
       "release-type": "simple"
+    },
+    "setup-ok": {
+      "component": "setup-ok",
+      "release-type": "simple"
     }
   }
 }

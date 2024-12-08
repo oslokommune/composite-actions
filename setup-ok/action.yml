@@ -1,0 +1,145 @@
+name: 'Setup and install tools'
+description: 'Setup and install CLI tools'
+
+inputs:
+  ok_version:
+    description: "Version of ok to install. Examples: v0.1.0, latest"
+    required: true
+    default: "latest"
+  boilerplate_version:
+    description: "Version of Boilerplate to install. Examples: 0.5.16, latest"
+    required: true
+    default: "latest"
+  terraform_version:
+    description: "Version of Terraform to install. Examples: 1.10.1, latest"
+    required: true
+    default: "latest"
+  yq_version:
+    description: "Version of yq to install. Examples: v4.44.6, latest"
+    required: true
+    default: "latest"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up BIN_DIR
+      id: bin-dir
+      shell: bash
+      run: |
+        BIN_DIR="$HOME/.local/bin"
+        mkdir -p "$BIN_DIR"
+        echo "dir=$BIN_DIR" >> $GITHUB_OUTPUT
+        echo "$BIN_DIR" >> "$GITHUB_PATH"
+
+    - name: Get versions
+      shell: bash
+      id: versions
+      run: |
+        get_latest_version() {
+          curl -s "https://api.github.com/repos/$1/releases/latest" | jq -r '.tag_name'
+        }
+
+        # Handle ok
+        if [[ "${{ inputs.ok_version }}" == "latest" ]]; then
+          OK_VERSION=$(get_latest_version "oslokommune/ok")
+        else
+          OK_VERSION="${{ inputs.ok_version }}"
+        fi
+        echo "ok_version=$OK_VERSION" >> $GITHUB_OUTPUT
+
+        # Handle boilerplate
+        if [[ "${{ inputs.boilerplate_version }}" == "latest" ]]; then
+          BOILERPLATE_VERSION=$(get_latest_version "gruntwork-io/boilerplate")
+        else
+          BOILERPLATE_VERSION="${{ inputs.boilerplate_version }}"
+        fi
+        echo "boilerplate_version=$BOILERPLATE_VERSION" >> $GITHUB_OUTPUT
+
+        # Handle terraform
+        if [[ "${{ inputs.terraform_version }}" == "latest" ]]; then
+          TERRAFORM_VERSION=$(get_latest_version "hashicorp/terraform" | sed 's/^v//')
+        else
+          TERRAFORM_VERSION="${{ inputs.terraform_version }}"
+        fi
+        echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
+
+        # Handle yq
+        if [[ "${{ inputs.yq_version }}" == "latest" ]]; then
+          YQ_VERSION=$(get_latest_version "mikefarah/yq")
+        else
+          YQ_VERSION="${{ inputs.yq_version }}"
+        fi
+        echo "yq_version=$YQ_VERSION" >> $GITHUB_OUTPUT
+
+
+    - name: Cache ok
+      uses: actions/cache@v4
+      id: cache-ok
+      with:
+        path: ${{ steps.bin-dir.outputs.dir }}/ok
+        key: ok-${{ steps.versions.outputs.ok_version }}
+
+    - name: Cache boilerplate
+      uses: actions/cache@v4
+      id: cache-boilerplate
+      with:
+        path: ${{ steps.bin-dir.outputs.dir }}/boilerplate
+        key: boilerplate-${{ steps.versions.outputs.boilerplate_version }}
+
+    - name: Cache terraform
+      uses: actions/cache@v4
+      id: cache-terraform
+      with:
+        path: ${{ steps.bin-dir.outputs.dir }}/terraform
+        key: terraform-${{ steps.versions.outputs.terraform_version }}
+
+    - name: Cache yq
+      uses: actions/cache@v4
+      id: cache-yq
+      with:
+        path: ${{ steps.bin-dir.outputs.dir }}/yq
+        key: yq-${{ steps.versions.outputs.yq_version }}
+
+    - name: Install tools
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        BIN_DIR: ${{ steps.bin-dir.outputs.dir }}
+      run: |
+        # Install ok
+        if [[ "${{ steps.cache-ok.outputs.cache-hit }}" != 'true' ]]; then
+          echo "Installing ok..."
+          gh release download "${{ steps.versions.outputs.ok_version }}" \
+            --repo "oslokommune/ok" \
+            --pattern "ok_*_linux_amd64.tar.gz" \
+            --output - | tar -xzOf - ok > "$BIN_DIR/ok"
+        fi
+        
+        # Install boilerplate
+        if [[ "${{ steps.cache-boilerplate.outputs.cache-hit }}" != 'true' ]]; then
+          echo "Installing boilerplate..."
+          gh release download "${{ steps.versions.outputs.boilerplate_version }}" \
+            --repo "gruntwork-io/boilerplate" \
+            --pattern "boilerplate_linux_amd64" \
+            --output "$BIN_DIR/boilerplate"
+        fi
+        
+        # Install terraform
+        if [[ "${{ steps.cache-terraform.outputs.cache-hit }}" != 'true' ]]; then
+          echo "Installing terraform..."
+          curl -L "https://releases.hashicorp.com/terraform/${{ steps.versions.outputs.terraform_version }}/terraform_${{ steps.versions.outputs.terraform_version }}_linux_amd64.zip" -o terraform.zip
+          unzip -o terraform.zip -d "$BIN_DIR"
+          rm -f terraform.zip
+        fi
+        
+        # Install yq
+        if [[ "${{ steps.cache-yq.outputs.cache-hit }}" != 'true' ]]; then
+          echo "Installing yq..."
+          gh release download "${{ steps.versions.outputs.yq_version }}" \
+            --repo "mikefarah/yq" \
+            --pattern "yq_linux_amd64" \
+            --output "$BIN_DIR/yq"
+        fi
+        
+        # Make all tools executable
+        chmod +x "$BIN_DIR"/*
