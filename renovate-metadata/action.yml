@@ -18,11 +18,11 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: Check PR author
+    - name: Check actor
       id: check-author
       shell: bash
       run: |
-        if [[ "${{ github.event.pull_request.user.login }}" == "kjoremiljo-renovate" ]]; then
+        if [[ "${{ github.actor }}" == "kjoremiljo-renovate" ]]; then
           echo "is_renovate=true" >> $GITHUB_OUTPUT
         else
           echo "is_renovate=false" >> $GITHUB_OUTPUT
