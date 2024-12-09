@@ -46,7 +46,7 @@ runs:
       shell: bash
       run: |
         set -e
-        RENOVATE_COMMIT=$(git log -n 5 --format="%H %s" | grep -m 1 "^[a-f0-9]\+ chore(deps):" || true)
+        RENOVATE_COMMIT=$(git log -n 5 --format="%H %s" | grep -m 1 "^[a-f0-9]\+ deps:" || true)
         if [ -z "$RENOVATE_COMMIT" ]; then
           echo "No Renovate commit found in the last 5 commits" >&2
           echo "update_type=unknown" >> $GITHUB_OUTPUT
