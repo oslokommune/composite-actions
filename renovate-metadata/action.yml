@@ -22,7 +22,7 @@ runs:
       id: check-author
       shell: bash
       run: |
-        if [[ "${{ github.actor }}" == "kjoremiljo-renovate" ]]; then
+        if [[ "${{ github.actor }}" == "renovate[bot]" ]]; then
           echo "is_renovate=true" >> $GITHUB_OUTPUT
         else
           echo "is_renovate=false" >> $GITHUB_OUTPUT
