@@ -31,6 +31,7 @@ runs:
         echo "dir=$BIN_DIR" >> $GITHUB_OUTPUT
         echo "$BIN_DIR" >> "$GITHUB_PATH"
 
+    # We get tool versions in order to use them as cache keys, i.e. figuring out if there's a cache hit or miss.
     - name: Get versions
       shell: bash
       id: versions
@@ -70,35 +71,30 @@ runs:
           YQ_VERSION="${{ inputs.yq_version }}"
         fi
         echo "yq_version=$YQ_VERSION" >> $GITHUB_OUTPUT
+        
+        # Concatenate all versions into one output. This is used as a cache key. This has the effect that
+        # if one version is updated, the cache will be invalidated for all tools. This is a trade-off between
+        # cache efficiency and simplicity.
+        
+        VERSIONS=""
+        VERSIONS="$VERSIONS___$OK_VERSION"
+        VERSIONS="$VERSIONS___$BOILERPLATE_VERSION"
+        VERSIONS="$VERSIONS___$TERRAFORM_VERSION"
+        VERSIONS="$VERSIONS___$YQ_VERSION"
+        echo "versions=$VERSIONS" >> $GITHUB_OUTPUT
 
 
-    - name: Cache ok
+    - name: Cache all tools
       uses: actions/cache@v4
-      id: cache-ok
+      id: cache-tools
       with:
-        path: ${{ steps.bin-dir.outputs.dir }}/ok
-        key: ok-${{ steps.versions.outputs.ok_version }}
+        path: |
+          ${{ steps.bin-dir.outputs.dir }}/ok
+          ${{ steps.bin-dir.outputs.dir }}/boilerplate
+          ${{ steps.bin-dir.outputs.dir }}/terraform
+          ${{ steps.bin-dir.outputs.dir }}/yq
+        key: ok-${{ steps.versions.outputs.versions }}
 
-    - name: Cache boilerplate
-      uses: actions/cache@v4
-      id: cache-boilerplate
-      with:
-        path: ${{ steps.bin-dir.outputs.dir }}/boilerplate
-        key: boilerplate-${{ steps.versions.outputs.boilerplate_version }}
-
-    - name: Cache terraform
-      uses: actions/cache@v4
-      id: cache-terraform
-      with:
-        path: ${{ steps.bin-dir.outputs.dir }}/terraform
-        key: terraform-${{ steps.versions.outputs.terraform_version }}
-
-    - name: Cache yq
-      uses: actions/cache@v4
-      id: cache-yq
-      with:
-        path: ${{ steps.bin-dir.outputs.dir }}/yq
-        key: yq-${{ steps.versions.outputs.yq_version }}
 
     - name: Install tools
       shell: bash
