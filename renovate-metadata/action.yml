@@ -1,0 +1,50 @@
+name: 'Renovate Metadata'
+description: 'Check if PR is from Renovate and get update type'
+
+inputs:
+  skip-verification:
+    description: 'Skip commit signature verification'
+    required: false
+    default: 'false'
+
+outputs:
+  is-renovate:
+    description: 'Whether the PR is from Renovate'
+    value: ${{ steps.check-author.outputs.is_renovate }}
+  update-type:
+    description: 'Renovate update type'
+    value: ${{ steps.get-update-type.outputs.update_type }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Check PR author
+      id: check-author
+      shell: bash
+      run: |
+        PR_AUTHOR=$(jq -r .pull_request.user.login "$GITHUB_EVENT_PATH")
+        if [ "$PR_AUTHOR" = "renovate[bot]" ]; then
+          echo "is_renovate=true" >> $GITHUB_OUTPUT
+        else
+          echo "is_renovate=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Checkout
+      uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+      with:
+        fetch-depth: 2
+
+    - name: Verify commit signature
+      if: ${{ inputs.skip-verification != 'true' }}
+      shell: bash
+      run: |
+        git verify-commit HEAD^
+      continue-on-error: true
+
+    - name: Get update type
+      id: get-update-type
+      shell: bash
+      run: |
+        COMMIT_MESSAGE=$(git log --format=%B -n 1 HEAD^)
+        UPDATE_TYPE=$(echo "$COMMIT_MESSAGE" | grep -oE '^(patch|minor|major)$')
+        echo "update_type=$UPDATE_TYPE" >> $GITHUB_OUTPUT
