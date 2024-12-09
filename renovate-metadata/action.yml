@@ -6,6 +6,10 @@ inputs:
     description: 'Skip commit signature verification'
     required: false
     default: 'false'
+  renovate-actor:
+    description: 'GitHub username of the Renovate bot'
+    required: false
+    default: 'kjoremiljo-renovate[bot]'
 
 outputs:
   is-renovate:
@@ -22,7 +26,7 @@ runs:
       id: check-author
       shell: bash
       run: |
-        if [[ "${{ github.actor }}" == "kjoremiljo-renovate[bot]" ]]; then
+        if [[ "${{ github.actor }}" == "${{ inputs.renovate-actor }}" ]]; then
           echo "is_renovate=true" >> $GITHUB_OUTPUT
         else
           echo "is_renovate=false" >> $GITHUB_OUTPUT
