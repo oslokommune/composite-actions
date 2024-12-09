@@ -22,8 +22,7 @@ runs:
       id: check-author
       shell: bash
       run: |
-        PR_AUTHOR=$(jq -r .pull_request.user.login "$GITHUB_EVENT_PATH")
-        if [ "$PR_AUTHOR" = "renovate[bot]" ]; then
+        if [[ "${{ github.event.pull_request.user.login }}" == "kjoremiljo-renovate" ]]; then
           echo "is_renovate=true" >> $GITHUB_OUTPUT
         else
           echo "is_renovate=false" >> $GITHUB_OUTPUT
