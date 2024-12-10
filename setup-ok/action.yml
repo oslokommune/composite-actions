@@ -96,7 +96,8 @@ runs:
           ${{ steps.bin-dir.outputs.dir }}/yq
         key: key-${{ steps.versions.outputs.versions }}
 
-
+    # Save cache even if the job fails.
+    # See: https://github.com/actions/cache/blob/main/save/README.md#always-save-cache
     - name: Save cache
       if: always() && steps.cache-tools-restore.outputs.cache-hit != 'true'
       uses: actions/cache@v4
