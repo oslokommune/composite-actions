@@ -77,10 +77,11 @@ runs:
         # cache efficiency and simplicity.
         
         VERSIONS=""
-        VERSIONS="$VERSIONS___$OK_VERSION"
-        VERSIONS="$VERSIONS___$BOILERPLATE_VERSION"
-        VERSIONS="$VERSIONS___$TERRAFORM_VERSION"
-        VERSIONS="$VERSIONS___$YQ_VERSION"
+        VERSIONS="${VERSIONS}___$OK_VERSION"
+        VERSIONS="${VERSIONS}___$BOILERPLATE_VERSION"
+        VERSIONS="${VERSIONS}___$TERRAFORM_VERSION"
+        VERSIONS="${VERSIONS}___$YQ_VERSION"
+        echo "VERSIONS=$VERSIONS"
         echo "versions=$VERSIONS" >> $GITHUB_OUTPUT
 
 
