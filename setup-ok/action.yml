@@ -86,7 +86,7 @@ runs:
 
 
     - name: Restore cache
-      uses: actions/cache@v4
+      uses: actions/cache/restore@v4
       id: cache-tools-restore
       with:
         path: |
@@ -100,7 +100,7 @@ runs:
     # See: https://github.com/actions/cache/blob/main/save/README.md#always-save-cache
     - name: Save cache
       if: always() && steps.cache-tools-restore.outputs.cache-hit != 'true'
-      uses: actions/cache@v4
+      uses: actions/cache/save@v4
       with:
         path: |
           ${{ steps.bin-dir.outputs.dir }}/ok
