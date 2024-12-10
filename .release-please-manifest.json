@@ -4,6 +4,6 @@
   "delete-release": "1.0.1",
   "verify-created-release": "1.0.0",
   "ecs-update-and-deploy-task-definition": "1.2.0",
-  "setup-boilerplate": "1.0.0",
+  "setup-boilerplate": "1.1.0",
   "setup-ok": "0.0.0"
 }
