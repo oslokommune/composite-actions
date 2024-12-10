@@ -94,7 +94,7 @@ runs:
           ${{ steps.bin-dir.outputs.dir }}/boilerplate
           ${{ steps.bin-dir.outputs.dir }}/terraform
           ${{ steps.bin-dir.outputs.dir }}/yq
-        key: ok-${{ steps.versions.outputs.versions }}
+        key: key-${{ steps.versions.outputs.versions }}
 
 
     - name: Install tools
