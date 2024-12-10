@@ -96,19 +96,6 @@ runs:
           ${{ steps.bin-dir.outputs.dir }}/yq
         key: key-${{ steps.versions.outputs.versions }}
 
-    # Save cache even if the job fails.
-    # See: https://github.com/actions/cache/blob/main/save/README.md#always-save-cache
-    - name: Save cache
-      if: always() && steps.cache-tools-restore.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v4
-      with:
-        path: |
-          ${{ steps.bin-dir.outputs.dir }}/ok
-          ${{ steps.bin-dir.outputs.dir }}/boilerplate
-          ${{ steps.bin-dir.outputs.dir }}/terraform
-          ${{ steps.bin-dir.outputs.dir }}/yq
-        key: key-${{ steps.versions.outputs.versions }}
-
 
     - name: Install tools
       shell: bash
@@ -145,3 +132,17 @@ runs:
         
         # Make all tools executable
         chmod +x "$BIN_DIR"/*
+
+
+    # Save cache even if the job fails.
+    # See: https://github.com/actions/cache/blob/main/save/README.md#always-save-cache
+    - name: Save cache
+      if: always() && steps.cache-tools-restore.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: |
+          ${{ steps.bin-dir.outputs.dir }}/ok
+          ${{ steps.bin-dir.outputs.dir }}/boilerplate
+          ${{ steps.bin-dir.outputs.dir }}/terraform
+          ${{ steps.bin-dir.outputs.dir }}/yq
+        key: key-${{ steps.versions.outputs.versions }}
