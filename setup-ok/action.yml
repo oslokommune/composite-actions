@@ -85,9 +85,21 @@ runs:
         echo "versions=$VERSIONS" >> $GITHUB_OUTPUT
 
 
-    - name: Cache all tools
+    - name: Restore cache
       uses: actions/cache@v4
-      id: cache-tools
+      id: cache-tools-restore
+      with:
+        path: |
+          ${{ steps.bin-dir.outputs.dir }}/ok
+          ${{ steps.bin-dir.outputs.dir }}/boilerplate
+          ${{ steps.bin-dir.outputs.dir }}/terraform
+          ${{ steps.bin-dir.outputs.dir }}/yq
+        key: key-${{ steps.versions.outputs.versions }}
+
+
+    - name: Save cache
+      if: always() && steps.cache-tools-restore.outputs.cache-hit != 'true'
+      uses: actions/cache@v4
       with:
         path: |
           ${{ steps.bin-dir.outputs.dir }}/ok
@@ -103,40 +115,32 @@ runs:
         GH_TOKEN: ${{ github.token }}
         BIN_DIR: ${{ steps.bin-dir.outputs.dir }}
       run: |
-        # Install ok
-        if [[ "${{ steps.cache-ok.outputs.cache-hit }}" != 'true' ]]; then
-          echo "Installing ok..."
-          gh release download "${{ steps.versions.outputs.ok_version }}" \
-            --repo "oslokommune/ok" \
-            --pattern "ok_*_linux_amd64.tar.gz" \
-            --output - | tar -xzOf - ok > "$BIN_DIR/ok"
+        if [[ "${{ steps.cache-tools-restore.outputs.cache-hit }}" == 'true' ]]; then
+          exit 0
         fi
         
-        # Install boilerplate
-        if [[ "${{ steps.cache-boilerplate.outputs.cache-hit }}" != 'true' ]]; then
-          echo "Installing boilerplate..."
-          gh release download "${{ steps.versions.outputs.boilerplate_version }}" \
-            --repo "gruntwork-io/boilerplate" \
-            --pattern "boilerplate_linux_amd64" \
-            --output "$BIN_DIR/boilerplate"
-        fi
-        
-        # Install terraform
-        if [[ "${{ steps.cache-terraform.outputs.cache-hit }}" != 'true' ]]; then
-          echo "Installing terraform..."
-          curl -L "https://releases.hashicorp.com/terraform/${{ steps.versions.outputs.terraform_version }}/terraform_${{ steps.versions.outputs.terraform_version }}_linux_amd64.zip" -o terraform.zip
-          unzip -o terraform.zip -d "$BIN_DIR"
-          rm -f terraform.zip
-        fi
-        
-        # Install yq
-        if [[ "${{ steps.cache-yq.outputs.cache-hit }}" != 'true' ]]; then
-          echo "Installing yq..."
-          gh release download "${{ steps.versions.outputs.yq_version }}" \
-            --repo "mikefarah/yq" \
-            --pattern "yq_linux_amd64" \
-            --output "$BIN_DIR/yq"
-        fi
+        echo "Installing ok..."
+        gh release download "${{ steps.versions.outputs.ok_version }}" \
+          --repo "oslokommune/ok" \
+          --pattern "ok_*_linux_amd64.tar.gz" \
+          --output - | tar -xzOf - ok > "$BIN_DIR/ok"
+
+        echo "Installing boilerplate..."
+        gh release download "${{ steps.versions.outputs.boilerplate_version }}" \
+          --repo "gruntwork-io/boilerplate" \
+          --pattern "boilerplate_linux_amd64" \
+          --output "$BIN_DIR/boilerplate"
+
+        echo "Installing terraform..."
+        curl -L "https://releases.hashicorp.com/terraform/${{ steps.versions.outputs.terraform_version }}/terraform_${{ steps.versions.outputs.terraform_version }}_linux_amd64.zip" -o terraform.zip
+        unzip -o terraform.zip -d "$BIN_DIR"
+        rm -f terraform.zip
+
+        echo "Installing yq..."
+        gh release download "${{ steps.versions.outputs.yq_version }}" \
+          --repo "mikefarah/yq" \
+          --pattern "yq_linux_amd64" \
+          --output "$BIN_DIR/yq"
         
         # Make all tools executable
         chmod +x "$BIN_DIR"/*
