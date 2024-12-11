@@ -1,5 +1,5 @@
-name: 'Setup and install tools'
-description: 'Setup and install CLI tools'
+name: "Setup and install ok"
+description: "Setup and install ok and its dependencies"
 
 inputs:
   ok_version:
