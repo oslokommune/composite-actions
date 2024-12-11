@@ -1,5 +1,5 @@
-name: "Setup and install ok"
-description: "Setup and install ok and its dependencies"
+name: 'Setup and install ok'
+description: 'Setup and install ok and its dependencies'
 
 inputs:
   ok_version:
