@@ -14,5 +14,5 @@ jobs:
 
     steps:
 
-      - name: Run setup-boilerplate composite action
+      - name: Run setup-ok composite action
         uses: oslokommune/composite-actions/setup-ok@main
