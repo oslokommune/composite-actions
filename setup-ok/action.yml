@@ -77,10 +77,10 @@ runs:
         # cache efficiency and simplicity.
         
         VERSIONS=""
-        VERSIONS="${VERSIONS}___$OK_VERSION"
-        VERSIONS="${VERSIONS}___$BOILERPLATE_VERSION"
-        VERSIONS="${VERSIONS}___$TERRAFORM_VERSION"
-        VERSIONS="${VERSIONS}___$YQ_VERSION"
+        VERSIONS="${VERSIONS}___ok-$OK_VERSION"
+        VERSIONS="${VERSIONS}___boilerplate-$BOILERPLATE_VERSION"
+        VERSIONS="${VERSIONS}___terraform-$TERRAFORM_VERSION"
+        VERSIONS="${VERSIONS}___yq-$YQ_VERSION"
         echo "VERSIONS=$VERSIONS"
         echo "versions=$VERSIONS" >> $GITHUB_OUTPUT
 
@@ -94,6 +94,7 @@ runs:
           ${{ steps.bin-dir.outputs.dir }}/boilerplate
           ${{ steps.bin-dir.outputs.dir }}/terraform
           ${{ steps.bin-dir.outputs.dir }}/yq
+        # Example key: "key-___v5.2.0___v0.6.0___1.10.2___v4.44.6"
         key: key-${{ steps.versions.outputs.versions }}
 
 
