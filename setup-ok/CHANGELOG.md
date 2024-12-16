@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/oslokommune/composite-actions/compare/setup-ok-v1.1.0...setup-ok-v1.2.0) (2024-12-16)
+
+
+### Features
+
+* **setup-ok:** New cache key ([fd4d3c7](https://github.com/oslokommune/composite-actions/commit/fd4d3c73955fceb10bc53f0048d1cdfafd6ace13))
+
 ## [1.1.0](https://github.com/oslokommune/composite-actions/compare/setup-ok-v1.0.0...setup-ok-v1.1.0) (2024-12-11)
 
 
