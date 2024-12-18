@@ -38,6 +38,7 @@ runs:
       id: check-author-and-parse-metadata
       uses: actions/github-script@v6
       with:
+        github-token: ${{secrets.GITHUB_TOKEN}}
         script: |
           const isRenovate = context.actor === '${{ inputs.renovate-actor }}';
           core.setOutput('is_renovate', isRenovate.toString());
@@ -47,8 +48,14 @@ runs:
             return;
           }
 
-          const commitMessage = await exec.getExecOutput('git log --format=%B -n 1 HEAD', [], {silent: true});
-          const metadata = commitMessage.stdout.split('---')[1];
+          const { data: commit } = await github.rest.repos.getCommit({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            ref: context.sha
+          });
+
+          const commitMessage = commit.commit.message;
+          const metadata = commitMessage.split('---')[1];
           
           if (!metadata) {
             core.setFailed('No metadata found in commit message');
