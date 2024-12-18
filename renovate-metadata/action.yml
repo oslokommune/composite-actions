@@ -27,20 +27,14 @@ runs:
       with:
         fetch-depth: 0
 
-    - name: Verify commit signature
-      if: ${{ inputs.skip-verification != 'true' }}
-      shell: bash
-      run: |
-        git verify-commit HEAD^
-      continue-on-error: true
-
-    - name: Check commits and parse Renovate metadata
+    - name: Check commits, verify signatures, and parse Renovate metadata
       id: check-commits-and-parse-metadata
       uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
       with:
         github-token: ${{secrets.GITHUB_TOKEN}}
         script: |
           const renovateActors = ['${{ inputs.renovate-actor }}', 'renovate[bot]', 'renovate-bot'];
+          const skipVerification = '${{ inputs.skip-verification }}' === 'true';
           
           const { data: pullRequest } = await github.rest.pulls.get({
             owner: context.repo.owner,
@@ -63,6 +57,13 @@ runs:
               repo: context.repo.repo,
               ref: commitInfo.sha
             });
+
+            if (!skipVerification) {
+              if (!commit.commit.verification.verified) {
+                core.setFailed(`Commit ${commit.sha} is not verified`);
+                return;
+              }
+            }
 
             const isRenovateCommit = 
               (commit.author && renovateActors.includes(commit.author.login)) ||
