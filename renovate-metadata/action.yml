@@ -15,15 +15,9 @@ outputs:
   is-renovate:
     description: 'Whether the PR is from Renovate'
     value: ${{ steps.check-author.outputs.is_renovate }}
-  update-type:
-    description: 'Renovate update type'
-    value: ${{ steps.parse-metadata.outputs.update_type }}
-  dependency-name:
-    description: 'Name of the updated dependency'
-    value: ${{ steps.parse-metadata.outputs.dependency_name }}
-  new-version:
-    description: 'New version of the updated dependency'
-    value: ${{ steps.parse-metadata.outputs.new_version }}
+  dependencies:
+    description: 'JSON string containing all updated dependencies information'
+    value: ${{ steps.parse-metadata.outputs.dependencies }}
 
 runs:
   using: "composite"
@@ -70,10 +64,8 @@ runs:
             return;
           }
 
-          const dependency = yamlData['updated-dependencies'][0];
+          const dependencies = yamlData['updated-dependencies'];
           
-          core.setOutput('update_type', dependency['update-type'] || 'unknown');
-          core.setOutput('dependency_name', dependency['dependency-name'] || 'unknown');
-          core.setOutput('new_version', dependency['new-version'] || 'unknown');
+          core.setOutput('dependencies', JSON.stringify(dependencies));
 
-          console.log('Parsed metadata:', JSON.stringify(dependency, null, 2));
+          console.log('Parsed metadata:', JSON.stringify(dependencies, null, 2));
