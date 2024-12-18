@@ -6,5 +6,5 @@
   "ecs-update-and-deploy-task-definition": "1.2.0",
   "setup-boilerplate": "1.1.0",
   "setup-ok": "1.2.1",
-  "renovate-metadata": "0.0.0"
+  "renovate-metadata": "1.0.0"
 }
