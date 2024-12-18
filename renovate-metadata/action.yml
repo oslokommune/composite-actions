@@ -1,5 +1,5 @@
 name: 'Renovate Metadata'
-description: 'Check if PR is from Renovate and get update metadata'
+description: 'Check if PR contains Renovate commits and get update metadata'
 
 inputs:
   skip-verification:
@@ -13,11 +13,11 @@ inputs:
 
 outputs:
   is-renovate:
-    description: 'Whether the PR is from Renovate'
-    value: ${{ steps.check-author-and-parse-metadata.outputs.is_renovate }}
+    description: 'Whether the PR contains Renovate commits'
+    value: ${{ steps.check-commits-and-parse-metadata.outputs.is_renovate }}
   dependencies:
     description: 'JSON string containing all updated dependencies information'
-    value: ${{ steps.check-author-and-parse-metadata.outputs.dependencies }}
+    value: ${{ steps.check-commits-and-parse-metadata.outputs.dependencies }}
 
 runs:
   using: "composite"
@@ -25,7 +25,7 @@ runs:
     - name: Checkout
       uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
       with:
-        fetch-depth: 5
+        fetch-depth: 0
 
     - name: Verify commit signature
       if: ${{ inputs.skip-verification != 'true' }}
@@ -34,43 +34,49 @@ runs:
         git verify-commit HEAD^
       continue-on-error: true
 
-    - name: Check author and parse Renovate metadata
-      id: check-author-and-parse-metadata
+    - name: Check commits and parse Renovate metadata
+      id: check-commits-and-parse-metadata
       uses: actions/github-script@v6
       with:
         github-token: ${{secrets.GITHUB_TOKEN}}
         script: |
-          const isRenovate = context.actor === '${{ inputs.renovate-actor }}';
-          core.setOutput('is_renovate', isRenovate.toString());
-
-          if (!isRenovate) {
-            console.log('PR is not from Renovate');
-            return;
-          }
-
-          const { data: commit } = await github.rest.repos.getCommit({
+          const { data: pullRequest } = await github.rest.pulls.get({
             owner: context.repo.owner,
             repo: context.repo.repo,
-            ref: context.sha
+            pull_number: context.issue.number
           });
 
-          const commitMessage = commit.commit.message;
-          const metadata = commitMessage.split('---')[1];
-          
-          if (!metadata) {
-            core.setFailed('No metadata found in commit message');
-            return;
+          const { data: commits } = await github.rest.pulls.listCommits({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: context.issue.number
+          });
+
+          let isRenovate = false;
+          let dependencies = [];
+
+          for (const commit of commits) {
+            if (commit.author.login === '${{ inputs.renovate-actor }}') {
+              isRenovate = true;
+              const commitMessage = commit.commit.message;
+              const metadata = commitMessage.split('---')[1];
+              
+              if (metadata) {
+                const yamlData = require('js-yaml').load(metadata);
+                if (yamlData && yamlData['updated-dependencies']) {
+                  dependencies = dependencies.concat(yamlData['updated-dependencies']);
+                }
+              }
+            }
           }
 
-          const yamlData = require('js-yaml').load(metadata);
+          core.setOutput('is_renovate', isRenovate.toString());
           
-          if (!yamlData || !yamlData['updated-dependencies'] || yamlData['updated-dependencies'].length === 0) {
-            core.setFailed('Invalid or empty metadata');
-            return;
+          if (dependencies.length > 0) {
+            core.setOutput('dependencies', JSON.stringify(dependencies));
+            console.log('Parsed metadata:', JSON.stringify(dependencies, null, 2));
+          } else if (isRenovate) {
+            core.setFailed('No valid metadata found in Renovate commits');
+          } else {
+            console.log('No Renovate commits found in this PR');
           }
-
-          const dependencies = yamlData['updated-dependencies'];
-          
-          core.setOutput('dependencies', JSON.stringify(dependencies));
-
-          console.log('Parsed metadata:', JSON.stringify(dependencies, null, 2));
