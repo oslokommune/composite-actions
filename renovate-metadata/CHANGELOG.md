@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/oslokommune/composite-actions/compare/renovate-metadata-v1.0.0...renovate-metadata-v1.0.1) (2024-12-18)
+
+
+### Bug Fixes
+
+* Shell is required ([3420fc4](https://github.com/oslokommune/composite-actions/commit/3420fc4135b9be4eb74f8899fb848a6855edf151))
+
 ## 1.0.0 (2024-12-18)
 
 
