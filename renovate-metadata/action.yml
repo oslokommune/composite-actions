@@ -10,6 +10,10 @@ inputs:
     description: 'GitHub username of the Renovate bot'
     required: false
     default: 'kjoremiljo-renovate[bot]'
+  fetch-depth:
+    description: 'Number of commits to fetch. 0 indicates all history for all branches and tags.'
+    required: false
+    default: '0'
 
 outputs:
   is-renovate:
@@ -25,7 +29,7 @@ runs:
     - name: Checkout
       uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
       with:
-        fetch-depth: 0
+        fetch-depth: ${{ inputs.fetch-depth }}
 
     - name: Install js-yaml
       shell: bash
