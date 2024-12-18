@@ -1,0 +1,107 @@
+name: 'Renovate Metadata'
+description: 'Check if PR contains Renovate commits and get update metadata'
+
+inputs:
+  skip-verification:
+    description: 'Skip commit signature verification'
+    required: false
+    default: 'false'
+  renovate-actor:
+    description: 'GitHub username of the Renovate bot'
+    required: false
+    default: 'kjoremiljo-renovate[bot]'
+  fetch-depth:
+    description: 'Number of commits to fetch. 0 indicates all history for all branches and tags.'
+    required: false
+    default: '0'
+
+outputs:
+  is-renovate:
+    description: 'Whether the PR contains Renovate commits'
+    value: ${{ steps.check-commits-and-parse-metadata.outputs.is_renovate }}
+  dependencies:
+    description: 'JSON string containing all updated dependencies information'
+    value: ${{ steps.check-commits-and-parse-metadata.outputs.dependencies }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout
+      uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+      with:
+        fetch-depth: ${{ inputs.fetch-depth }}
+
+    - name: Install js-yaml
+      run: npm install js-yaml
+
+    - name: Check commits, verify signatures, and parse Renovate metadata
+      id: check-commits-and-parse-metadata
+      uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+      with:
+        script: |
+          const jsYaml = require('js-yaml');
+          const renovateActors = ['${{ inputs.renovate-actor }}', 'renovate[bot]', 'renovate-bot'];
+          const skipVerification = '${{ inputs.skip-verification }}' === 'true';
+          
+          const { data: pullRequest } = await github.rest.pulls.get({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: context.issue.number
+          });
+
+          const { data: commits } = await github.rest.pulls.listCommits({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: context.issue.number
+          });
+
+          let isRenovate = false;
+          const dependenciesMap = new Map();
+
+          for (const commitInfo of commits) {
+            const { data: commit } = await github.rest.repos.getCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: commitInfo.sha
+            });
+
+            if (!skipVerification) {
+              if (!commit.commit.verification.verified) {
+                core.setFailed(`Commit ${commit.sha} is not verified`);
+                return;
+              }
+            }
+
+            const isRenovateCommit = 
+              (commit.author && renovateActors.includes(commit.author.login)) ||
+              (commit.committer && renovateActors.includes(commit.committer.login));
+
+            if (isRenovateCommit) {
+              isRenovate = true;
+              const commitMessage = commit.commit.message;
+              const metadata = commitMessage.split('---')[1];
+              
+              if (metadata) {
+                const yamlData = jsYaml.load(metadata);
+                if (yamlData && yamlData['updated-dependencies']) {
+                  for (const dep of yamlData['updated-dependencies']) {
+                    const key = `${dep['dependency-name']}|${dep['new-version']}`;
+                    dependenciesMap.set(key, dep);
+                  }
+                }
+              }
+            }
+          }
+
+          core.setOutput('is_renovate', isRenovate.toString());
+          
+          const dependencies = Array.from(dependenciesMap.values());
+          
+          if (dependencies.length > 0) {
+            core.setOutput('dependencies', JSON.stringify(dependencies));
+            console.log('Parsed metadata:', JSON.stringify(dependencies, null, 2));
+          } else if (isRenovate) {
+            core.setFailed('No valid metadata found in Renovate commits');
+          } else {
+            console.log('No Renovate commits found in this PR');
+          }
