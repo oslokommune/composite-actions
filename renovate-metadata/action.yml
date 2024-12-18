@@ -53,7 +53,7 @@ runs:
           });
 
           let isRenovate = false;
-          let dependencies = [];
+          const dependenciesMap = new Map();
 
           for (const commitInfo of commits) {
             const { data: commit } = await github.rest.repos.getCommit({
@@ -81,13 +81,18 @@ runs:
               if (metadata) {
                 const yamlData = jsYaml.load(metadata);
                 if (yamlData && yamlData['updated-dependencies']) {
-                  dependencies = dependencies.concat(yamlData['updated-dependencies']);
+                  for (const dep of yamlData['updated-dependencies']) {
+                    const key = `${dep['dependency-name']}|${dep['new-version']}`;
+                    dependenciesMap.set(key, dep);
+                  }
                 }
               }
             }
           }
 
           core.setOutput('is_renovate', isRenovate.toString());
+          
+          const dependencies = Array.from(dependenciesMap.values());
           
           if (dependencies.length > 0) {
             core.setOutput('dependencies', JSON.stringify(dependencies));
