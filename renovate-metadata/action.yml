@@ -32,7 +32,6 @@ runs:
         fetch-depth: ${{ inputs.fetch-depth }}
 
     - name: Install js-yaml
-      shell: bash
       run: npm install js-yaml
 
     - name: Check commits, verify signatures, and parse Renovate metadata
