@@ -40,6 +40,8 @@ runs:
       with:
         github-token: ${{secrets.GITHUB_TOKEN}}
         script: |
+          const renovateActors = ['${{ inputs.renovate-actor }}', 'renovate[bot]', 'renovate-bot'];
+          
           const { data: pullRequest } = await github.rest.pulls.get({
             owner: context.repo.owner,
             repo: context.repo.repo,
@@ -55,8 +57,18 @@ runs:
           let isRenovate = false;
           let dependencies = [];
 
-          for (const commit of commits) {
-            if (commit.author.login === '${{ inputs.renovate-actor }}') {
+          for (const commitInfo of commits) {
+            const { data: commit } = await github.rest.repos.getCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: commitInfo.sha
+            });
+
+            const isRenovateCommit = 
+              (commit.author && renovateActors.includes(commit.author.login)) ||
+              (commit.committer && renovateActors.includes(commit.committer.login));
+
+            if (isRenovateCommit) {
               isRenovate = true;
               const commitMessage = commit.commit.message;
               const metadata = commitMessage.split('---')[1];
