@@ -29,6 +29,10 @@
     "setup-ok": {
       "component": "setup-ok",
       "release-type": "simple"
+    },
+    "renovate-metadata": {
+      "component": "renovate-metadata",
+      "release-type": "simple"
     }
   }
 }
