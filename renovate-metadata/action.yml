@@ -3,11 +3,11 @@ description: 'Check if PR contains Renovate commits and get update metadata'
 
 inputs:
   skip-verification:
-    description: 'Skip commit signature verification'
+    description: 'Skip commit signature verification.'
     required: false
     default: 'false'
   renovate-actor:
-    description: 'GitHub username of the Renovate bot'
+    description: 'GitHub username of the Renovate bot.'
     required: false
     default: 'kjoremiljo-renovate[bot]'
   fetch-depth:
