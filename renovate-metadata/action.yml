@@ -1,5 +1,5 @@
 name: 'Renovate Metadata'
-description: 'Check if PR is from Renovate and get update type'
+description: 'Check if PR is from Renovate and get update metadata'
 
 inputs:
   skip-verification:
@@ -17,7 +17,13 @@ outputs:
     value: ${{ steps.check-author.outputs.is_renovate }}
   update-type:
     description: 'Renovate update type'
-    value: ${{ steps.get-update-type.outputs.update_type }}
+    value: ${{ steps.parse-metadata.outputs.update_type }}
+  dependency-name:
+    description: 'Name of the updated dependency'
+    value: ${{ steps.parse-metadata.outputs.dependency_name }}
+  new-version:
+    description: 'New version of the updated dependency'
+    value: ${{ steps.parse-metadata.outputs.new_version }}
 
 runs:
   using: "composite"
@@ -44,20 +50,30 @@ runs:
         git verify-commit HEAD^
       continue-on-error: true
 
-    - name: Get update type
-      id: get-update-type
-      shell: bash
-      run: |
-        set -e
-        RENOVATE_COMMIT=$(git log -n 5 --format="%H %s" | grep -m 1 "^[a-f0-9]\+ deps:" || true)
-        if [ -z "$RENOVATE_COMMIT" ]; then
-          echo "No Renovate commit found in the last 5 commits" >&2
-          echo "update_type=unknown" >> $GITHUB_OUTPUT
-          exit 0
-        fi
-        COMMIT_HASH=$(echo "$RENOVATE_COMMIT" | cut -d ' ' -f 1)
-        COMMIT_MESSAGE=$(git log --format=%B -n 1 $COMMIT_HASH)
-        UPDATE_TYPE=$(echo "$COMMIT_MESSAGE" | grep -oE '^(patch|minor|major)' || echo "unknown")
-        echo "update_type=$UPDATE_TYPE" >> $GITHUB_OUTPUT
-        echo "Detected update type: $UPDATE_TYPE"
-        echo "Renovate commit: $COMMIT_HASH"
+    - name: Parse Renovate metadata
+      id: parse-metadata
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const commitMessage = await exec.getExecOutput('git log --format=%B -n 1 HEAD', [], {silent: true});
+          const metadata = commitMessage.stdout.split('---')[1];
+          
+          if (!metadata) {
+            core.setFailed('No metadata found in commit message');
+            return;
+          }
+
+          const yamlData = require('js-yaml').load(metadata);
+          
+          if (!yamlData || !yamlData['updated-dependencies'] || yamlData['updated-dependencies'].length === 0) {
+            core.setFailed('Invalid or empty metadata');
+            return;
+          }
+
+          const dependency = yamlData['updated-dependencies'][0];
+          
+          core.setOutput('update_type', dependency['update-type'] || 'unknown');
+          core.setOutput('dependency_name', dependency['dependency-name'] || 'unknown');
+          core.setOutput('new_version', dependency['new-version'] || 'unknown');
+
+          console.log('Parsed metadata:', JSON.stringify(dependency, null, 2));
