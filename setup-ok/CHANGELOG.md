@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/oslokommune/composite-actions/compare/setup-ok-v1.2.0...setup-ok-v1.2.1) (2024-12-18)
+
+
+### Bug Fixes
+
+* **setup-ok:** Don't save cache if install fails ([8aea952](https://github.com/oslokommune/composite-actions/commit/8aea952585637e678a0970e296da92472686be63))
+
 ## [1.2.0](https://github.com/oslokommune/composite-actions/compare/setup-ok-v1.1.0...setup-ok-v1.2.0) (2024-12-16)
 
 
