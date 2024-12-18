@@ -27,11 +27,16 @@ runs:
       with:
         fetch-depth: 0
 
+    - name: Install js-yaml
+      shell: bash
+      run: npm install js-yaml
+
     - name: Check commits, verify signatures, and parse Renovate metadata
       id: check-commits-and-parse-metadata
       uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
       with:
         script: |
+          const jsYaml = require('js-yaml');
           const renovateActors = ['${{ inputs.renovate-actor }}', 'renovate[bot]', 'renovate-bot'];
           const skipVerification = '${{ inputs.skip-verification }}' === 'true';
           
@@ -74,7 +79,7 @@ runs:
               const metadata = commitMessage.split('---')[1];
               
               if (metadata) {
-                const yamlData = require('js-yaml').load(metadata);
+                const yamlData = jsYaml.load(metadata);
                 if (yamlData && yamlData['updated-dependencies']) {
                   dependencies = dependencies.concat(yamlData['updated-dependencies']);
                 }
