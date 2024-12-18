@@ -99,6 +99,7 @@ runs:
 
 
     - name: Install tools
+      id: install-tools
       shell: bash
       env:
         GH_TOKEN: ${{ github.token }}
@@ -135,10 +136,10 @@ runs:
         chmod +x "$BIN_DIR"/*
 
 
-    # Save cache even if the job fails.
+    # Save cache even if the calling job fails. It is useful when developing new workflows, that often fail.
     # See: https://github.com/actions/cache/blob/main/save/README.md#always-save-cache
     - name: Save cache
-      if: always() && steps.cache-tools-restore.outputs.cache-hit != 'true'
+      if: always() && steps.cache-tools-restore.outputs.cache-hit != 'true' && steps.install-tools.outcome == 'success'
       uses: actions/cache/save@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
       with:
         path: |
