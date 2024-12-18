@@ -15,6 +15,7 @@ on:
       - "ecs-update-and-deploy-task-definition/*"
       - "setup-boilerplate/*"
       - "setup-ok/*"
+      - "renovate-metadata/*"
 
 
 jobs:
