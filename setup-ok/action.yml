@@ -35,6 +35,7 @@ runs:
         echo "dir=$BIN_DIR" >> $GITHUB_OUTPUT
         echo "$BIN_DIR" >> "$GITHUB_PATH"
 
+
     # We get tool versions in order to use them as cache keys, i.e. figuring out if there's a cache hit or miss.
     - name: Get versions
       shell: bash
