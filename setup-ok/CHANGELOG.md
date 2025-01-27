@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/oslokommune/composite-actions/compare/setup-ok-v1.2.1...setup-ok-v1.3.0) (2025-01-27)
+
+
+### Features
+
+* **setup-ok:** Trigger release of Terragrunt ([0946bc3](https://github.com/oslokommune/composite-actions/commit/0946bc3ffaed2df847b11bd9c74a339d22b59035))
+
 ## [1.2.1](https://github.com/oslokommune/composite-actions/compare/setup-ok-v1.2.0...setup-ok-v1.2.1) (2024-12-18)
 
 
