@@ -70,7 +70,7 @@ runs:
 
         # Handle terragrunt
         if [[ "${{ inputs.terragrunt_version }}" == "latest" ]]; then
-          TERRAGRUNT_VERSION=$(get_latest_version "hashicorp/terraform")
+          TERRAGRUNT_VERSION=$(get_latest_version "hashicorp/terragrunt")
         else
           TERRAGRUNT_VERSION="${{ inputs.terragrunt_version }}"
         fi
