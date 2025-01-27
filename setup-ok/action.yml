@@ -14,6 +14,10 @@ inputs:
     description: "Version of Terraform to install. Examples: 1.10.1, latest"
     required: true
     default: "latest"
+  terragrunt_version:
+    description: "Version of Terragrunt to install. Examples: 0.71.1, latest"
+    required: true
+    default: "latest"
   yq_version:
     description: "Version of yq to install. Examples: v4.44.6, latest"
     required: true
@@ -64,6 +68,14 @@ runs:
         fi
         echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
 
+        # Handle terragrunt
+        if [[ "${{ inputs.terragrunt_version }}" == "latest" ]]; then
+          TERRAGRUNT_VERSION=$(get_latest_version "hashicorp/terraform")
+        else
+          TERRAGRUNT_VERSION="${{ inputs.terragrunt_version }}"
+        fi
+        echo "terragrunt_version=$TERRAGRUNT_VERSION" >> $GITHUB_OUTPUT
+
         # Handle yq
         if [[ "${{ inputs.yq_version }}" == "latest" ]]; then
           YQ_VERSION=$(get_latest_version "mikefarah/yq")
@@ -80,6 +92,7 @@ runs:
         VERSIONS="${VERSIONS}___ok-$OK_VERSION"
         VERSIONS="${VERSIONS}___boilerplate-$BOILERPLATE_VERSION"
         VERSIONS="${VERSIONS}___terraform-$TERRAFORM_VERSION"
+        VERSIONS="${VERSIONS}___terragrunt-$TERRAGRUNT_VERSION"
         VERSIONS="${VERSIONS}___yq-$YQ_VERSION"
         echo "VERSIONS=$VERSIONS"
         echo "versions=$VERSIONS" >> $GITHUB_OUTPUT
@@ -93,6 +106,7 @@ runs:
           ${{ steps.bin-dir.outputs.dir }}/ok
           ${{ steps.bin-dir.outputs.dir }}/boilerplate
           ${{ steps.bin-dir.outputs.dir }}/terraform
+          ${{ steps.bin-dir.outputs.dir }}/terragrunt
           ${{ steps.bin-dir.outputs.dir }}/yq
         # Example key: "key-___v5.2.0___v0.6.0___1.10.2___v4.44.6"
         key: key-${{ steps.versions.outputs.versions }}
@@ -126,6 +140,12 @@ runs:
         unzip -o terraform.zip -d "$BIN_DIR"
         rm -f terraform.zip
 
+        echo "Installing terragrunt..."
+        gh release download "${{ steps.versions.outputs.terragrunt_version }}" \
+          --repo "gruntwork-io/terragrunt" \
+          --pattern "terragrunt_linux_amd64" \
+          --output "$BIN_DIR/terragrunt"
+        
         echo "Installing yq..."
         gh release download "${{ steps.versions.outputs.yq_version }}" \
           --repo "mikefarah/yq" \
@@ -146,5 +166,6 @@ runs:
           ${{ steps.bin-dir.outputs.dir }}/ok
           ${{ steps.bin-dir.outputs.dir }}/boilerplate
           ${{ steps.bin-dir.outputs.dir }}/terraform
+          ${{ steps.bin-dir.outputs.dir }}/terragrunt
           ${{ steps.bin-dir.outputs.dir }}/yq
         key: key-${{ steps.versions.outputs.versions }}
