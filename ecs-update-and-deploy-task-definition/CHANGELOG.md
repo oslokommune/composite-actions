@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.2.2](https://github.com/oslokommune/composite-actions/compare/ecs-update-and-deploy-task-definition-v1.2.1...ecs-update-and-deploy-task-definition-v1.2.2) (2025-03-04)
+
+
+### Bug fixes
+
+* **ecs:** Remove invalid properties from task definition ([a7a839f](https://github.com/oslokommune/composite-actions/commit/a7a839f0b57bc244944b6947027d82a29c38ce53))
+
+
+### Dependency updates
+
+* bump aws-actions/amazon-ecs-render-task-definition ([#99](https://github.com/oslokommune/composite-actions/issues/99)) ([01795c5](https://github.com/oslokommune/composite-actions/commit/01795c58416fc2bcc687be268be76e8677ea5f58))
+
 ## [1.2.1](https://github.com/oslokommune/composite-actions/compare/ecs-update-and-deploy-task-definition-v1.2.0...ecs-update-and-deploy-task-definition-v1.2.1) (2025-03-04)
 
 
