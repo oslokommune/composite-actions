@@ -1,9 +1,9 @@
 {
-  "disallow-same-approver": "1.5.0",
+  "disallow-same-approver": "1.5.1",
   "optimize-apt-get": "1.3.0",
   "delete-release": "1.0.1",
   "verify-created-release": "1.0.0",
-  "ecs-update-and-deploy-task-definition": "1.2.0",
+  "ecs-update-and-deploy-task-definition": "1.2.1",
   "setup-boilerplate": "1.1.0",
   "setup-ok": "1.3.0",
   "renovate-metadata": "1.0.1"
