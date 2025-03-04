@@ -80,7 +80,7 @@ runs:
         aws ecs describe-task-definition \
           --task-definition "${{ inputs.task-definition-name }}" \
           --query taskDefinition \
-          | jq 'del(.registeredAt, .registeredBy)' > "${{ inputs.task-definition-file-name }}"
+          | jq 'del(.registeredAt, .registeredBy, .compatibilities, .taskDefinitionArn, .requiresAttributes, .revision, .status)' > "${{ inputs.task-definition-file-name }}"
 
 
     - name: Update ECS task definition with new image URI ⚙️
