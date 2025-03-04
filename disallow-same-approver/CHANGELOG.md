@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.1](https://github.com/oslokommune/composite-actions/compare/disallow-same-approver-v1.5.0...disallow-same-approver-v1.5.1) (2025-03-04)
+
+
+### Dependency updates
+
+* bump actions/github-script in /disallow-same-approver ([c3f4c02](https://github.com/oslokommune/composite-actions/commit/c3f4c028abd0d1619277bd2fcff16a9ccf1ff349))
+* Bump actions/github-script in /disallow-same-approver ([#53](https://github.com/oslokommune/composite-actions/issues/53)) ([abe29d8](https://github.com/oslokommune/composite-actions/commit/abe29d8f6047787dc2bcda4d2d88d9ade85ee142))
+
 ## [1.5.0](https://github.com/oslokommune/composite-actions/compare/disallow-same-approver-v1.4.0...disallow-same-approver-v1.5.0) (2023-01-09)
 
 
