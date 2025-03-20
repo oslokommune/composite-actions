@@ -72,10 +72,12 @@ runs:
     - name: Update ECS task definition with new image URIs ⚙️
       id: update-task-definition
       uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+      env:
+        INPUT_IMAGES: ${{ inputs.images }}
       with:
         script: |
           const fs = require('fs');
-          var inputs = ${{ toJSON(inputs) }}
+          var imagesJson = core.getInput('images')
           
           // Set filenames
           const taskDefFile = 'task-definition.json';
@@ -90,7 +92,7 @@ runs:
           
           // Parse images JSON
           //const imagesJson = JSON.parse('${{ inputs.images }}');
-          const imagesJson = inputs['images']
+          //const imagesJson = inputs['images']
           
           console.log(`Found ${imagesJson.length} container image(s) to update`);
           
