@@ -1,9 +1,8 @@
-name: "Update and optionally deploy ECS task definition"
+const containerName = imageConfig['container-name'];name: "Update and optionally deploy ECS task definition"
 
-description: "Downloads an existing ECS task definition, updates the image URI, and optionally deploys the updated task definition to the specified ECS service."
+description: "Downloads an existing ECS task definition, updates multiple container image URIs, and optionally deploys the updated task definition to the specified ECS service."
 
 inputs:
-
   aws-region:
     description: "The AWS region to use."
     required: true
@@ -20,46 +19,33 @@ inputs:
     description: "The name of the ECS service to deploy to."
     required: true
 
-  container-name:
-    description: "The name of the container defined in the containerDefinitions section of the ECS task definition."
-    required: true
-
-  image-repository:
-    description: "The name of the ECR repository where the image is stored."
-    required: true
-
-  image-tag:
-    description: "The tag of the image."
-    required: true
-
   task-definition-name:
     description: "The name of the task definition."
     required: true
 
-  task-definition-file-name:
-    description: "The name of the task definition file."
-    default: "task-definition.json"
-
   download-existing-task-definition:
     description: "Download the existing task definition from AWS."
+    required: true
+
+  images:
+    description: "JSON array of containers and images to update in the task definition. Format: [{\"container-name\": \"name\", \"image\": \"uri\"}]"
     required: true
 
   deploy:
     description: "Deploy the task definition. Can be either \"true\" or \"false\"."
     required: true
 
-outputs:
 
+outputs:
   task-definition-file-name:
     description: "The path to the rendered task definition file."
     value: "${{ steps.update-task-definition.outputs.task-definition }}"
 
-runs:
 
+runs:
   using: composite
 
   steps:
-
     - name: Configure AWS credentials using the OpenID Connect (OIDC) provider 🔑
       uses: aws-actions/configure-aws-credentials@ececac1a45f3b08a01d2dd070d28d111c5fe6722 # v4.1.0
       with:
@@ -80,16 +66,60 @@ runs:
         aws ecs describe-task-definition \
           --task-definition "${{ inputs.task-definition-name }}" \
           --query taskDefinition \
-          | jq 'del(.registeredAt, .registeredBy, .compatibilities, .taskDefinitionArn, .requiresAttributes, .revision, .status)' > "${{ inputs.task-definition-file-name }}"
+          | jq 'del(.registeredAt, .registeredBy, .compatibilities, .taskDefinitionArn, .requiresAttributes, .revision, .status)' > "task-definition.json"
 
 
-    - name: Update ECS task definition with new image URI ⚙️
+    - name: Update ECS task definition with new image URIs ⚙️
       id: update-task-definition
-      uses: aws-actions/amazon-ecs-render-task-definition@dcaed1bc6bc474b66e41183372f906fe7a4c6325 # v1.7.0
+      uses: actions/github-script@v6
       with:
-        task-definition: "${{ inputs.task-definition-file-name }}"
-        container-name: "${{ inputs.container-name }}"
-        image: "${{ steps.ecr-login.outputs.registry }}/${{ inputs.image-repository }}:${{ inputs.image-tag }}"
+        script: |
+          const fs = require('fs');
+          const core = require('@actions/core');
+          
+          // Set filenames
+          const taskDefFile = 'task-definition.json';
+          const outputTaskDefFile = 'updated-task-definition.json';
+          
+          // Read task definition
+          const taskDef = JSON.parse(fs.readFileSync(taskDefFile, 'utf8'));
+          
+          // Get ECR registry URL from the ecr-login step
+          const ecrRegistry = '${{ steps.ecr-login.outputs.registry }}';
+          console.log(`Using ECR registry: ${ecrRegistry}`);
+          
+          // Parse images JSON
+          const imagesJson = JSON.parse('${{ inputs.images }}');
+          console.log(`Found ${imagesJson.length} container image(s) to update`);
+          
+          // Update container images
+          imagesJson.forEach(imageConfig => {
+            // Create full image URI with ECR registry
+            const imageUri = `${ecrRegistry}/${imageConfig.image}`;
+          
+            console.log(`Updating container '${containerName}' with image '${imageUri}'`);
+          
+            // Find container in task definition
+            const containerIndex = taskDef.containerDefinitions.findIndex(
+              container => container.name === containerName
+            );
+          
+            if (containerIndex >= 0) {
+              // Update container image
+              taskDef.containerDefinitions[containerIndex].image = imageUri;
+              console.log(`Successfully updated container '${containerName}'`);
+            } else {
+              // Container not found
+              core.warning(`Container '${containerName}' not found in task definition`);
+            }
+          });
+          
+          // Write updated task definition to file
+          fs.writeFileSync(outputTaskDefFile, JSON.stringify(taskDef, null, 2));
+          console.log('Task definition update complete');
+          
+          // Set output
+          core.setOutput('task-definition', outputTaskDefFile);
 
 
     - if: inputs.deploy == 'true'
