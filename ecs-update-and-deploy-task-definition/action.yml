@@ -123,7 +123,7 @@ runs:
       name: Deploy container 🚀
       uses: aws-actions/amazon-ecs-deploy-task-definition@8230edfe842008418c5275908cae75e51d3befb2 # v2.3.0
       with:
-        task-definition: "${{ steps.update-task-definition.outputs.task-definition }}"
-        service: "${{ inputs.service-name }}"
         cluster: "${{ inputs.cluster-name }}"
+        service: "${{ inputs.service-name }}"
+        task-definition: "${{ steps.update-task-definition.outputs.task-definition }}"
         wait-for-service-stability: true
