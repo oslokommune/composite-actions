@@ -77,7 +77,7 @@ runs:
       with:
         script: |
           const fs = require('fs');
-          var imagesJson = core.getInput('images')
+          const imagesJson = JSON.parse(core.getInput('images'));
           
           // Set filenames
           const taskDefFile = 'task-definition.json';
