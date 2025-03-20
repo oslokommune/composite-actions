@@ -1,4 +1,4 @@
-const containerName = imageConfig['container-name'];name: "Update and optionally deploy ECS task definition"
+name: "Update and optionally deploy ECS task definition"
 
 description: "Downloads an existing ECS task definition, updates multiple container image URIs, and optionally deploys the updated task definition to the specified ECS service."
 
@@ -99,6 +99,7 @@ runs:
           // Update container images
           imagesJson.forEach(imageConfig => {
             // Create full image URI with ECR registry
+            const containerName = imageConfig['container-name'];
             const imageUri = `${ecrRegistry}/${imageConfig.image}`;
           
             console.log(`Updating container '${containerName}' with image '${imageUri}'`);
