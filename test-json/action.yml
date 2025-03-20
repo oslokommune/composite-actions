@@ -1,0 +1,22 @@
+name: "Test JSON"
+
+inputs:
+  images:
+    description: "JSON array of containers and images to update in the task definition. Format: [{\"container-name\": \"name\", \"image\": \"uri\"}]"
+    required: true
+
+
+runs:
+  using: composite
+
+  steps:
+    - name: Update ECS task definition with new image URIs ⚙️
+      id: update-task-definition
+      env:
+        INPUT_IMAGES: ${{ inputs.images }}
+      with:
+        script: |
+          const imagesJson = JSON.parse(core.getInput('images'));
+          
+          console.log("imagesJson: ", imagesJson);
+          console.log("imagesJson.length: ", imagesJson.length);
