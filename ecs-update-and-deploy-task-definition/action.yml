@@ -23,10 +23,6 @@ inputs:
     description: "The name of the task definition."
     required: true
 
-  download-existing-task-definition:
-    description: "Download the existing task definition from AWS."
-    required: true
-
   images:
     description: "JSON array of containers and images to update in the task definition. Format: [{\"container-name\": \"name\", \"image\": \"uri\"}]"
     required: true
@@ -59,8 +55,7 @@ runs:
       uses: aws-actions/amazon-ecr-login@062b18b96a7aff071d4dc91bc00c4c1a7945b076 # v2.0.1
 
 
-    - if: inputs.download-existing-task-definition == 'true'
-      name: Download existing ECS task definition ⚙️
+    - name: Download existing ECS task definition ⚙️
       shell: bash
       run: |
         aws ecs describe-task-definition \
