@@ -75,6 +75,7 @@ runs:
       with:
         script: |
           const fs = require('fs');
+          var inputs = ${{ toJSON(inputs) }}
           
           // Set filenames
           const taskDefFile = 'task-definition.json';
@@ -88,7 +89,9 @@ runs:
           console.log(`Using ECR registry: ${ecrRegistry}`);
           
           // Parse images JSON
-          const imagesJson = JSON.parse('${{ inputs.images }}');
+          //const imagesJson = JSON.parse('${{ inputs.images }}');
+          const imagesJson = inputs['images']
+          
           console.log(`Found ${imagesJson.length} container image(s) to update`);
           
           // Update container images
