@@ -161,17 +161,17 @@ runs:
         RUN_TASK_ARN: ${{ steps.deploy.outputs.run-task-arn }}
       run: |
         # Example values to be used for testing in a local script:
-        GITHUB_STEP_SUMMARY="/dev/stdout"
-        IMAGES_JSON='[{"container-name":"flyway","image":"flyway@sha256:0d4626f3160ffcb561926074c0c3305a0faa7955"},{"container-name":"too-tikki","image":"pirates-dev-too-tikki@sha256:c5777a8d16b664157b5ac56196f70527f1ce10e1"}]'
-        AWS_REGION='eu-west-1'
-        ECR_REGISTRY="123456789012.dkr.ecr.$AWS_REGION.amazonaws.com"
-        CLUSTER_NAME='pirates-dev'
-        SERVICE_NAME='too-tikki'
-        TASK_DEFINITION_NAME='too-tikki'
-        DEPLOY='true'
-        TASK_REVISION='42'
-        TASK_DEFINITION_ARN='arn:aws:ecs:eu-west-1:123456789012:task-definition/too-tikki:42'
-        RUN_TASK_ARN='["arn:aws:ecs:eu-west-1:123456789012:task/pirates-dev/84907460b8b24177b892f577fcf7aae6"]'
+#        GITHUB_STEP_SUMMARY="/dev/stdout"
+#        IMAGES_JSON='[{"container-name":"flyway","image":"flyway@sha256:0d4626f3160ffcb561926074c0c3305a0faa7955"},{"container-name":"too-tikki","image":"pirates-dev-too-tikki@sha256:c5777a8d16b664157b5ac56196f70527f1ce10e1"}]'
+#        AWS_REGION='eu-west-1'
+#        ECR_REGISTRY="123456789012.dkr.ecr.$AWS_REGION.amazonaws.com"
+#        CLUSTER_NAME='pirates-dev'
+#        SERVICE_NAME='too-tikki'
+#        TASK_DEFINITION_NAME='too-tikki'
+#        DEPLOY='true'
+#        TASK_REVISION='42'
+#        TASK_DEFINITION_ARN='arn:aws:ecs:eu-west-1:123456789012:task-definition/too-tikki:42'
+#        RUN_TASK_ARN='["arn:aws:ecs:eu-west-1:123456789012:task/pirates-dev/84907460b8b24177b892f577fcf7aae6"]'
 
         # Get AWS account ID from the ECR registry URL
         AWS_ACCOUNT_ID=$(echo "$ECR_REGISTRY" | cut -d. -f1)
