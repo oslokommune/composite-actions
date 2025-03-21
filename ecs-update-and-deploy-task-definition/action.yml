@@ -94,8 +94,8 @@ runs:
           // Update container images
           imagesJson.forEach(imageConfig => {
             // Create full image URI with ECR registry
-            const containerName = imageConfig['container-name'];
-            const imageUri = `${ecrRegistry}/${imageConfig.image}`;
+            const containerName = imageConfig['containerName'];
+            const imageUri = `${ecrRegistry}/${imageConfig.imageRepository}`;
           
             console.log(`Updating container '${containerName}' with image '${imageUri}'`);
           
@@ -143,7 +143,7 @@ runs:
       run: |
         # Example values to be used for testing in a local script:
     #    GITHUB_STEP_SUMMARY="/dev/stdout"
-    #    IMAGES_JSON='[{"container-name":"flyway","image":"flyway@sha256:0d4626f3160ffcb561926074c0c3305a0faa7955"},{"container-name":"too-tikki","image":"pirates-dev-too-tikki@sha256:c5777a8d16b664157b5ac56196f70527f1ce10e1"}]'
+    #    IMAGES_JSON='[{"containerName":"flyway","imageRepository":"flyway@sha256:0d4626f3160ffcb561926074c0c3305a0faa7955"},{"containerName":"too-tikki","imageRepository":"pirates-dev-too-tikki@sha256:c5777a8d16b664157b5ac56196f70527f1ce10e1"}]'
     #    SERVICE_NAME='too-tikki'
     #    TASK_DEFINITION_NAME='too-tikki'
     #    DEPLOY='true'
@@ -167,6 +167,6 @@ runs:
         # Parse and display container images in a table - without showing the ECR registry
         echo "| Container | Image |" >> $GITHUB_STEP_SUMMARY
         echo "| --- | --- |" >> $GITHUB_STEP_SUMMARY
-        echo "$IMAGES_JSON" | jq -r '.[] | "| \(.["container-name"]) | `\(.image)` |"' >> $GITHUB_STEP_SUMMARY
+        echo "$IMAGES_JSON" | jq -r '.[] | "| \(.["containerName"]) | `\(.imageRepository)` |"' >> $GITHUB_STEP_SUMMARY
     
         echo "" >> $GITHUB_STEP_SUMMARY
