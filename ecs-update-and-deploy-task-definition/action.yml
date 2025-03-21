@@ -85,7 +85,10 @@ runs:
           console.log(`Using ECR registry: ${ecrRegistry}`);
           
           // Parse images JSON
-          const imagesJson = JSON.parse(core.getInput('images'));
+          const imagesInput = core.getInput('images');
+          console.log("Images input", imagesInput);
+          
+          const imagesJson = JSON.parse(imagesInput);
           console.log(`Found ${imagesJson.length} container image(s) to update`);
           
           // Update container images
