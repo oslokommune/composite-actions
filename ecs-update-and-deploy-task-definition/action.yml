@@ -93,10 +93,13 @@ runs:
           
           // Update container images
           imagesJson.forEach(imageConfig => {
-            // Create full image URI with ECR registry
-            const containerName = imageConfig['containerName'];
-            const imageUri = `${ecrRegistry}/${imageConfig.image}`;
-          
+            // Get container details
+            const containerName = imageConfig.containerName;
+            const imageRepository = imageConfig.imageRepository;
+            const imageDigest = imageConfig.imageDigest;
+            
+            // Create full image URI with ECR registry and digest
+            const imageUri = `${ecrRegistry}/${imageRepository}@${imageDigest}`;
             console.log(`Updating container '${containerName}' with image '${imageUri}'`);
           
             // Find container in task definition
@@ -120,7 +123,7 @@ runs:
           
           // Set output
           core.setOutput('task-definition', outputTaskDefFile);
-
+    
 
     - if: inputs.deploy == 'true'
       name: Deploy task definition 🚀
@@ -141,15 +144,14 @@ runs:
         TASK_DEFINITION_NAME: ${{ inputs.task-definition-name }}
         DEPLOY: ${{ inputs.deploy }}
       run: |
-#        # Example values to be used for testing in a local script:
-#        GITHUB_STEP_SUMMARY="/dev/stdout"
-#        IMAGES_JSON='[{"containerName":"flyway","imageRepository":"flyway","imageDigest":"sha256:0d4626f3160ffcb561926074c0c3305a0faa7955","imageVersion":"2025-03-06_16-27-31_main_gha-13703418764_sha-b8a861e"},{"containerName":"too-tikki","imageRepository":"pirates-dev-too-tikki","imageDigest":"sha256:c5777a8d16b664157b5ac56196f70527f1ce10e1","imageVersion":"2025-03-06_16-27-31_main_gha-13703418764_sha-b8a861e"}]'
-#        SERVICE_NAME='too-tikki'
-#        TASK_DEFINITION_NAME='too-tikki'
-#        DEPLOY='true'
-        
+            # Example values to be used for testing in a local script:
+    #        GITHUB_STEP_SUMMARY="/dev/stdout"
+    #        IMAGES_JSON='[{"containerName":"flyway","imageRepository":"flyway","imageDigest":"sha256:0d4626f3160ffcb561926074c0c3305a0faa7955","imageVersion":"2025-03-06_16-27-31_main_gha-13703418764_sha-b8a861e"},{"containerName":"too-tikki","imageRepository":"pirates-dev-too-tikki","imageDigest":"sha256:c5777a8d16b664157b5ac56196f70527f1ce10e1","imageVersion":"2025-03-06_16-27-31_main_gha-13703418764_sha-b8a861e"}]'
+    #        SERVICE_NAME='too-tikki'
+    #        TASK_DEFINITION_NAME='too-tikki'
+    #        DEPLOY='true'
         # Count the number of images being deployed
-        IMAGE_COUNT=$(echo "$IMAGES_JSON" | jq 'if type == "array" then length else 1 end')
+        IMAGE_COUNT=$(echo "$IMAGES_JSON" | jq 'length')
         
         echo "## Deployment summary 📋" >> $GITHUB_STEP_SUMMARY
         
@@ -164,11 +166,10 @@ runs:
         echo "### Containers(s) 📦" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         
-        # Parse and display container images in a table with all fields
+        # Parse and display container images in a table with only the new format fields
         echo "| Container | Repository | Digest | Tag |" >> $GITHUB_STEP_SUMMARY
         echo "| --- | --- | --- | --- |" >> $GITHUB_STEP_SUMMARY
         
-        # Handle both array and single object cases and format both digest and version as code
         echo "$IMAGES_JSON" | jq -r 'if type == "array" then .[] else . end | "| \(.containerName) | \(.imageRepository) | `\(.imageDigest)` | `\(.imageVersion)` |"' >> $GITHUB_STEP_SUMMARY
         
         echo "" >> $GITHUB_STEP_SUMMARY
