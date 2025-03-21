@@ -1,4 +1,4 @@
-name: "Update and optionally deploy ECS task definition"
+name: "Update and deploy ECS task definition"
 
 description: "Downloads an existing ECS task definition, updates multiple container image URIs, and optionally deploys the updated task definition to the specified ECS service."
 
@@ -120,7 +120,7 @@ runs:
 
 
     - if: inputs.deploy == 'true'
-      name: Deploy container 🚀
+      name: Deploy task definition 🚀
       uses: aws-actions/amazon-ecs-deploy-task-definition@8230edfe842008418c5275908cae75e51d3befb2 # v2.3.0
       with:
         cluster: "${{ inputs.cluster-name }}"
