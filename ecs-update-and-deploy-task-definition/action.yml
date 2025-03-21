@@ -125,15 +125,15 @@ runs:
           core.setOutput('task-definition', outputTaskDefFile);
     
 
-    - if: inputs.deploy == 'true'
-      name: Deploy task definition 🚀
-      id: deploy
-      uses: aws-actions/amazon-ecs-deploy-task-definition@8230edfe842008418c5275908cae75e51d3befb2 # v2.3.0
-      with:
-        cluster: "${{ inputs.cluster-name }}"
-        service: "${{ inputs.service-name }}"
-        task-definition: "${{ steps.update-task-definition.outputs.task-definition }}"
-        wait-for-service-stability: true
+#    - if: inputs.deploy == 'true'
+#      name: Deploy task definition 🚀
+#      id: deploy
+#      uses: aws-actions/amazon-ecs-deploy-task-definition@8230edfe842008418c5275908cae75e51d3befb2 # v2.3.0
+#      with:
+#        cluster: "${{ inputs.cluster-name }}"
+#        service: "${{ inputs.service-name }}"
+#        task-definition: "${{ steps.update-task-definition.outputs.task-definition }}"
+#        wait-for-service-stability: true
 
 
     - name: Write deployment summary 📝
@@ -152,9 +152,6 @@ runs:
         #        DEPLOY='true'
         # Count the number of images being deployed
              
-        echo IMAGES_JSON:
-        echo "$IMAGES_JSON"
-        
         IMAGE_COUNT=$(echo "$IMAGES_JSON" | jq 'length')
         
         echo "## Deployment summary 📋" >> $GITHUB_STEP_SUMMARY
