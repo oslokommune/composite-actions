@@ -133,106 +133,40 @@ runs:
         wait-for-service-stability: true
 
 
-    - name: Get deployed task definition revision 📋
-      id: get-task-revision
-      if: inputs.deploy == 'true'
-      shell: bash
-      run: |
-        REVISION=$(aws ecs describe-services \
-          --cluster "${{ inputs.cluster-name }}" \
-          --services "${{ inputs.service-name }}" \
-          --query "services[0].taskDefinition" \
-          --output text | awk -F'/' '{print $2}' | awk -F':' '{print $2}')
-        echo "revision=$REVISION" >> $GITHUB_OUTPUT
-
-
     - name: Write deployment summary 📝
       shell: bash
       env:
         IMAGES_JSON: ${{ inputs.images }}
-        ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
-        AWS_REGION: ${{ inputs.aws-region }}
-        CLUSTER_NAME: ${{ inputs.cluster-name }}
         SERVICE_NAME: ${{ inputs.service-name }}
         TASK_DEFINITION_NAME: ${{ inputs.task-definition-name }}
         DEPLOY: ${{ inputs.deploy }}
-        TASK_REVISION: ${{ steps.get-task-revision.outputs.revision }}
-        TASK_DEFINITION_ARN: ${{ steps.deploy.outputs.task-definition-arn }}
-        RUN_TASK_ARN: ${{ steps.deploy.outputs.run-task-arn }}
       run: |
         # Example values to be used for testing in a local script:
-#        GITHUB_STEP_SUMMARY="/dev/stdout"
-#        IMAGES_JSON='[{"container-name":"flyway","image":"flyway@sha256:0d4626f3160ffcb561926074c0c3305a0faa7955"},{"container-name":"too-tikki","image":"pirates-dev-too-tikki@sha256:c5777a8d16b664157b5ac56196f70527f1ce10e1"}]'
-#        AWS_REGION='eu-west-1'
-#        ECR_REGISTRY="123456789012.dkr.ecr.$AWS_REGION.amazonaws.com"
-#        CLUSTER_NAME='pirates-dev'
-#        SERVICE_NAME='too-tikki'
-#        TASK_DEFINITION_NAME='too-tikki'
-#        DEPLOY='true'
-#        TASK_REVISION='42'
-#        TASK_DEFINITION_ARN='arn:aws:ecs:eu-west-1:123456789012:task-definition/too-tikki:42'
-#        RUN_TASK_ARN='["arn:aws:ecs:eu-west-1:123456789012:task/pirates-dev/84907460b8b24177b892f577fcf7aae6"]'
-
-        # Get AWS account ID from the ECR registry URL
-        AWS_ACCOUNT_ID=$(echo "$ECR_REGISTRY" | cut -d. -f1)
+    #    GITHUB_STEP_SUMMARY="/dev/stdout"
+    #    IMAGES_JSON='[{"container-name":"flyway","image":"flyway@sha256:0d4626f3160ffcb561926074c0c3305a0faa7955"},{"container-name":"too-tikki","image":"pirates-dev-too-tikki@sha256:c5777a8d16b664157b5ac56196f70527f1ce10e1"}]'
+    #    SERVICE_NAME='too-tikki'
+    #    TASK_DEFINITION_NAME='too-tikki'
+    #    DEPLOY='true'
 
         # Count the number of images being deployed
         IMAGE_COUNT=$(echo "$IMAGES_JSON" | jq 'length')
-
+    
         echo "## Deployment summary 📋" >> $GITHUB_STEP_SUMMARY
-
+    
         # Add summary statement below title
         if [[ "$DEPLOY" == "true" ]]; then
-          echo "✅ Updated task definition with $IMAGE_COUNT container image(s) and deployed to ECS service \`$SERVICE_NAME\`." >> $GITHUB_STEP_SUMMARY
+          echo "✅ Updated task definition \`$TASK_DEFINITION_NAME\` with $IMAGE_COUNT container image(s) and deployed to ECS service \`$SERVICE_NAME\`." >> $GITHUB_STEP_SUMMARY
         else
-          echo "Updated task definition with $IMAGE_COUNT container image(s). **No deployment was performed.**" >> $GITHUB_STEP_SUMMARY
+          echo "Updated task definition \`$TASK_DEFINITION_NAME\` with $IMAGE_COUNT container image(s). **No deployment was performed.**" >> $GITHUB_STEP_SUMMARY
         fi
         echo "" >> $GITHUB_STEP_SUMMARY
-
+    
         echo "### Containers(s) 📦" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-
-        # Parse and display container images in a table
-        echo "| Container | Image URI |" >> $GITHUB_STEP_SUMMARY
+    
+        # Parse and display container images in a table - without showing the ECR registry
+        echo "| Container | Image |" >> $GITHUB_STEP_SUMMARY
         echo "| --- | --- |" >> $GITHUB_STEP_SUMMARY
-        echo "$IMAGES_JSON" | jq -r '.[] | "| \(.["container-name"]) | `'"$ECR_REGISTRY"'/\(.image)` |"' >> $GITHUB_STEP_SUMMARY
-
+        echo "$IMAGES_JSON" | jq -r '.[] | "| \(.["container-name"]) | `\(.image)` |"' >> $GITHUB_STEP_SUMMARY
+    
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### Task details ⚙️" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "| Parameter | Value |" >> $GITHUB_STEP_SUMMARY
-        echo "| --- | --- |" >> $GITHUB_STEP_SUMMARY
-        echo "| AWS Region | \`$AWS_REGION\` |" >> $GITHUB_STEP_SUMMARY
-
-        # Cluster with link
-        CLUSTER_URL="https://$AWS_ACCOUNT_ID.$AWS_REGION.console.aws.amazon.com/ecs/v2/clusters/$CLUSTER_NAME?region=$AWS_REGION"
-        echo "| Cluster | \`$CLUSTER_NAME\` [[View]($CLUSTER_URL)] |" >> $GITHUB_STEP_SUMMARY
-
-        # Service with link
-        SERVICE_URL="https://$AWS_ACCOUNT_ID.$AWS_REGION.console.aws.amazon.com/ecs/v2/clusters/$CLUSTER_NAME/services/$SERVICE_NAME?region=$AWS_REGION"
-        echo "| Service | \`$SERVICE_NAME\` [[View]($SERVICE_URL)] |" >> $GITHUB_STEP_SUMMARY
-
-        # Task Definition URL for later use
-        TASK_DEF_URL="https://$AWS_ACCOUNT_ID.$AWS_REGION.console.aws.amazon.com/ecs/v2/task-definitions/$TASK_DEFINITION_NAME/$TASK_REVISION/containers?region=$AWS_REGION"
-
-        if [[ "$DEPLOY" == "true" ]]; then
-          # Extract the first task ARN from RUN_TASK_ARN array if available
-          if [ -n "$RUN_TASK_ARN" ] && [ "$RUN_TASK_ARN" != "null" ]; then
-            FIRST_TASK=$(echo "$RUN_TASK_ARN" | jq -r '.[0]')
-            # Extract task ID from the ARN
-            TASK_ID=$(echo "$FIRST_TASK" | sed -E 's/.*task\/[^\/]+\/([^\/]+)$/\1/')
-            # Create task URL
-            TASK_URL="https://$AWS_ACCOUNT_ID.$AWS_REGION.console.aws.amazon.com/ecs/v2/clusters/$CLUSTER_NAME/services/$SERVICE_NAME/tasks/$TASK_ID/configuration?region=$AWS_REGION"
-            # Display task ARN with link
-            echo "| Task ARN | \`$FIRST_TASK\` [[View]($TASK_URL)] |" >> $GITHUB_STEP_SUMMARY
-          fi
-
-          # Show task definition ARN with link if available
-          if [ -n "$TASK_DEFINITION_ARN" ] && [ "$TASK_DEFINITION_ARN" != "null" ]; then
-            echo "| Task Definition ARN | \`$TASK_DEFINITION_ARN\` [[View]($TASK_DEF_URL)] |" >> $GITHUB_STEP_SUMMARY
-          fi
-
-          echo "| Deployment | ✅ Deployed |" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "| Deployment | ❌ Not deployed |" >> $GITHUB_STEP_SUMMARY
-        fi
