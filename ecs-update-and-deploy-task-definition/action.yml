@@ -89,12 +89,13 @@ runs:
           console.log("Images input", imagesInput);
           
           const imagesJson = JSON.parse(imagesInput);
-          console.log(`Found ${imagesJson.length} container image(s) to update`);
+          const containerNames = Object.keys(imagesJson);
+          console.log(`Found ${containerNames.length} container image(s) to update`);
           
           // Update container images
-          imagesJson.forEach(imageConfig => {
-            // Get container details
-            const containerName = imageConfig.containerName;
+          for (const containerName of containerNames) {
+            // Get container details from the object structure
+            const imageConfig = imagesJson[containerName];
             const imageRepository = imageConfig.imageRepository;
             const imageDigest = imageConfig.imageDigest;
             
@@ -115,7 +116,7 @@ runs:
               // Container not found
               core.warning(`Container '${containerName}' not found in task definition`);
             }
-          });
+          }
           
           // Write updated task definition to file
           fs.writeFileSync(outputTaskDefFile, JSON.stringify(taskDef, null, 2));
