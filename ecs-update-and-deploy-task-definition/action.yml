@@ -24,7 +24,7 @@ inputs:
     required: true
 
   images:
-    description: "JSON array of containers and images to update in the task definition. Format: [{\"container-name\": \"name\", \"image\": \"uri\"}]"
+    description: "JSON array of containers and images to update in the task definition. See this action's README for the expected format."
     required: true
 
   deploy:
@@ -147,7 +147,7 @@ runs:
       run: |
         # Example values to be used for testing in a local script:
         #        GITHUB_STEP_SUMMARY="/dev/stdout"
-        #        IMAGES_JSON='[{"containerName":"flyway","imageRepository":"flyway","imageDigest":"sha256:0d4626f3160ffcb561926074c0c3305a0faa7955","imageVersion":"2025-03-06_16-27-31_main_gha-13703418764_sha-b8a861e"},{"containerName":"too-tikki","imageRepository":"pirates-dev-too-tikki","imageDigest":"sha256:c5777a8d16b664157b5ac56196f70527f1ce10e1","imageVersion":"2025-03-06_16-27-31_main_gha-13703418764_sha-b8a861e"}]'
+        #        IMAGES_JSON='{"init-container":{"imageRepository":"pirates-dev-too-tikki-init","imageDigest":"sha256:0d4626f3160ffcb561926074c0c3305a0faa7955","imageTag":"2025-03-06_16-27-31_main_gha-13703418764_sha-b8a861e"},"too-tikki":{"imageRepository":"pirates-dev-too-tikki-main","imageDigest":"sha256:c5777a8d16b664157b5ac56196f70527f1ce10e1","imageTag":"2025-03-06_16-27-31_main_gha-13703418764_sha-b8a861e"}}'
         #        SERVICE_NAME='too-tikki'
         #        TASK_DEFINITION_NAME='too-tikki'
         #        DEPLOY='true'
@@ -172,6 +172,6 @@ runs:
         echo "| Container | Repository | Digest | Tag |" >> $GITHUB_STEP_SUMMARY
         echo "| --- | --- | --- | --- |" >> $GITHUB_STEP_SUMMARY
         
-        echo "$IMAGES_JSON" | jq -r 'if type == "array" then .[] else . end | "| \(.containerName) | \(.imageRepository) | `\(.imageDigest)` | `\(.imageVersion)` |"' >> $GITHUB_STEP_SUMMARY
+        echo "$IMAGES_JSON" | jq -r 'to_entries[] | "| \(.key) | \(.value.imageRepository) | `\(.value.imageDigest)` | `\(.value.imageTag)` |"' >> $GITHUB_STEP_SUMMARY
         
         echo "" >> $GITHUB_STEP_SUMMARY
