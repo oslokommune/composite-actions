@@ -147,7 +147,6 @@ runs:
       shell: bash
       run: |
         echo "**No deployment was performed.**" >> $GITHUB_STEP_SUMMARY
-        exit 0
 
 
     - if: inputs.deploy == 'true'
