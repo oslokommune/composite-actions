@@ -164,6 +164,7 @@ runs:
         AWS_REGION: ${{ inputs.aws-region }}
         CLUSTER_NAME: ${{ inputs.cluster-name }}
         ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+        RUN_TASK_ARN: ${{ steps.deploy.outputs.run-task-arn }}
       run: |
         # Get the latest revision from the deployed service
         TASK_REVISION=$(aws ecs describe-services \
@@ -173,6 +174,9 @@ runs:
           --output text | awk -F'/' '{print $2}' | awk -F':' '{print $2}')
         echo "revision=$TASK_REVISION" >> $GITHUB_OUTPUT
 
+        echo "RUN_TASK_ARN: $RUN_TASK_ARN"
+        echo "RUN_TASK_ARN: $RUN_TASK_ARN" >>  >> $GITHUB_STEP_SUMMARY
+        
         # Get the latest task ID
         TASK_ID=$(aws ecs list-tasks \
           --cluster "$CLUSTER_NAME" \
