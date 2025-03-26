@@ -179,7 +179,7 @@ runs:
         SERVICE_URL="https://$AWS_REGION.console.aws.amazon.com/ecs/v2/clusters/$CLUSTER_NAME/services/$SERVICE_NAME?region=$AWS_REGION"
         TASK_REVISION=$(echo "$TASK_DEFINITION_ARN" | cut -d ':' -f 7)
         TASK_DEF_URL="https://$AWS_REGION.console.aws.amazon.com/ecs/v2/task-definitions/$TASK_DEFINITION_NAME/$TASK_REVISION/containers?region=$AWS_REGION"
-        CONTAINER_ROWS=$(echo "$IMAGES_JSON" | jq -r 'to_entries[] | "| \(.key) | \(.value.imageRepository) | `\(.value.imageDigest)` | `\(.value.imageTag)` |"')
+        CONTAINER_ROWS=$(echo "$IMAGES_JSON" | jq -r 'to_entries[] | "| `\(.key)` | \(.value.imageRepository) | `\(.value.imageDigest)` | `\(.value.imageTag)` |"')
         
         #######################################
         ### Write the deployment summary 📝 ###
@@ -192,9 +192,9 @@ runs:
         ✅ Updated task definition successfully.
         
         | Item | Link |
-        |-------------------|--------------------------------------------------------------------------------------|
-        | ECS service       | [$SERVICE_NAME]($SERVICE_URL){:target="_blank"} ↗️                                   |
-        | Task definition   | [$TASK_DEFINITION_NAME:$TASK_REVISION]($TASK_DEF_URL){:target="_blank"} ↗️           |
+        |-------------------|----------------------------------------------------------|
+        | ECS service       | [$SERVICE_NAME]($SERVICE_URL)                            |
+        | Task definition   | [$TASK_DEFINITION_NAME:$TASK_REVISION]($TASK_DEF_URL)    |
         
         ### Container(s) updated 📦
         
