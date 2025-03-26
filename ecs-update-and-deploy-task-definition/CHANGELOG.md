@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.0](https://github.com/oslokommune/composite-actions/compare/ecs-update-and-deploy-task-definition-v1.2.2...ecs-update-and-deploy-task-definition-v2.0.0) (2025-03-26)
+
+
+### ⚠ BREAKING CHANGES
+
+* Support deploying multiple containers ([#103](https://github.com/oslokommune/composite-actions/issues/103))
+
+### Features
+
+* Support deploying multiple containers ([#103](https://github.com/oslokommune/composite-actions/issues/103)) ([d22c7cf](https://github.com/oslokommune/composite-actions/commit/d22c7cffd1f172a68b29cd1ce009806e24008d00))
+
 ## [1.2.2](https://github.com/oslokommune/composite-actions/compare/ecs-update-and-deploy-task-definition-v1.2.1...ecs-update-and-deploy-task-definition-v1.2.2) (2025-03-04)
 
 
