@@ -177,42 +177,32 @@ runs:
         #CLUSTER_NAME='pirates-dev'
         #TASK_DEFINITION_NAME='too-tikki'
         #TASK_DEFINITION_ARN="arn:aws:ecs:$AWS_REGION:$AWS_ACCOUNT_ID:task-definition/$TASK_DEFINITION_NAME:143"
-    
-        # Count the number of images being deployed
+        
+        # Calculate all variables first
         IMAGE_COUNT=$(echo "$IMAGES_JSON" | jq 'length')
-    
-        # Get AWS account ID from the ECR registry URL
         AWS_ACCOUNT_ID=$(echo "$ECR_REGISTRY" | cut -d. -f1)
-    
-        # Build AWS Console URLs
-        SERVICE_URL="https://$AWS_ACCOUNT_ID.$AWS_REGION.console.aws.amazon.com/ecs/v2/clusters/$CLUSTER_NAME/services/$SERVICE_NAME?region=$AWS_REGION"
+        SERVICE_URL="https://$AWS_REGION.console.aws.amazon.com/ecs/v2/clusters/$CLUSTER_NAME/services/$SERVICE_NAME?region=$AWS_REGION"
         TASK_REVISION=$(echo "$TASK_DEFINITION_ARN" | cut -d ':' -f 7)
-        TASK_DEF_URL="https://$AWS_ACCOUNT_ID.$AWS_REGION.console.aws.amazon.com/ecs/v2/task-definitions/$TASK_DEFINITION_NAME/$TASK_REVISION/containers?region=$AWS_REGION"
-    
-        if [[ ! -z "$TASK_ID" ]]; then
-          TASK_URL="https://$AWS_ACCOUNT_ID.$AWS_REGION.console.aws.amazon.com/ecs/v2/clusters/$CLUSTER_NAME/services/$SERVICE_NAME/tasks/$TASK_ID/configuration?region=$AWS_REGION"
-        fi
-    
-        echo "## Deployment summary 📋" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "✅ Updated task definition successfully." >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-    
-        # Add table with links
-        echo "| Item | Link |" >> $GITHUB_STEP_SUMMARY
-        echo "|-------------------|-------------------------------------------|" >> $GITHUB_STEP_SUMMARY
-        echo "| ECS service | [$SERVICE_NAME]($SERVICE_URL) ↗️ |" >> $GITHUB_STEP_SUMMARY
-        echo "| Task definition | [$TASK_DEFINITION_NAME:$TASK_REVISION]($TASK_DEF_URL) ↗️ |" >> $GITHUB_STEP_SUMMARY
-    
-        echo "" >> $GITHUB_STEP_SUMMARY
-    
-        echo "### Container(s) updated 📦" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-    
-        # Parse and display container images in a table
-        echo "| Container | Repository | Digest | Tag |" >> $GITHUB_STEP_SUMMARY
-        echo "| --- | --- | --- | --- |" >> $GITHUB_STEP_SUMMARY
-    
-        echo "$IMAGES_JSON" | jq -r 'to_entries[] | "| \(.key) | \(.value.imageRepository) | `\(.value.imageDigest)` | `\(.value.imageTag)` |"' >> $GITHUB_STEP_SUMMARY
-    
-        echo "" >> $GITHUB_STEP_SUMMARY
+        TASK_DEF_URL="https://$AWS_REGION.console.aws.amazon.com/ecs/v2/task-definitions/$TASK_DEFINITION_NAME/$TASK_REVISION/containers?region=$AWS_REGION"
+        
+        # Generate container table entries
+        CONTAINER_ROWS=$(echo "$IMAGES_JSON" | jq -r 'to_entries[] | "| \(.key) | \(.value.imageRepository) | `\(.value.imageDigest)` | `\(.value.imageTag)` |"')
+        
+        # Generate the entire summary at once
+        cat << EOF >> $GITHUB_STEP_SUMMARY
+        
+        ## Deployment summary 📋
+        
+        ✅ Updated task definition successfully.
+        
+        | Item | Link |
+        |-------------------|--------------------------------------------------------------------|
+        | ECS service       | [$SERVICE_NAME]($SERVICE_URL) ↗️                                   |
+        | Task definition   | [$TASK_DEFINITION_NAME:$TASK_REVISION]($TASK_DEF_URL) ↗️           |
+        
+        ### Container(s) updated 📦
+        
+        | Container | Repository | Digest | Tag |
+        | --- | --- | --- | --- |
+        $CONTAINER_ROWS
+        EOF
