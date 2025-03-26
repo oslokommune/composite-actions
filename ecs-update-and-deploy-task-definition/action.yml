@@ -192,9 +192,9 @@ runs:
         ✅ Updated task definition successfully.
         
         | Item | Link |
-        |-------------------|--------------------------------------------------------------------|
-        | ECS service       | [$SERVICE_NAME]($SERVICE_URL) ↗️                                   |
-        | Task definition   | [$TASK_DEFINITION_NAME:$TASK_REVISION]($TASK_DEF_URL) ↗️           |
+        |-------------------|--------------------------------------------------------------------------------------|
+        | ECS service       | [$SERVICE_NAME]($SERVICE_URL){:target="_blank"} ↗️                                   |
+        | Task definition   | [$TASK_DEFINITION_NAME:$TASK_REVISION]($TASK_DEF_URL){:target="_blank"} ↗️           |
         
         ### Container(s) updated 📦
         
