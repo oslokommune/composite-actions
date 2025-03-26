@@ -178,17 +178,17 @@ runs:
         #TASK_DEFINITION_NAME='too-tikki'
         #TASK_DEFINITION_ARN="arn:aws:ecs:$AWS_REGION:$AWS_ACCOUNT_ID:task-definition/$TASK_DEFINITION_NAME:143"
         
-        # Calculate all variables first
         IMAGE_COUNT=$(echo "$IMAGES_JSON" | jq 'length')
         AWS_ACCOUNT_ID=$(echo "$ECR_REGISTRY" | cut -d. -f1)
         SERVICE_URL="https://$AWS_REGION.console.aws.amazon.com/ecs/v2/clusters/$CLUSTER_NAME/services/$SERVICE_NAME?region=$AWS_REGION"
         TASK_REVISION=$(echo "$TASK_DEFINITION_ARN" | cut -d ':' -f 7)
         TASK_DEF_URL="https://$AWS_REGION.console.aws.amazon.com/ecs/v2/task-definitions/$TASK_DEFINITION_NAME/$TASK_REVISION/containers?region=$AWS_REGION"
-        
-        # Generate container table entries
         CONTAINER_ROWS=$(echo "$IMAGES_JSON" | jq -r 'to_entries[] | "| \(.key) | \(.value.imageRepository) | `\(.value.imageDigest)` | `\(.value.imageTag)` |"')
         
-        # Generate the entire summary at once
+        #######################################
+        ### Write the deployment summary 📝 ###
+        #######################################
+        
         cat << EOF >> $GITHUB_STEP_SUMMARY
         
         ## Deployment summary 📋
