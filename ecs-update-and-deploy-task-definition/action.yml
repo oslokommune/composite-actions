@@ -146,10 +146,6 @@ runs:
       name: Write simple summary for non-deployment 📝
       shell: bash
       run: |
-        # Example values to be used for testing in a local script:
-        #        GITHUB_STEP_SUMMARY="/dev/stdout"
-        #        DEPLOY='false'
-        
         echo "**No deployment was performed.**" >> $GITHUB_STEP_SUMMARY
         exit 0
 
