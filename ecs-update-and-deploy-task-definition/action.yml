@@ -31,6 +31,11 @@ inputs:
     description: "Deploy the task definition. Can be either \"true\" or \"false\"."
     required: true
 
+  wait-for-service-stability:
+    description: 'Whether to wait for the ECS service to reach stable state after deploying the new task definition. Default \"true\".'
+    required: false
+    default: true
+
 
 outputs:
   task-definition-file-name:
@@ -134,7 +139,7 @@ runs:
         cluster: "${{ inputs.cluster-name }}"
         service: "${{ inputs.service-name }}"
         task-definition: "${{ steps.update-task-definition.outputs.task-definition }}"
-        wait-for-service-stability: true
+        wait-for-service-stability: "${{ inputs.wait-for-service-stability }}"
 
 
     - if: inputs.deploy == 'false'
@@ -178,16 +183,15 @@ runs:
     
         # To test the summary locally, copy the rest of this workflow into a script, uncomment the variables, and run.
         #
-        #        ECR_REGISTRY='123456789012.dkr.ecr.$AWS_REGION.amazonaws.com'
-        #
-        #        GITHUB_STEP_SUMMARY="/dev/stdout"
-        #        IMAGES_JSON='{"init-container":{"imageRepository":"pirates-dev-too-tikki-init","imageDigest":"sha256:0d4626f3160ffcb561926074c0c3305a0faa7955","imageTag":"2025-03-06_16-27-31_main_gha-13703418764_sha-b8a861e"},"too-tikki":{"imageRepository":"pirates-dev-too-tikki-main","imageDigest":"sha256:c5777a8d16b664157b5ac56196f70527f1ce10e1","imageTag":"2025-03-06_16-27-31_main_gha-13703418764_sha-b8a861e"}}'
-        #        SERVICE_NAME='too-tikki'
-        #        TASK_DEFINITION_NAME='too-tikki'
-        #        AWS_REGION='eu-west-1'
-        #        CLUSTER_NAME='pirates-dev'
-        #        TASK_REVISION='42'
-        #        TASK_ID='5944ec0e1ac64736a7d863582d06ef53'
+        #ECR_REGISTRY='123456789012.dkr.ecr.$AWS_REGION.amazonaws.com'
+        #GITHUB_STEP_SUMMARY="/dev/stdout"
+        #IMAGES_JSON='{"init-container":{"imageRepository":"pirates-dev-too-tikki-init","imageDigest":"sha256:0d4626f3160ffcb561926074c0c3305a0faa7955","imageTag":"2025-03-06_16-27-31_main_gha-13703418764_sha-b8a861e"},"too-tikki":{"imageRepository":"pirates-dev-too-tikki-main","imageDigest":"sha256:c5777a8d16b664157b5ac56196f70527f1ce10e1","imageTag":"2025-03-06_16-27-31_main_gha-13703418764_sha-b8a861e"}}'
+        #SERVICE_NAME='too-tikki'
+        #TASK_DEFINITION_NAME='too-tikki'
+        #AWS_REGION='eu-west-1'
+        #CLUSTER_NAME='pirates-dev'
+        #TASK_REVISION='42'
+        #TASK_ID='5944ec0e1ac64736a7d863582d06ef53'
     
         # Count the number of images being deployed
         IMAGE_COUNT=$(echo "$IMAGES_JSON" | jq 'length')
