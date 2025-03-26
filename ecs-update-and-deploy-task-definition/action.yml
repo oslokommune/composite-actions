@@ -160,42 +160,23 @@ runs:
       env:
         IMAGES_JSON: ${{ inputs.images }}
         SERVICE_NAME: ${{ inputs.service-name }}
-        TASK_DEFINITION_NAME: ${{ inputs.task-definition-name }}
         AWS_REGION: ${{ inputs.aws-region }}
         CLUSTER_NAME: ${{ inputs.cluster-name }}
         ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
-        RUN_TASK_ARN: ${{ steps.deploy.outputs.run-task-arn }}
+        TASK_DEFINITION_NAME: ${{ inputs.task-definition-name }}
+        TASK_DEFINITION_ARN: ${{ steps.deploy.outputs.task-definition-arn }}
       run: |
-        # Get the latest revision from the deployed service
-        TASK_REVISION=$(aws ecs describe-services \
-          --cluster "${{ inputs.cluster-name }}" \
-          --services "${{ inputs.service-name }}" \
-          --query "services[0].taskDefinition" \
-          --output text | awk -F'/' '{print $2}' | awk -F':' '{print $2}')
-        echo "revision=$TASK_REVISION" >> $GITHUB_OUTPUT
-
-        echo "RUN_TASK_ARN: $RUN_TASK_ARN"
-        echo "RUN_TASK_ARN: $RUN_TASK_ARN" >>  >> $GITHUB_STEP_SUMMARY
-        
-        # Get the latest task ID
-        TASK_ID=$(aws ecs list-tasks \
-          --cluster "$CLUSTER_NAME" \
-          --service-name "$SERVICE_NAME" \
-          --desired-status RUNNING \
-          --query "taskArns[0]" \
-          --output text | awk -F'/' '{print $3}')
-    
         # To test the summary locally, copy the rest of this workflow into a script, uncomment the variables, and run.
         #
-        #ECR_REGISTRY='123456789012.dkr.ecr.$AWS_REGION.amazonaws.com'
+        #AWS_ACCOUNT_ID='123456789012'
+        #ECR_REGISTRY="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
         #GITHUB_STEP_SUMMARY="/dev/stdout"
         #IMAGES_JSON='{"init-container":{"imageRepository":"pirates-dev-too-tikki-init","imageDigest":"sha256:0d4626f3160ffcb561926074c0c3305a0faa7955","imageTag":"2025-03-06_16-27-31_main_gha-13703418764_sha-b8a861e"},"too-tikki":{"imageRepository":"pirates-dev-too-tikki-main","imageDigest":"sha256:c5777a8d16b664157b5ac56196f70527f1ce10e1","imageTag":"2025-03-06_16-27-31_main_gha-13703418764_sha-b8a861e"}}'
         #SERVICE_NAME='too-tikki'
-        #TASK_DEFINITION_NAME='too-tikki'
         #AWS_REGION='eu-west-1'
         #CLUSTER_NAME='pirates-dev'
-        #TASK_REVISION='42'
-        #TASK_ID='5944ec0e1ac64736a7d863582d06ef53'
+        #TASK_DEFINITION_NAME='too-tikki'
+        #TASK_DEFINITION_ARN="arn:aws:ecs:$AWS_REGION:$AWS_ACCOUNT_ID:task-definition/$TASK_DEFINITION_NAME:143"
     
         # Count the number of images being deployed
         IMAGE_COUNT=$(echo "$IMAGES_JSON" | jq 'length')
@@ -205,6 +186,7 @@ runs:
     
         # Build AWS Console URLs
         SERVICE_URL="https://$AWS_ACCOUNT_ID.$AWS_REGION.console.aws.amazon.com/ecs/v2/clusters/$CLUSTER_NAME/services/$SERVICE_NAME?region=$AWS_REGION"
+        TASK_REVISION=$(echo "$TASK_DEFINITION_ARN" | cut -d ':' -f 7)
         TASK_DEF_URL="https://$AWS_ACCOUNT_ID.$AWS_REGION.console.aws.amazon.com/ecs/v2/task-definitions/$TASK_DEFINITION_NAME/$TASK_REVISION/containers?region=$AWS_REGION"
     
         if [[ ! -z "$TASK_ID" ]]; then
@@ -212,21 +194,16 @@ runs:
         fi
     
         echo "## Deployment summary 📋" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
         echo "✅ Updated task definition successfully." >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
     
         # Add table with links
         echo "| Item | Link |" >> $GITHUB_STEP_SUMMARY
         echo "|-------------------|-------------------------------------------|" >> $GITHUB_STEP_SUMMARY
-    
-        # Add task link if available
-        echo "| Task | [$TASK_ID]($TASK_URL) ↗️ |" >> $GITHUB_STEP_SUMMARY
-    
-        # Add task definition link
+        echo "| ECS service | [$SERVICE_NAME]($SERVICE_URL) ↗️ |" >> $GITHUB_STEP_SUMMARY
         echo "| Task definition | [$TASK_DEFINITION_NAME:$TASK_REVISION]($TASK_DEF_URL) ↗️ |" >> $GITHUB_STEP_SUMMARY
     
-        # Add service link
-        echo "| ECS service | [$SERVICE_NAME]($SERVICE_URL) ↗️ |" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
     
         echo "### Container(s) updated 📦" >> $GITHUB_STEP_SUMMARY
