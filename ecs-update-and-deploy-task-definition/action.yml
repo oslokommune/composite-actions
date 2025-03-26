@@ -32,9 +32,9 @@ inputs:
     required: true
 
   wait-for-service-stability:
-    description: 'Whether to wait for the ECS service to reach stable state after deploying the new task definition. Default \"true\".'
+    description: 'Whether to wait for the ECS service to reach stable state after deploying the new task definition. Default "true" Can be either "true" or "false".'
     required: false
-    default: true
+    default: "true"
 
 
 outputs:
