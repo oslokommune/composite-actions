@@ -1,6 +1,8 @@
 name: "Update and deploy ECS task definition"
 
-description: "Downloads an existing ECS task definition, updates multiple container image URIs, and optionally deploys the updated task definition to the specified ECS service."
+description: |
+  Downloads an existing ECS task definition, updates multiple container image URIs, optionally deploys the updated task
+  definition to the specified ECS service, and writes the images deployed to an SSM parameter.
 
 inputs:
   aws-region:
@@ -36,6 +38,10 @@ inputs:
     required: false
     default: "true"
 
+  images-ssm-parameter-name:
+    description: 'The name of the SSM parameter to store the images JSON in. Must be provided if deploy is "true"'
+    required: false
+
 
 outputs:
   task-definition-file-name:
@@ -47,6 +53,16 @@ runs:
   using: composite
 
   steps:
+
+
+    - name: Check if images-ssm-parameter-name is empty ❌
+      if: inputs.deploy == 'true' && inputs.images-ssm-parameter-name == ''
+      shell: bash
+      run: |
+        echo "Error: images-ssm-parameter-name is required but not provided."
+        exit 1
+
+
     - name: Configure AWS credentials using the OpenID Connect (OIDC) provider 🔑
       uses: aws-actions/configure-aws-credentials@ececac1a45f3b08a01d2dd070d28d111c5fe6722 # v4.1.0
       with:
@@ -139,7 +155,38 @@ runs:
         cluster: "${{ inputs.cluster-name }}"
         service: "${{ inputs.service-name }}"
         task-definition: "${{ steps.update-task-definition.outputs.task-definition }}"
+        propagate-tags: "SERVICE"
         wait-for-service-stability: "${{ inputs.wait-for-service-stability }}"
+
+
+    - if: inputs.deploy == 'true'
+      name: Write deployed images to SSM parameter 📝
+      shell: bash
+      env:
+        DEPLOYED_IMAGES: ${{ inputs.images }}
+        SSM_PARAMETER_NAME: ${{ inputs.images-ssm-parameter-name }}
+      run: |
+        echo "Deployed images:"
+        echo $DEPLOYED_IMAGES | jq
+        
+        CURRENT_IMAGES=$(aws ssm get-parameter \
+          --name "$SSM_PARAMETER_NAME" \
+          --query "Parameter.Value" \
+          --output text)
+        echo "Current images:"
+        echo $CURRENT_IMAGES
+        echo $CURRENT_IMAGES | jq
+
+        MERGED_IMAGES=$(echo "$CURRENT_IMAGES" | jq --argjson new "$DEPLOYED_IMAGES" '. + $new')
+        echo "Merged images:"
+        echo $MERGED_IMAGES | jq
+        
+        aws ssm put-parameter \
+          --name "$SSM_PARAMETER_NAME" \
+          --type "String" \
+          --value "$MERGED_IMAGES" \
+          --overwrite
+        echo "✅ Wrote deployed images to SSM parameter '$SSM_PARAMETER_NAME'"
 
 
     - if: inputs.deploy == 'false'
@@ -160,6 +207,7 @@ runs:
         ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
         TASK_DEFINITION_NAME: ${{ inputs.task-definition-name }}
         TASK_DEFINITION_ARN: ${{ steps.deploy.outputs.task-definition-arn }}
+        IMAGES_SSM_PARAMETER_NAME: ${{ inputs.images-ssm-parameter-name }}
       run: |
         # To test the summary locally, copy the rest of this workflow into a script, uncomment the variables, and run.
         #
@@ -172,6 +220,7 @@ runs:
         #CLUSTER_NAME='pirates-dev'
         #TASK_DEFINITION_NAME='too-tikki'
         #TASK_DEFINITION_ARN="arn:aws:ecs:$AWS_REGION:$AWS_ACCOUNT_ID:task-definition/$TASK_DEFINITION_NAME:143"
+        #IMAGES_SSM_PARAMETER_NAME="/ecs/pirates-dev/too-tikki/images"
         
         IMAGE_COUNT=$(echo "$IMAGES_JSON" | jq 'length')
         AWS_ACCOUNT_ID=$(echo "$ECR_REGISTRY" | cut -d. -f1)
@@ -186,9 +235,9 @@ runs:
         
         cat << EOF >> $GITHUB_STEP_SUMMARY
         
-        ## Deployment summary 📋
+        ## Deployment summary TEMP 📋
         
-        ✅ Updated task definition successfully.
+        ✅ Successfully updated task definition.
         
         | Item | Link |
         |-------------------|----------------------------------------------------------|
@@ -196,8 +245,13 @@ runs:
         | Task definition   | [$TASK_DEFINITION_NAME:$TASK_REVISION]($TASK_DEF_URL)    |
         
         ### Container(s) updated 📦
-        
-        | Container | Repository | Digest | Tag |
-        | --- | --- | --- | --- |
+        | Container | ECR repository | Digest | Tag |
+        | --------- | -------------- | ------ | --- |
         $CONTAINER_ROWS
+        
         EOF
+        
+        if [ -n "$IMAGES_SSM_PARAMETER_NAME" ]; then  
+          SSM_URL="https://$AWS_REGION.console.aws.amazon.com/systems-manager/parameters/$IMAGES_SSM_PARAMETER_NAME/description?region=$AWS_REGION"  
+          echo "✅ Successfully wrote image metadata to SSM parameter [$IMAGES_SSM_PARAMETER_NAME]($SSM_URL)." >> $GITHUB_STEP_SUMMARY  
+        fi
