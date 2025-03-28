@@ -171,8 +171,9 @@ runs:
         CURRENT_IMAGES=$(aws ssm get-parameter \
           --name "$SSM_PARAMETER_NAME" \
           --query "Parameter.Value" \
-          --output text 2>/dev/null || echo "{}")
+          --output text)
         echo "Current images:"
+        echo $CURRENT_IMAGES
         echo $CURRENT_IMAGES | jq
 
         MERGED_IMAGES=$(echo "$CURRENT_IMAGES" | jq --argjson new "$DEPLOYED_IMAGES" '. + $new')
