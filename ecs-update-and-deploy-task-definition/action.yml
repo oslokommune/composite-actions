@@ -162,21 +162,24 @@ runs:
       name: Write deployed images to SSM parameter 📝
       shell: bash
       env:
-        IMAGES_JSON: ${{ inputs.images }}
+        DEPLOYED_IMAGES: ${{ inputs.images }}
         SSM_PARAMETER_NAME: ${{ inputs.images-ssm-parameter-name }}
       run: |
-        echo "Images: $IMAGES_JSON"
+        echo "Deployed images:"
+        echo $DEPLOYED_IMAGES | jq
         
         CURRENT_IMAGES=$(aws ssm get-parameter \
           --name "$SSM_PARAMETER_NAME" \
           --query "Parameter.Value" \
           --output text 2>/dev/null || echo "{}")
-        echo "Current image: $CURRENT_IMAGES"
+        echo "Current images:"
+        echo $CURRENT_IMAGES | jq
 
-        MERGED_IMAGES=$(echo "$CURRENT_IMAGES" | jq --argjson new "$IMAGES_JSON" '. + $new')
-        echo "Merged images JSON: $MERGED_IMAGES"
+        MERGED_IMAGES=$(echo "$CURRENT_IMAGES" | jq --argjson new "$DEPLOYED_IMAGES" '. + $new')
+        echo "Merged images:"
+        echo $MERGED_IMAGES | jq
         
-        echo "Writing images JSON to SSM parameter '$SSM_PARAMETER_NAME'"
+        echo "Writing deployed images to SSM parameter '$SSM_PARAMETER_NAME'"
         aws ssm put-parameter \
           --name "$SSM_PARAMETER_NAME" \
           --type "String" \
