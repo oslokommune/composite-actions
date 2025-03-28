@@ -179,12 +179,12 @@ runs:
         echo "Merged images:"
         echo $MERGED_IMAGES | jq
         
-        echo "Writing deployed images to SSM parameter '$SSM_PARAMETER_NAME'"
         aws ssm put-parameter \
           --name "$SSM_PARAMETER_NAME" \
           --type "String" \
           --value "$MERGED_IMAGES" \
           --overwrite
+        echo "✅ Wrote deployed images to SSM parameter '$SSM_PARAMETER_NAME'"
 
 
     - if: inputs.deploy == 'false'
