@@ -236,7 +236,7 @@ runs:
         
         ## Deployment summary 📋
         
-        ✅ Updated task definition successfully.
+        ✅ Successfully updated task definition.
         
         | Item | Link |
         |-------------------|----------------------------------------------------------|
@@ -244,13 +244,13 @@ runs:
         | Task definition   | [$TASK_DEFINITION_NAME:$TASK_REVISION]($TASK_DEF_URL)    |
         
         ### Container(s) updated 📦
-        | Container | Repository | Digest | Tag |
-        | --------- | ---------- | ------ | --- |
+        | Container | ECR repository | Digest | Tag |
+        | --------- | -------------- | ------ | --- |
         $CONTAINER_ROWS
         
         EOF
         
         if [ -n "$IMAGES_SSM_PARAMETER_NAME" ]; then  
           SSM_URL="https://$AWS_REGION.console.aws.amazon.com/systems-manager/parameters/$IMAGES_SSM_PARAMETER_NAME/description?region=$AWS_REGION"  
-          echo "Wrote image metadata to SSM parameter [$IMAGES_SSM_PARAMETER_NAME]($SSM_URL)." >> $GITHUB_STEP_SUMMARY  
+          echo "✅ Successfully wrote image metadata to SSM parameter [$IMAGES_SSM_PARAMETER_NAME]($SSM_URL)." >> $GITHUB_STEP_SUMMARY  
         fi
