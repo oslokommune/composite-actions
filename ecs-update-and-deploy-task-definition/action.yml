@@ -85,33 +85,6 @@ runs:
           | jq 'del(.registeredAt, .registeredBy, .compatibilities, .taskDefinitionArn, .requiresAttributes, .revision, .status)' > "task-definition.json"
 
 
-    - name: Get existing task definition tags 🏷️
-      id: get-task-tags
-      shell: bash
-      run: |
-        # Get the latest task definition ARN
-        TASK_DEF_ARN=$(aws ecs describe-task-definition \
-          --task-definition "${{ inputs.task-definition-name }}" \
-          --query taskDefinition.taskDefinitionArn \
-          --output text)
-        
-        echo "Task definition ARN: $TASK_DEF_ARN"
-        
-        # List tags for the task definition
-        TAGS_JSON=$(aws ecs list-tags-for-resource \
-          --resource-arn "$TASK_DEF_ARN" \
-          --output json)
-        
-        # Format tags for the ECS deploy action
-        FORMATTED_TAGS=$(echo $TAGS_JSON | jq -c '.tags | map({key: .key, value: .value})')
-        
-        # Store tags in output
-        echo "tags=$FORMATTED_TAGS" >> $GITHUB_OUTPUT
-        
-        echo "Retrieved tags:"
-        echo $FORMATTED_TAGS | jq
-
-
     - name: Update ECS task definition with new image URIs ⚙️
       id: update-task-definition
       uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
@@ -182,9 +155,8 @@ runs:
         cluster: "${{ inputs.cluster-name }}"
         service: "${{ inputs.service-name }}"
         task-definition: "${{ steps.update-task-definition.outputs.task-definition }}"
-        #propagate-tags: "SERVICE"
+        propagate-tags: "SERVICE"
         wait-for-service-stability: "${{ inputs.wait-for-service-stability }}"
-        run-task-tags: "${{ steps.get-task-tags.outputs.tags }}"
 
 
     - if: inputs.deploy == 'true'
