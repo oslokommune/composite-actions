@@ -194,19 +194,22 @@ runs:
         DEPLOYED_IMAGES: ${{ inputs.images }}
         SSM_PARAMETER_NAME: ${{ inputs.images-ssm-parameter-name }}
       run: |
-        echo "Deployed images:"
+        echo "Deployed images: (This is the image to update in the task definition.)"
         echo $DEPLOYED_IMAGES | jq
+        echo
         
         CURRENT_IMAGES=$(aws ssm get-parameter \
           --name "$SSM_PARAMETER_NAME" \
           --query "Parameter.Value" \
           --output text)
-        echo "Current images:"
+        echo "Current images from SSM:"
         echo $CURRENT_IMAGES | jq
+        echo
 
         MERGED_IMAGES=$(echo "$CURRENT_IMAGES" | jq --argjson new "$DEPLOYED_IMAGES" '. + $new')
-        echo "Merged images:"
+        echo "Current images from SSM merged with deployed images:"
         echo $MERGED_IMAGES | jq
+        echo
         
         aws ssm put-parameter \
           --name "$SSM_PARAMETER_NAME" \
