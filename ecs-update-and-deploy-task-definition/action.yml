@@ -43,12 +43,6 @@ inputs:
     required: false
 
 
-outputs:
-  task-definition-file-name:
-    description: "The path to the rendered task definition file."
-    value: "${{ steps.update-task-definition.outputs.task-definition }}"
-
-
 runs:
   using: composite
 
@@ -76,13 +70,28 @@ runs:
       uses: aws-actions/amazon-ecr-login@062b18b96a7aff071d4dc91bc00c4c1a7945b076 # v2.0.1
 
 
-    - name: Download existing ECS task definition ⚙️
+    - name: Download ECS task definition 🏷️
+      id: get-task-info
       shell: bash
+      env:
+        TASK_DEFINITION_NAME: "${{ inputs.task-definition-name }}"
       run: |
-        aws ecs describe-task-definition \
-          --task-definition "${{ inputs.task-definition-name }}" \
-          --query taskDefinition \
-          | jq 'del(.registeredAt, .registeredBy, .compatibilities, .taskDefinitionArn, .requiresAttributes, .revision, .status)' > "task-definition.json"
+        TASK_RESPONSE=$(aws ecs describe-task-definition \
+          --task-definition "$TASK_DEFINITION_NAME" \
+          --include TAGS)
+        
+        # Remove unnecessary fields from the task definition
+        echo "$TASK_RESPONSE" | jq '.taskDefinition | 
+          del(.registeredAt, .registeredBy, .compatibilities, .taskDefinitionArn, 
+              .requiresAttributes, .revision, .status)' > "task-definition.json"
+        
+        # Get tags from the API response
+        TAGS=$(echo "$TASK_RESPONSE" | jq '.tags')
+        
+        # Add tags to task definition
+        jq --argjson tags "$TAGS" '. + {tags: $tags}' "task-definition.json" > "temp.json" && mv "temp.json" "task-definition.json"
+        
+        echo "✅ Task definition with tags saved to task-definition.json"
 
 
     - name: Update ECS task definition with new image URIs ⚙️
@@ -95,7 +104,7 @@ runs:
           const fs = require('fs');
           
           // Set filenames
-          const taskDefFile = 'task-definition.json';
+          const taskDefFile = "task-definition.json";
           const outputTaskDefFile = 'updated-task-definition.json';
           
           // Read task definition
@@ -144,19 +153,36 @@ runs:
           console.log('Task definition update complete');
           
           // Set output
-          core.setOutput('task-definition', outputTaskDefFile);
+          core.setOutput('task-definition-filename', outputTaskDefFile);
 
 
     - if: inputs.deploy == 'true'
       name: Deploy task definition 🚀
       id: deploy
-      uses: aws-actions/amazon-ecs-deploy-task-definition@8230edfe842008418c5275908cae75e51d3befb2 # v2.3.0
-      with:
-        cluster: "${{ inputs.cluster-name }}"
-        service: "${{ inputs.service-name }}"
-        task-definition: "${{ steps.update-task-definition.outputs.task-definition }}"
-        propagate-tags: "SERVICE"
-        wait-for-service-stability: "${{ inputs.wait-for-service-stability }}"
+      shell: bash
+      env:
+        CLUSTER: "${{ inputs.cluster-name }}"
+        SERVICE: "${{ inputs.service-name }}"
+        TASK_DEFINITION_FAMILY: "${{ inputs.service-name }}"
+        TASK_DEFINITION_FILENAME: "${{ steps.update-task-definition.outputs.task-definition-filename }}"
+        WAIT_FOR_SERVICE_STABILITY: "${{ inputs.wait-for-service-stability }}"
+      run: |
+        echo Registering task definition...
+        OUTPUT=$(aws ecs register-task-definition --cli-input-json "file://$TASK_DEFINITION_FILENAME")
+        TASK_DEF_REVISION=$(echo "$OUTPUT" | jq -r '.taskDefinition.taskDefinitionArn' | rev | cut -d':' -f1 | rev)
+        
+        echo "Done! Task def revision: $TASK_DEF_REVISION"
+        echo
+        echo Updating ECS service...
+        aws ecs update-service \
+          --cluster "$CLUSTER" \
+          --service "$SERVICE" \
+          --task-definition "$TASK_DEFINITION_FAMILY:$TASK_DEF_REVISION" \
+          --propagate-tags SERVICE
+        
+        echo "✅ Deployment successful."
+
+        echo "::set-output name=task-definition-revision::$TASK_DEF_REVISION"
 
 
     - if: inputs.deploy == 'true'
@@ -206,7 +232,7 @@ runs:
         CLUSTER_NAME: ${{ inputs.cluster-name }}
         ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
         TASK_DEFINITION_NAME: ${{ inputs.task-definition-name }}
-        TASK_DEFINITION_ARN: ${{ steps.deploy.outputs.task-definition-arn }}
+        TASK_DEFINITION_REVISION: ${{ steps.deploy.outputs.task-definition-revision }}
         IMAGES_SSM_PARAMETER_NAME: ${{ inputs.images-ssm-parameter-name }}
       run: |
         # To test the summary locally, copy the rest of this workflow into a script, uncomment the variables, and run.
@@ -219,14 +245,13 @@ runs:
         #AWS_REGION='eu-west-1'
         #CLUSTER_NAME='pirates-dev'
         #TASK_DEFINITION_NAME='too-tikki'
-        #TASK_DEFINITION_ARN="arn:aws:ecs:$AWS_REGION:$AWS_ACCOUNT_ID:task-definition/$TASK_DEFINITION_NAME:143"
+        #TASK_DEFINITION_REVISION=143"
         #IMAGES_SSM_PARAMETER_NAME="/ecs/pirates-dev/too-tikki/images"
         
         IMAGE_COUNT=$(echo "$IMAGES_JSON" | jq 'length')
         AWS_ACCOUNT_ID=$(echo "$ECR_REGISTRY" | cut -d. -f1)
         SERVICE_URL="https://$AWS_REGION.console.aws.amazon.com/ecs/v2/clusters/$CLUSTER_NAME/services/$SERVICE_NAME?region=$AWS_REGION"
-        TASK_REVISION=$(echo "$TASK_DEFINITION_ARN" | cut -d ':' -f 7)
-        TASK_DEF_URL="https://$AWS_REGION.console.aws.amazon.com/ecs/v2/task-definitions/$TASK_DEFINITION_NAME/$TASK_REVISION/containers?region=$AWS_REGION"
+        TASK_DEF_URL="https://$AWS_REGION.console.aws.amazon.com/ecs/v2/task-definitions/$TASK_DEFINITION_NAME/$TASK_DEFINITION_REVISION/containers?region=$AWS_REGION"
         CONTAINER_ROWS=$(echo "$IMAGES_JSON" | jq -r 'to_entries[] | "| \(.key) | \(.value.imageRepository) | `\(.value.imageDigest)` | `\(.value.imageTag)` |"')
         
         #######################################
@@ -235,14 +260,14 @@ runs:
         
         cat << EOF >> $GITHUB_STEP_SUMMARY
         
-        ## Deployment summary TEMP 📋
+        ## Deployment summary 📋
         
         ✅ Successfully updated task definition.
         
         | Item | Link |
-        |-------------------|----------------------------------------------------------|
-        | ECS service       | [$SERVICE_NAME]($SERVICE_URL)                            |
-        | Task definition   | [$TASK_DEFINITION_NAME:$TASK_REVISION]($TASK_DEF_URL)    |
+        |-------------------|---------------------------------------------------------------------|
+        | ECS service       | [$SERVICE_NAME]($SERVICE_URL)                                       |
+        | Task definition   | [$TASK_DEFINITION_NAME:$TASK_DEFINITION_REVISION]($TASK_DEF_URL)    |
         
         ### Container(s) updated 📦
         | Container | ECR repository | Digest | Tag |
