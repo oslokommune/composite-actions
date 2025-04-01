@@ -184,7 +184,7 @@ runs:
         
         echo "✅ Deployment successful."
 
-        echo "::set-output name=task-definition-revision::$TASK_DEF_REVISION"
+        echo "{task-definition-revision}={$TASK_DEF_REVISION}" >> "$GITHUB_OUTPUT"
 
 
     - if: inputs.deploy == 'true'
@@ -214,6 +214,7 @@ runs:
           --type "String" \
           --value "$MERGED_IMAGES" \
           --overwrite
+        
         echo "✅ Wrote deployed images to SSM parameter '$SSM_PARAMETER_NAME'"
 
 
