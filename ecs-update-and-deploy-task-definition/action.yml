@@ -202,7 +202,6 @@ runs:
           --query "Parameter.Value" \
           --output text)
         echo "Current images:"
-        echo $CURRENT_IMAGES
         echo $CURRENT_IMAGES | jq
 
         MERGED_IMAGES=$(echo "$CURRENT_IMAGES" | jq --argjson new "$DEPLOYED_IMAGES" '. + $new')
