@@ -179,8 +179,8 @@ runs:
           --service "$SERVICE" \
           --task-definition "$TASK_DEFINITION_FAMILY:$TASK_DEF_REVISION" \
           --propagate-tags SERVICE \
-          --no-cli-pager \
-          --output text
+          --output json \
+          --query 'service.serviceName'
         
         echo "✅ Deployment successful."
 
