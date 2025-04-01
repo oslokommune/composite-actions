@@ -178,7 +178,9 @@ runs:
           --cluster "$CLUSTER" \
           --service "$SERVICE" \
           --task-definition "$TASK_DEFINITION_FAMILY:$TASK_DEF_REVISION" \
-          --propagate-tags SERVICE
+          --propagate-tags SERVICE \
+          --no-cli-pager \
+          --output text
         
         echo "✅ Deployment successful."
 
