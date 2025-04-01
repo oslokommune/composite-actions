@@ -194,7 +194,7 @@ runs:
         DEPLOYED_IMAGES: ${{ inputs.images }}
         SSM_PARAMETER_NAME: ${{ inputs.images-ssm-parameter-name }}
       run: |
-        echo "Deployed images: (This is the image to update in the task definition.)"
+        echo "Deployed images: (This is the input image to this workflow.)"
         echo $DEPLOYED_IMAGES | jq
         echo
         
@@ -202,7 +202,7 @@ runs:
           --name "$SSM_PARAMETER_NAME" \
           --query "Parameter.Value" \
           --output text)
-        echo "Current images from SSM:"
+        echo "Current images from SSM: (These are all images stored for this task definition, before deploying.)"
         echo $CURRENT_IMAGES | jq
         echo
 
