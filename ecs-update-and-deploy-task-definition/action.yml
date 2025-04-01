@@ -184,7 +184,7 @@ runs:
         
         echo "✅ Deployment successful."
 
-        echo "{task-definition-revision}={$TASK_DEF_REVISION}" >> "$GITHUB_OUTPUT"
+        echo "task-definition-revision=$TASK_DEF_REVISION" >> "$GITHUB_OUTPUT"
 
 
     - if: inputs.deploy == 'true'
