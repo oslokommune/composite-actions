@@ -144,34 +144,70 @@ runs:
           exit 0
         fi
         
+        gh_download() {
+          local REPO="$1"
+          local VERSION="$2" 
+          local PATTERN="$3"
+          local OUTPUT="$4"
+          local DESCRIPTION="$5"
+          local MAX_RETRIES=3
+          local RETRY_COUNT=0
+
+          while [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; do
+            if gh release download "$VERSION" --repo "$REPO" --pattern "$PATTERN" --output "$OUTPUT"; then
+              return 0
+            fi
+            
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            if [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; then
+              echo "Failed to $DESCRIPTION. Retrying ($RETRY_COUNT/$MAX_RETRIES)..." >&2
+              sleep 2
+            fi
+          done
+          
+          echo "Error: Unable to $DESCRIPTION after $MAX_RETRIES retries." >&2
+          return 1
+        }
+
+        curl_download() {
+          local URL="$1"
+          local OUTPUT="$2"
+          local DESCRIPTION="$3"
+          local MAX_RETRIES=3
+          local RETRY_COUNT=0
+
+          while [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; do
+            if curl -L "$URL" -o "$OUTPUT"; then
+              return 0
+            fi
+            
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            if [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; then
+              echo "Failed to $DESCRIPTION. Retrying ($RETRY_COUNT/$MAX_RETRIES)..." >&2
+              sleep 2
+            fi
+          done
+          
+          echo "Error: Unable to $DESCRIPTION after $MAX_RETRIES retries." >&2
+          return 1
+        }
+        
         echo "Installing ok..."
-        gh release download "${{ steps.versions.outputs.ok_version }}" \
-          --repo "oslokommune/ok" \
-          --pattern "ok_*_linux_amd64.tar.gz" \
-          --output - | tar -xzOf - ok > "$BIN_DIR/ok"
+        gh_download "oslokommune/ok" "${{ steps.versions.outputs.ok_version }}" "ok_*_linux_amd64.tar.gz" "-" "install ok" | tar -xzOf - ok > "$BIN_DIR/ok"
 
         echo "Installing boilerplate..."
-        gh release download "${{ steps.versions.outputs.boilerplate_version }}" \
-          --repo "gruntwork-io/boilerplate" \
-          --pattern "boilerplate_linux_amd64" \
-          --output "$BIN_DIR/boilerplate"
+        gh_download "gruntwork-io/boilerplate" "${{ steps.versions.outputs.boilerplate_version }}" "boilerplate_linux_amd64" "$BIN_DIR/boilerplate" "install boilerplate"
 
         echo "Installing terraform..."
-        curl -L "https://releases.hashicorp.com/terraform/${{ steps.versions.outputs.terraform_version }}/terraform_${{ steps.versions.outputs.terraform_version }}_linux_amd64.zip" -o terraform.zip
+        curl_download "https://releases.hashicorp.com/terraform/${{ steps.versions.outputs.terraform_version }}/terraform_${{ steps.versions.outputs.terraform_version }}_linux_amd64.zip" "terraform.zip" "install terraform"
         unzip -o terraform.zip -d "$BIN_DIR"
         rm -f terraform.zip
 
         echo "Installing terragrunt..."
-        gh release download "${{ steps.versions.outputs.terragrunt_version }}" \
-          --repo "gruntwork-io/terragrunt" \
-          --pattern "terragrunt_linux_amd64" \
-          --output "$BIN_DIR/terragrunt"
+        gh_download "gruntwork-io/terragrunt" "${{ steps.versions.outputs.terragrunt_version }}" "terragrunt_linux_amd64" "$BIN_DIR/terragrunt" "install terragrunt"
         
         echo "Installing yq..."
-        gh release download "${{ steps.versions.outputs.yq_version }}" \
-          --repo "mikefarah/yq" \
-          --pattern "yq_linux_amd64" \
-          --output "$BIN_DIR/yq"
+        gh_download "mikefarah/yq" "${{ steps.versions.outputs.yq_version }}" "yq_linux_amd64" "$BIN_DIR/yq" "install yq"
         
         # Make all tools executable
         chmod +x "$BIN_DIR"/*
