@@ -15,4 +15,4 @@ jobs:
     steps:
 
       - name: Run setup-ok composite action
-        uses: oslokommune/composite-actions/setup-ok@main
+        uses: oslokommune/composite-actions/setup-ok@${{ github.ref_name }}
