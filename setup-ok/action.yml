@@ -42,7 +42,27 @@ runs:
       id: versions
       run: |
         get_latest_version() {
-          curl -s "https://api.github.com/repos/$1/releases/latest" | jq -r '.tag_name'
+          local REPO="$1"
+          local VERSION=""
+          local MAX_RETRIES=3
+          local RETRY_COUNT=0
+        
+          while [[ -z "$VERSION" && $RETRY_COUNT -lt $MAX_RETRIES ]]; do
+            VERSION=$(curl --silent --fail-with-body "https://api.github.com/repos/$REPO/releases/latest" | jq -r '.tag_name')
+        
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            if [[ -z "$VERSION" ]]; then
+              echo "Failed to fetch version for $REPO. Retrying ($RETRY_COUNT/$MAX_RETRIES)..." >&2
+              sleep 2
+            fi
+          done
+        
+          if [[ -z "$VERSION" ]]; then
+            echo "Error: Unable to fetch version for $REPO after $MAX_RETRIES retries." >&2
+            exit 1
+          fi
+        
+          echo "$VERSION"
         }
 
         # Handle ok
