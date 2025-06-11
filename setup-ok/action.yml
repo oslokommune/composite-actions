@@ -129,7 +129,7 @@ runs:
           ${{ steps.bin-dir.outputs.dir }}/terraform
           ${{ steps.bin-dir.outputs.dir }}/terragrunt
           ${{ steps.bin-dir.outputs.dir }}/yq
-        # Example key: "key-___v5.2.0___v0.6.0___1.10.2___v4.44.6"
+        # Example key: "key-___ok-v5.12.0___boilerplate-v0.6.2___terraform-1.12.1___terragrunt-v0.81.3___yq-v4.45.4"
         key: key-${{ steps.versions.outputs.versions }}
 
 
