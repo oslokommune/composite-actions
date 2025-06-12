@@ -48,7 +48,7 @@ runs:
           local RETRY_COUNT=0
         
           while [[ -z "$VERSION" && $RETRY_COUNT -lt $MAX_RETRIES ]]; do
-            VERSION=$(curl -L --silent --fail-with-body "https://api.github.com/repos/$REPO/releases/latest" | jq -r '.tag_name')
+            VERSION=$(curl -L --fail-with-body "https://api.github.com/repos/$REPO/releases/latest" | jq -r '.tag_name')
         
             RETRY_COUNT=$((RETRY_COUNT + 1))
             if [[ -z "$VERSION" ]]; then
