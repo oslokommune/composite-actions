@@ -40,48 +40,74 @@ runs:
     - name: Get versions
       shell: bash
       id: versions
+      env:
+        INPUT_OK_VERSION: ${{ inputs.ok_version }}
+        INPUT_BOILERPLATE_VERSION: ${{ inputs.boilerplate_version }}
+        INPUT_TERRAFORM_VERSION: ${{ inputs.terraform_version }}
+        INPUT_TERRAGRUNT_VERSION: ${{ inputs.terragrunt_version }}
+        INPUT_YQ_VERSION: ${{ inputs.yq_version }}
       run: |
         get_latest_version() {
-          curl -s "https://api.github.com/repos/$1/releases/latest" | jq -r '.tag_name'
+          local REPO="$1"
+          local VERSION=""
+          local MAX_RETRIES=3
+          local RETRY_COUNT=0
+        
+          while [[ -z "$VERSION" && $RETRY_COUNT -lt $MAX_RETRIES ]]; do
+            VERSION=$(curl -L --fail-with-body "https://api.github.com/repos/$REPO/releases/latest" | jq -r '.tag_name')
+        
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            if [[ -z "$VERSION" ]]; then
+              echo "Failed to fetch version for $REPO. Retrying ($RETRY_COUNT/$MAX_RETRIES)..." >&2
+              sleep 2
+            fi
+          done
+        
+          if [[ -z "$VERSION" ]]; then
+            echo "Error: Unable to fetch version for $REPO after $MAX_RETRIES retries." >&2
+            exit 1
+          fi
+        
+          echo "$VERSION"
         }
 
         # Handle ok
-        if [[ "${{ inputs.ok_version }}" == "latest" ]]; then
+        if [[ "$INPUT_OK_VERSION" == "latest" ]]; then
           OK_VERSION=$(get_latest_version "oslokommune/ok")
         else
-          OK_VERSION="${{ inputs.ok_version }}"
+          OK_VERSION="$INPUT_OK_VERSION"
         fi
         echo "ok_version=$OK_VERSION" >> $GITHUB_OUTPUT
 
         # Handle boilerplate
-        if [[ "${{ inputs.boilerplate_version }}" == "latest" ]]; then
+        if [[ "$INPUT_BOILERPLATE_VERSION" == "latest" ]]; then
           BOILERPLATE_VERSION=$(get_latest_version "gruntwork-io/boilerplate")
         else
-          BOILERPLATE_VERSION="${{ inputs.boilerplate_version }}"
+          BOILERPLATE_VERSION="$INPUT_BOILERPLATE_VERSION"
         fi
         echo "boilerplate_version=$BOILERPLATE_VERSION" >> $GITHUB_OUTPUT
 
         # Handle terraform
-        if [[ "${{ inputs.terraform_version }}" == "latest" ]]; then
+        if [[ "$INPUT_TERRAFORM_VERSION" == "latest" ]]; then
           TERRAFORM_VERSION=$(get_latest_version "hashicorp/terraform" | sed 's/^v//')
         else
-          TERRAFORM_VERSION="${{ inputs.terraform_version }}"
+          TERRAFORM_VERSION="$INPUT_TERRAFORM_VERSION"
         fi
         echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
 
         # Handle terragrunt
-        if [[ "${{ inputs.terragrunt_version }}" == "latest" ]]; then
+        if [[ "$INPUT_TERRAGRUNT_VERSION" == "latest" ]]; then
           TERRAGRUNT_VERSION=$(get_latest_version "gruntwork-io/terragrunt")
         else
-          TERRAGRUNT_VERSION="${{ inputs.terragrunt_version }}"
+          TERRAGRUNT_VERSION="$INPUT_TERRAGRUNT_VERSION"
         fi
         echo "terragrunt_version=$TERRAGRUNT_VERSION" >> $GITHUB_OUTPUT
 
         # Handle yq
-        if [[ "${{ inputs.yq_version }}" == "latest" ]]; then
+        if [[ "$INPUT_YQ_VERSION" == "latest" ]]; then
           YQ_VERSION=$(get_latest_version "mikefarah/yq")
         else
-          YQ_VERSION="${{ inputs.yq_version }}"
+          YQ_VERSION="$INPUT_YQ_VERSION"
         fi
         echo "yq_version=$YQ_VERSION" >> $GITHUB_OUTPUT
         
@@ -102,15 +128,18 @@ runs:
     - name: Restore cache
       uses: actions/cache/restore@v4
       id: cache-tools-restore
+      env:
+        BIN_DIR: ${{ steps.bin-dir.outputs.dir }}
+        VERSIONS: ${{ steps.versions.outputs.versions }}
       with:
         path: |
-          ${{ steps.bin-dir.outputs.dir }}/ok
-          ${{ steps.bin-dir.outputs.dir }}/boilerplate
-          ${{ steps.bin-dir.outputs.dir }}/terraform
-          ${{ steps.bin-dir.outputs.dir }}/terragrunt
-          ${{ steps.bin-dir.outputs.dir }}/yq
-        # Example key: "key-___v5.2.0___v0.6.0___1.10.2___v4.44.6"
-        key: key-${{ steps.versions.outputs.versions }}
+          ${{ env.BIN_DIR }}/ok
+          ${{ env.BIN_DIR }}/boilerplate
+          ${{ env.BIN_DIR }}/terraform
+          ${{ env.BIN_DIR }}/terragrunt
+          ${{ env.BIN_DIR }}/yq
+        # Example key: "key-___ok-v5.12.0___boilerplate-v0.6.2___terraform-1.12.1___terragrunt-v0.81.3___yq-v4.45.4"
+        key: key-${{ env.VERSIONS }}
 
 
     - name: Install tools
@@ -119,39 +148,81 @@ runs:
       env:
         GH_TOKEN: ${{ github.token }}
         BIN_DIR: ${{ steps.bin-dir.outputs.dir }}
+        CACHE_HIT: ${{ steps.cache-tools-restore.outputs.cache-hit }}
+        OK_VERSION: ${{ steps.versions.outputs.ok_version }}
+        BOILERPLATE_VERSION: ${{ steps.versions.outputs.boilerplate_version }}
+        TERRAFORM_VERSION: ${{ steps.versions.outputs.terraform_version }}
+        TERRAGRUNT_VERSION: ${{ steps.versions.outputs.terragrunt_version }}
+        YQ_VERSION: ${{ steps.versions.outputs.yq_version }}
       run: |
-        if [[ "${{ steps.cache-tools-restore.outputs.cache-hit }}" == 'true' ]]; then
+        if [[ "$CACHE_HIT" == 'true' ]]; then
           exit 0
         fi
         
+        gh_download() {
+          local REPO="$1"
+          local VERSION="$2" 
+          local PATTERN="$3"
+          local OUTPUT="$4"
+          local DESCRIPTION="$5"
+          local MAX_RETRIES=3
+          local RETRY_COUNT=0
+
+          while [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; do
+            if gh release download "$VERSION" --repo "$REPO" --pattern "$PATTERN" --output "$OUTPUT"; then
+              return 0
+            fi
+            
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            if [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; then
+              echo "Failed to $DESCRIPTION. Retrying ($RETRY_COUNT/$MAX_RETRIES)..." >&2
+              sleep 2
+            fi
+          done
+          
+          echo "Error: Unable to $DESCRIPTION after $MAX_RETRIES retries." >&2
+          return 1
+        }
+
+        curl_download() {
+          local URL="$1"
+          local OUTPUT="$2"
+          local DESCRIPTION="$3"
+          local MAX_RETRIES=3
+          local RETRY_COUNT=0
+
+          while [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; do
+            if curl -L "$URL" -o "$OUTPUT"; then
+              return 0
+            fi
+            
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            if [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; then
+              echo "Failed to $DESCRIPTION. Retrying ($RETRY_COUNT/$MAX_RETRIES)..." >&2
+              sleep 2
+            fi
+          done
+          
+          echo "Error: Unable to $DESCRIPTION after $MAX_RETRIES retries." >&2
+          return 1
+        }
+        
         echo "Installing ok..."
-        gh release download "${{ steps.versions.outputs.ok_version }}" \
-          --repo "oslokommune/ok" \
-          --pattern "ok_*_linux_amd64.tar.gz" \
-          --output - | tar -xzOf - ok > "$BIN_DIR/ok"
+        gh_download "oslokommune/ok" "$OK_VERSION" "ok_*_linux_amd64.tar.gz" "-" "install ok" | tar -xzOf - ok > "$BIN_DIR/ok"
 
         echo "Installing boilerplate..."
-        gh release download "${{ steps.versions.outputs.boilerplate_version }}" \
-          --repo "gruntwork-io/boilerplate" \
-          --pattern "boilerplate_linux_amd64" \
-          --output "$BIN_DIR/boilerplate"
+        gh_download "gruntwork-io/boilerplate" "$BOILERPLATE_VERSION" "boilerplate_linux_amd64" "$BIN_DIR/boilerplate" "install boilerplate"
 
         echo "Installing terraform..."
-        curl -L "https://releases.hashicorp.com/terraform/${{ steps.versions.outputs.terraform_version }}/terraform_${{ steps.versions.outputs.terraform_version }}_linux_amd64.zip" -o terraform.zip
+        curl_download "https://releases.hashicorp.com/terraform/$TERRAFORM_VERSION/terraform_${TERRAFORM_VERSION}_linux_amd64.zip" "terraform.zip" "install terraform"
         unzip -o terraform.zip -d "$BIN_DIR"
         rm -f terraform.zip
 
         echo "Installing terragrunt..."
-        gh release download "${{ steps.versions.outputs.terragrunt_version }}" \
-          --repo "gruntwork-io/terragrunt" \
-          --pattern "terragrunt_linux_amd64" \
-          --output "$BIN_DIR/terragrunt"
+        gh_download "gruntwork-io/terragrunt" "$TERRAGRUNT_VERSION" "terragrunt_linux_amd64" "$BIN_DIR/terragrunt" "install terragrunt"
         
         echo "Installing yq..."
-        gh release download "${{ steps.versions.outputs.yq_version }}" \
-          --repo "mikefarah/yq" \
-          --pattern "yq_linux_amd64" \
-          --output "$BIN_DIR/yq"
+        gh_download "mikefarah/yq" "$YQ_VERSION" "yq_linux_amd64" "$BIN_DIR/yq" "install yq"
         
         # Make all tools executable
         chmod +x "$BIN_DIR"/*
@@ -162,11 +233,14 @@ runs:
     - name: Save cache
       if: always() && steps.cache-tools-restore.outputs.cache-hit != 'true' && steps.install-tools.outcome == 'success'
       uses: actions/cache/save@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
+      env:
+        BIN_DIR: ${{ steps.bin-dir.outputs.dir }}
+        VERSIONS: ${{ steps.versions.outputs.versions }}
       with:
         path: |
-          ${{ steps.bin-dir.outputs.dir }}/ok
-          ${{ steps.bin-dir.outputs.dir }}/boilerplate
-          ${{ steps.bin-dir.outputs.dir }}/terraform
-          ${{ steps.bin-dir.outputs.dir }}/terragrunt
-          ${{ steps.bin-dir.outputs.dir }}/yq
-        key: key-${{ steps.versions.outputs.versions }}
+          ${{ env.BIN_DIR }}/ok
+          ${{ env.BIN_DIR }}/boilerplate
+          ${{ env.BIN_DIR }}/terraform
+          ${{ env.BIN_DIR }}/terragrunt
+          ${{ env.BIN_DIR }}/yq
+        key: key-${{ env.VERSIONS }}
