@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/oslokommune/composite-actions/compare/setup-ok-v1.3.0...setup-ok-v1.4.0) (2025-06-13)
+
+
+### Features
+
+* Add retry logic ([#109](https://github.com/oslokommune/composite-actions/issues/109)) ([b61d2e6](https://github.com/oslokommune/composite-actions/commit/b61d2e6d2ff2ed81a3c271e43100a50dfdfdcc0c))
+
 ## [1.3.0](https://github.com/oslokommune/composite-actions/compare/setup-ok-v1.2.1...setup-ok-v1.3.0) (2025-01-27)
 
 
