@@ -40,6 +40,12 @@ runs:
     - name: Get versions
       shell: bash
       id: versions
+      env:
+        INPUT_OK_VERSION: ${{ inputs.ok_version }}
+        INPUT_BOILERPLATE_VERSION: ${{ inputs.boilerplate_version }}
+        INPUT_TERRAFORM_VERSION: ${{ inputs.terraform_version }}
+        INPUT_TERRAGRUNT_VERSION: ${{ inputs.terragrunt_version }}
+        INPUT_YQ_VERSION: ${{ inputs.yq_version }}
       run: |
         get_latest_version() {
           local REPO="$1"
@@ -66,42 +72,42 @@ runs:
         }
 
         # Handle ok
-        if [[ "${{ inputs.ok_version }}" == "latest" ]]; then
+        if [[ "$INPUT_OK_VERSION" == "latest" ]]; then
           OK_VERSION=$(get_latest_version "oslokommune/ok")
         else
-          OK_VERSION="${{ inputs.ok_version }}"
+          OK_VERSION="$INPUT_OK_VERSION"
         fi
         echo "ok_version=$OK_VERSION" >> $GITHUB_OUTPUT
 
         # Handle boilerplate
-        if [[ "${{ inputs.boilerplate_version }}" == "latest" ]]; then
+        if [[ "$INPUT_BOILERPLATE_VERSION" == "latest" ]]; then
           BOILERPLATE_VERSION=$(get_latest_version "gruntwork-io/boilerplate")
         else
-          BOILERPLATE_VERSION="${{ inputs.boilerplate_version }}"
+          BOILERPLATE_VERSION="$INPUT_BOILERPLATE_VERSION"
         fi
         echo "boilerplate_version=$BOILERPLATE_VERSION" >> $GITHUB_OUTPUT
 
         # Handle terraform
-        if [[ "${{ inputs.terraform_version }}" == "latest" ]]; then
+        if [[ "$INPUT_TERRAFORM_VERSION" == "latest" ]]; then
           TERRAFORM_VERSION=$(get_latest_version "hashicorp/terraform" | sed 's/^v//')
         else
-          TERRAFORM_VERSION="${{ inputs.terraform_version }}"
+          TERRAFORM_VERSION="$INPUT_TERRAFORM_VERSION"
         fi
         echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
 
         # Handle terragrunt
-        if [[ "${{ inputs.terragrunt_version }}" == "latest" ]]; then
+        if [[ "$INPUT_TERRAGRUNT_VERSION" == "latest" ]]; then
           TERRAGRUNT_VERSION=$(get_latest_version "gruntwork-io/terragrunt")
         else
-          TERRAGRUNT_VERSION="${{ inputs.terragrunt_version }}"
+          TERRAGRUNT_VERSION="$INPUT_TERRAGRUNT_VERSION"
         fi
         echo "terragrunt_version=$TERRAGRUNT_VERSION" >> $GITHUB_OUTPUT
 
         # Handle yq
-        if [[ "${{ inputs.yq_version }}" == "latest" ]]; then
+        if [[ "$INPUT_YQ_VERSION" == "latest" ]]; then
           YQ_VERSION=$(get_latest_version "mikefarah/yq")
         else
-          YQ_VERSION="${{ inputs.yq_version }}"
+          YQ_VERSION="$INPUT_YQ_VERSION"
         fi
         echo "yq_version=$YQ_VERSION" >> $GITHUB_OUTPUT
         
@@ -122,15 +128,18 @@ runs:
     - name: Restore cache
       uses: actions/cache/restore@v4
       id: cache-tools-restore
+      env:
+        BIN_DIR: ${{ steps.bin-dir.outputs.dir }}
+        VERSIONS: ${{ steps.versions.outputs.versions }}
       with:
         path: |
-          ${{ steps.bin-dir.outputs.dir }}/ok
-          ${{ steps.bin-dir.outputs.dir }}/boilerplate
-          ${{ steps.bin-dir.outputs.dir }}/terraform
-          ${{ steps.bin-dir.outputs.dir }}/terragrunt
-          ${{ steps.bin-dir.outputs.dir }}/yq
+          ${{ env.BIN_DIR }}/ok
+          ${{ env.BIN_DIR }}/boilerplate
+          ${{ env.BIN_DIR }}/terraform
+          ${{ env.BIN_DIR }}/terragrunt
+          ${{ env.BIN_DIR }}/yq
         # Example key: "key-___ok-v5.12.0___boilerplate-v0.6.2___terraform-1.12.1___terragrunt-v0.81.3___yq-v4.45.4"
-        key: key-${{ steps.versions.outputs.versions }}
+        key: key-${{ env.VERSIONS }}
 
 
     - name: Install tools
@@ -139,8 +148,14 @@ runs:
       env:
         GH_TOKEN: ${{ github.token }}
         BIN_DIR: ${{ steps.bin-dir.outputs.dir }}
+        CACHE_HIT: ${{ steps.cache-tools-restore.outputs.cache-hit }}
+        OK_VERSION: ${{ steps.versions.outputs.ok_version }}
+        BOILERPLATE_VERSION: ${{ steps.versions.outputs.boilerplate_version }}
+        TERRAFORM_VERSION: ${{ steps.versions.outputs.terraform_version }}
+        TERRAGRUNT_VERSION: ${{ steps.versions.outputs.terragrunt_version }}
+        YQ_VERSION: ${{ steps.versions.outputs.yq_version }}
       run: |
-        if [[ "${{ steps.cache-tools-restore.outputs.cache-hit }}" == 'true' ]]; then
+        if [[ "$CACHE_HIT" == 'true' ]]; then
           exit 0
         fi
         
@@ -193,21 +208,21 @@ runs:
         }
         
         echo "Installing ok..."
-        gh_download "oslokommune/ok" "${{ steps.versions.outputs.ok_version }}" "ok_*_linux_amd64.tar.gz" "-" "install ok" | tar -xzOf - ok > "$BIN_DIR/ok"
+        gh_download "oslokommune/ok" "$OK_VERSION" "ok_*_linux_amd64.tar.gz" "-" "install ok" | tar -xzOf - ok > "$BIN_DIR/ok"
 
         echo "Installing boilerplate..."
-        gh_download "gruntwork-io/boilerplate" "${{ steps.versions.outputs.boilerplate_version }}" "boilerplate_linux_amd64" "$BIN_DIR/boilerplate" "install boilerplate"
+        gh_download "gruntwork-io/boilerplate" "$BOILERPLATE_VERSION" "boilerplate_linux_amd64" "$BIN_DIR/boilerplate" "install boilerplate"
 
         echo "Installing terraform..."
-        curl_download "https://releases.hashicorp.com/terraform/${{ steps.versions.outputs.terraform_version }}/terraform_${{ steps.versions.outputs.terraform_version }}_linux_amd64.zip" "terraform.zip" "install terraform"
+        curl_download "https://releases.hashicorp.com/terraform/$TERRAFORM_VERSION/terraform_${TERRAFORM_VERSION}_linux_amd64.zip" "terraform.zip" "install terraform"
         unzip -o terraform.zip -d "$BIN_DIR"
         rm -f terraform.zip
 
         echo "Installing terragrunt..."
-        gh_download "gruntwork-io/terragrunt" "${{ steps.versions.outputs.terragrunt_version }}" "terragrunt_linux_amd64" "$BIN_DIR/terragrunt" "install terragrunt"
+        gh_download "gruntwork-io/terragrunt" "$TERRAGRUNT_VERSION" "terragrunt_linux_amd64" "$BIN_DIR/terragrunt" "install terragrunt"
         
         echo "Installing yq..."
-        gh_download "mikefarah/yq" "${{ steps.versions.outputs.yq_version }}" "yq_linux_amd64" "$BIN_DIR/yq" "install yq"
+        gh_download "mikefarah/yq" "$YQ_VERSION" "yq_linux_amd64" "$BIN_DIR/yq" "install yq"
         
         # Make all tools executable
         chmod +x "$BIN_DIR"/*
@@ -218,11 +233,14 @@ runs:
     - name: Save cache
       if: always() && steps.cache-tools-restore.outputs.cache-hit != 'true' && steps.install-tools.outcome == 'success'
       uses: actions/cache/save@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
+      env:
+        BIN_DIR: ${{ steps.bin-dir.outputs.dir }}
+        VERSIONS: ${{ steps.versions.outputs.versions }}
       with:
         path: |
-          ${{ steps.bin-dir.outputs.dir }}/ok
-          ${{ steps.bin-dir.outputs.dir }}/boilerplate
-          ${{ steps.bin-dir.outputs.dir }}/terraform
-          ${{ steps.bin-dir.outputs.dir }}/terragrunt
-          ${{ steps.bin-dir.outputs.dir }}/yq
-        key: key-${{ steps.versions.outputs.versions }}
+          ${{ env.BIN_DIR }}/ok
+          ${{ env.BIN_DIR }}/boilerplate
+          ${{ env.BIN_DIR }}/terraform
+          ${{ env.BIN_DIR }}/terragrunt
+          ${{ env.BIN_DIR }}/yq
+        key: key-${{ env.VERSIONS }}
