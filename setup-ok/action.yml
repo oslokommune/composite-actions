@@ -5,23 +5,28 @@ inputs:
   ok_version:
     description: "Version of ok to install. Examples: v0.1.0, latest"
     required: true
-    default: "latest"
+    # renovate: datasource=github-releases depName=oslokommune/ok
+    default: "v5.12.0"
   boilerplate_version:
     description: "Version of Boilerplate to install. Examples: 0.5.16, latest"
     required: true
-    default: "latest"
+    # renovate: datasource=github-releases depName=gruntwork-io/boilerplate
+    default: "v0.6.3"
   terraform_version:
     description: "Version of Terraform to install. Examples: 1.10.1, latest"
     required: true
-    default: "latest"
+    # renovate: datasource=github-releases depName=hashicorp/terraform extractVersion=^v?(?<version>.*)$
+    default: "1.12.2"
   terragrunt_version:
     description: "Version of Terragrunt to install. Examples: 0.71.1, latest"
     required: true
-    default: "latest"
+    # renovate: datasource=github-releases depName=gruntwork-io/terragrunt
+    default: "v0.81.7"
   yq_version:
     description: "Version of yq to install. Examples: v4.44.6, latest"
     required: true
-    default: "latest"
+    # renovate: datasource=github-releases depName=mikefarah/yq
+    default: "v4.45.4"
 
 runs:
   using: "composite"
@@ -53,9 +58,7 @@ runs:
           local MAX_RETRIES=3
           local RETRY_COUNT=0
         
-          while [[ -z "$VERSION" && $RETRY_COUNT -lt $MAX_RETRIES ]]; do
-            VERSION=$(curl -L --fail-with-body "https://api.github.com/repos/$REPO/releases/latest" | jq -r '.tag_name')
-        
+          while ! VERSION="$(curl -L --fail-with-body "https://api.github.com/repos/$REPO/releases/latest" | jq --exit-status --raw-output '.tag_name')" && [ "$RETRY_COUNT" -lt "$MAX_RETRIES" ]; do
             RETRY_COUNT=$((RETRY_COUNT + 1))
             if [[ -z "$VERSION" ]]; then
               echo "Failed to fetch version for $REPO. Retrying ($RETRY_COUNT/$MAX_RETRIES)..." >&2

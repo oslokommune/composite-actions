@@ -1,0 +1,23 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["github>oslokommune/golden-path-renovate:default.json5"],
+  "prConcurrentLimit": 100,
+  "packageRules": [
+    {
+      "matchFileNames": ["setup-ok/action.yml"],
+      "matchManagers": ["custom.regex"],
+      "groupName": "setup-ok tool versions",
+      "separateMajorMinor": false
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "fileMatch": ["^setup-ok/action\\.yml$"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)( versioning=(?<versioning>.*?))?( extractVersion=(?<extractVersion>.*?))?\\s*default: [\"'](?<currentValue>.*?)[\"']"
+      ]
+    }
+  ]
+}
+
