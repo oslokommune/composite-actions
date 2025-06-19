@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.5.0](https://github.com/oslokommune/composite-actions/compare/setup-ok-v1.4.0...setup-ok-v1.5.0) (2025-06-19)
+
+
+### Features
+
+* fixed default versions ([0bd5d07](https://github.com/oslokommune/composite-actions/commit/0bd5d07a162364b86018f8bc92063f6562459dee))
+
+
+### Bug fixes
+
+* retry on github api failure ([229ecc0](https://github.com/oslokommune/composite-actions/commit/229ecc0b6bfc83337c9107e4b1bf47b9a05540f6))
+
 ## [1.4.0](https://github.com/oslokommune/composite-actions/compare/setup-ok-v1.3.0...setup-ok-v1.4.0) (2025-06-13)
 
 
