@@ -134,7 +134,7 @@ runs:
     - if: inputs.deploy == 'true'
       name: Deploy task definition 🚀
       id: deploy
-      uses: aws-actions/amazon-ecs-deploy-task-definition@8230edfe842008418c5275908cae75e51d3befb2 # v2.3.0
+      uses: aws-actions/amazon-ecs-deploy-task-definition@f7b2b96b7fe1b20b452641919c0559bcc19ab8f9 # v2.3.3
       with:
         cluster: "${{ inputs.cluster-name }}"
         service: "${{ inputs.service-name }}"
