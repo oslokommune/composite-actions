@@ -27,6 +27,11 @@ inputs:
     required: true
     # renovate: datasource=github-releases depName=mikefarah/yq
     default: "v4.45.4"
+  tfswitch_version:
+    description: "Version of tfswitch to install. Examples: v1.4.5, latest"
+    required: true
+    # renovate: datasource=github-releases depName=warrensbox/terraform-switcher
+    default: "v1.4.5"
 
 runs:
   using: "composite"
@@ -51,6 +56,7 @@ runs:
         INPUT_TERRAFORM_VERSION: ${{ inputs.terraform_version }}
         INPUT_TERRAGRUNT_VERSION: ${{ inputs.terragrunt_version }}
         INPUT_YQ_VERSION: ${{ inputs.yq_version }}
+        INPUT_TFSWITCH_VERSION: ${{ inputs.tfswitch_version }}
       run: |
         get_latest_version() {
           local REPO="$1"
@@ -113,6 +119,14 @@ runs:
           YQ_VERSION="$INPUT_YQ_VERSION"
         fi
         echo "yq_version=$YQ_VERSION" >> $GITHUB_OUTPUT
+
+        # Handle tfswitch
+        if [[ "$INPUT_TFSWITCH_VERSION" == "latest" ]]; then
+          TFSWITCH_VERSION=$(get_latest_version "warrensbox/terraform-switcher")
+        else
+          TFSWITCH_VERSION="$INPUT_TFSWITCH_VERSION"
+        fi
+        echo "tfswitch_version=$TFSWITCH_VERSION" >> $GITHUB_OUTPUT
         
         # Concatenate all versions into one output. This is used as a cache key. This has the effect that
         # if one version is updated, the cache will be invalidated for all tools. This is a trade-off between
@@ -124,6 +138,7 @@ runs:
         VERSIONS="${VERSIONS}___terraform-$TERRAFORM_VERSION"
         VERSIONS="${VERSIONS}___terragrunt-$TERRAGRUNT_VERSION"
         VERSIONS="${VERSIONS}___yq-$YQ_VERSION"
+        VERSIONS="${VERSIONS}___tfswitch-$TFSWITCH_VERSION"
         echo "VERSIONS=$VERSIONS"
         echo "versions=$VERSIONS" >> $GITHUB_OUTPUT
 
@@ -141,6 +156,7 @@ runs:
           ${{ env.BIN_DIR }}/terraform
           ${{ env.BIN_DIR }}/terragrunt
           ${{ env.BIN_DIR }}/yq
+          ${{ env.BIN_DIR }}/tfswitch
         # Example key: "key-___ok-v5.12.0___boilerplate-v0.6.2___terraform-1.12.1___terragrunt-v0.81.3___yq-v4.45.4"
         key: key-${{ env.VERSIONS }}
 
@@ -157,6 +173,7 @@ runs:
         TERRAFORM_VERSION: ${{ steps.versions.outputs.terraform_version }}
         TERRAGRUNT_VERSION: ${{ steps.versions.outputs.terragrunt_version }}
         YQ_VERSION: ${{ steps.versions.outputs.yq_version }}
+        TFSWITCH_VERSION: ${{ steps.versions.outputs.tfswitch_version }}
       run: |
         if [[ "$CACHE_HIT" == 'true' ]]; then
           exit 0
@@ -227,6 +244,9 @@ runs:
         echo "Installing yq..."
         gh_download "mikefarah/yq" "$YQ_VERSION" "yq_linux_amd64" "$BIN_DIR/yq" "install yq"
         
+        echo "Installing tfswitch..."
+        gh_download "warrensbox/terraform-switcher" "$TFSWITCH_VERSION" "terraform-switcher_${TFSWITCH_VERSION}_linux_amd64.tar.gz" "-" "install tfswitch" | tar -xzOf - tfswitch > "$BIN_DIR/tfswitch"
+        
         # Make all tools executable
         chmod +x "$BIN_DIR"/*
 
@@ -246,4 +266,5 @@ runs:
           ${{ env.BIN_DIR }}/terraform
           ${{ env.BIN_DIR }}/terragrunt
           ${{ env.BIN_DIR }}/yq
+          ${{ env.BIN_DIR }}/tfswitch
         key: key-${{ env.VERSIONS }}
