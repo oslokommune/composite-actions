@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/oslokommune/composite-actions/compare/setup-ok-v1.5.0...setup-ok-v1.6.0) (2025-07-02)
+
+
+### Features
+
+* Add tfswitch ([8380461](https://github.com/oslokommune/composite-actions/commit/8380461a74c1ae51b7c017c1401a0866a65cc523))
+
 ## [1.5.0](https://github.com/oslokommune/composite-actions/compare/setup-ok-v1.4.0...setup-ok-v1.5.0) (2025-06-19)
 
 
