@@ -21,7 +21,7 @@ inputs:
     description: "Version of Terragrunt to install. Examples: 0.71.1, latest"
     required: true
     # renovate: datasource=github-releases depName=gruntwork-io/terragrunt
-    default: "v0.81.7"
+    default: "v0.82.3"
   yq_version:
     description: "Version of yq to install. Examples: v4.44.6, latest"
     required: true
