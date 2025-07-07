@@ -21,7 +21,7 @@ inputs:
     description: "Version of Terragrunt to install. Examples: 0.71.1, latest"
     required: true
     # renovate: datasource=github-releases depName=gruntwork-io/terragrunt
-    default: "v0.82.3"
+    default: "v0.82.4"
   yq_version:
     description: "Version of yq to install. Examples: v4.44.6, latest"
     required: true
@@ -31,7 +31,7 @@ inputs:
     description: "Version of tfswitch to install. Examples: v1.4.5, latest"
     required: true
     # renovate: datasource=github-releases depName=warrensbox/terraform-switcher
-    default: "v1.4.5"
+    default: "v1.4.6"
 
 runs:
   using: "composite"
