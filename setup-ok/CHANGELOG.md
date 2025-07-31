@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.1](https://github.com/oslokommune/composite-actions/compare/setup-ok-v1.6.0...setup-ok-v1.6.1) (2025-07-31)
+
+
+### Dependency updates
+
+* bump ok to v5.13.0 ([ca450b4](https://github.com/oslokommune/composite-actions/commit/ca450b4fdf8a825c3b7880a52acdfa6a58a18291))
+
 ## [1.6.0](https://github.com/oslokommune/composite-actions/compare/setup-ok-v1.5.0...setup-ok-v1.6.0) (2025-07-02)
 
 
