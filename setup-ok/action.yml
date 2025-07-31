@@ -6,7 +6,7 @@ inputs:
     description: "Version of ok to install. Examples: v0.1.0, latest"
     required: true
     # renovate: datasource=github-releases depName=oslokommune/ok
-    default: "v5.12.0"
+    default: "v5.13.0"
   boilerplate_version:
     description: "Version of Boilerplate to install. Examples: 0.5.16, latest"
     required: true
