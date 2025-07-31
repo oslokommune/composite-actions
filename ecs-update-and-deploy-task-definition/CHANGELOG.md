@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.1](https://github.com/oslokommune/composite-actions/compare/ecs-update-and-deploy-task-definition-v2.0.0...ecs-update-and-deploy-task-definition-v2.0.1) (2025-07-31)
+
+
+### Dependency updates
+
+* bump aws-actions/configure-aws-credentials ([#108](https://github.com/oslokommune/composite-actions/issues/108)) ([f159173](https://github.com/oslokommune/composite-actions/commit/f159173d97f27914cae2aef9b4d18eeca40234eb))
+
 ## [2.0.0](https://github.com/oslokommune/composite-actions/compare/ecs-update-and-deploy-task-definition-v1.2.2...ecs-update-and-deploy-task-definition-v2.0.0) (2025-03-26)
 
 
