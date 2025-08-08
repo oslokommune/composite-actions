@@ -36,6 +36,11 @@ inputs:
     required: false
     default: "true"
 
+  desired-count:
+    description: "Optional. Desired number of tasks to run in the service. Leave empty to not override the current service desired count."
+    required: false
+    default: ""
+
 
 outputs:
   task-definition-file-name:
@@ -77,42 +82,42 @@ runs:
       with:
         script: |
           const fs = require('fs');
-          
+
           // Set filenames
           const taskDefFile = 'task-definition.json';
           const outputTaskDefFile = 'updated-task-definition.json';
-          
+
           // Read task definition
           const taskDef = JSON.parse(fs.readFileSync(taskDefFile, 'utf8'));
-          
+
           // Get ECR registry URL from the ecr-login step
           const ecrRegistry = '${{ steps.ecr-login.outputs.registry }}';
           console.log(`Using ECR registry: ${ecrRegistry}`);
-          
+
           // Parse images JSON
           const imagesInput = core.getInput('images');
           console.log("Images input", imagesInput);
-          
+
           const imagesJson = JSON.parse(imagesInput);
           const containerNames = Object.keys(imagesJson);
           console.log(`Found ${containerNames.length} container image(s) to update`);
-          
+
           // Update container images
           for (const containerName of containerNames) {
             // Get container details from the object structure
             const imageConfig = imagesJson[containerName];
             const imageRepository = imageConfig.imageRepository;
             const imageDigest = imageConfig.imageDigest;
-          
+
             // Create full image URI with ECR registry and digest
             const imageUri = `${ecrRegistry}/${imageRepository}@${imageDigest}`;
             console.log(`Updating container '${containerName}' with image '${imageUri}'`);
-          
+
             // Find container in task definition
             const containerIndex = taskDef.containerDefinitions.findIndex(
               container => container.name === containerName
             );
-          
+
             if (containerIndex >= 0) {
               // Update container image
               taskDef.containerDefinitions[containerIndex].image = imageUri;
@@ -122,11 +127,11 @@ runs:
               core.warning(`Container '${containerName}' not found in task definition`);
             }
           }
-          
+
           // Write updated task definition to file
           fs.writeFileSync(outputTaskDefFile, JSON.stringify(taskDef, null, 2));
           console.log('Task definition update complete');
-          
+
           // Set output
           core.setOutput('task-definition', outputTaskDefFile);
 
@@ -140,6 +145,7 @@ runs:
         service: "${{ inputs.service-name }}"
         task-definition: "${{ steps.update-task-definition.outputs.task-definition }}"
         wait-for-service-stability: "${{ inputs.wait-for-service-stability }}"
+        desired-count: "${{ inputs.desired-count }}"
 
 
     - if: inputs.deploy == 'false'
@@ -172,31 +178,31 @@ runs:
         #CLUSTER_NAME='pirates-dev'
         #TASK_DEFINITION_NAME='too-tikki'
         #TASK_DEFINITION_ARN="arn:aws:ecs:$AWS_REGION:$AWS_ACCOUNT_ID:task-definition/$TASK_DEFINITION_NAME:143"
-        
+
         IMAGE_COUNT=$(echo "$IMAGES_JSON" | jq 'length')
         AWS_ACCOUNT_ID=$(echo "$ECR_REGISTRY" | cut -d. -f1)
         SERVICE_URL="https://$AWS_REGION.console.aws.amazon.com/ecs/v2/clusters/$CLUSTER_NAME/services/$SERVICE_NAME?region=$AWS_REGION"
         TASK_REVISION=$(echo "$TASK_DEFINITION_ARN" | cut -d ':' -f 7)
         TASK_DEF_URL="https://$AWS_REGION.console.aws.amazon.com/ecs/v2/task-definitions/$TASK_DEFINITION_NAME/$TASK_REVISION/containers?region=$AWS_REGION"
         CONTAINER_ROWS=$(echo "$IMAGES_JSON" | jq -r 'to_entries[] | "| \(.key) | \(.value.imageRepository) | `\(.value.imageDigest)` | `\(.value.imageTag)` |"')
-        
+
         #######################################
         ### Write the deployment summary 📝 ###
         #######################################
-        
+
         cat << EOF >> $GITHUB_STEP_SUMMARY
-        
+
         ## Deployment summary 📋
-        
+
         ✅ Updated task definition successfully.
-        
+
         | Item | Link |
         |-------------------|----------------------------------------------------------|
         | ECS service       | [$SERVICE_NAME]($SERVICE_URL)                            |
         | Task definition   | [$TASK_DEFINITION_NAME:$TASK_REVISION]($TASK_DEF_URL)    |
-        
+
         ### Container(s) updated 📦
-        
+
         | Container | Repository | Digest | Tag |
         | --- | --- | --- | --- |
         $CONTAINER_ROWS
