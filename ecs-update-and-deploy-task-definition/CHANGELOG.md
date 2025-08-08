@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.0](https://github.com/oslokommune/composite-actions/compare/ecs-update-and-deploy-task-definition-v2.0.1...ecs-update-and-deploy-task-definition-v2.1.0) (2025-08-08)
+
+
+### Features
+
+* add optional desired-count input and pass to deploy step ([#130](https://github.com/oslokommune/composite-actions/issues/130)) ([51d2198](https://github.com/oslokommune/composite-actions/commit/51d2198a792ca3f5da9499b243a6cafe115868fa))
+
 ## [2.0.1](https://github.com/oslokommune/composite-actions/compare/ecs-update-and-deploy-task-definition-v2.0.0...ecs-update-and-deploy-task-definition-v2.0.1) (2025-07-31)
 
 
