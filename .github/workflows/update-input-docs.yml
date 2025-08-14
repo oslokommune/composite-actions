@@ -42,8 +42,8 @@ jobs:
         id: gpg
         uses: crazy-max/ghaction-import-gpg@e89d40939c28e39f97cf32126055eeae86ba74ec # v6.3.0
         with:
-          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY_FOR_MACHINE_USER }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE_FOR_MACHINE_USER }}
 
           # Username and email is inferred from GPG key metadata
           git_user_signingkey: true
