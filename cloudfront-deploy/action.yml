@@ -1,0 +1,77 @@
+name: 'CloudFront Deploy'
+description: 'Deploy pre-built static sites to S3 and CloudFront'
+author: 'oslokommune'
+
+inputs:
+  aws-role-arn:
+    description: 'AWS IAM role ARN for OIDC authentication'
+    required: true
+  aws-region:
+    description: 'AWS region'
+    required: false
+    default: 'eu-west-1'
+  s3-bucket-name:
+    description: 'Target S3 bucket name for deployment'
+    required: true
+  site-path:
+    description: 'Path to directory containing built static site files'
+    required: false
+    default: './site'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Configure AWS credentials using the OpenID Connect (OIDC) provider 🔑
+      uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+      with:
+        aws-region: ${{ inputs.aws-region }}
+        role-to-assume: ${{ inputs.aws-role-arn }}
+        role-session-name: cloudfront-deploy-action
+
+    - name: Find distribution ID
+      id: distribution
+      shell: bash
+      env:
+        BUCKET_NAME: ${{ inputs.s3-bucket-name }}
+      run: |
+        # NOTE: We find the correct CloudFront distribution by finding a distribution
+        # that with an origin with the expected name and that targets the expected bucket
+        distributions="$(
+          aws cloudfront list-distributions \
+          --query "DistributionList.Items[?Origins.Items[?Id=='s3_origin' && starts_with(DomainName, '$BUCKET_NAME.s3.')]].Id" \
+          --page-size 100 \
+          --output json
+        )"
+
+        num_matching_distributions="$(echo "$distributions" | jq '. | length')"
+
+        if [ "$num_matching_distributions" -ne 1 ]; then
+          echo "Expected 1 matching CloudFront distribution, found $num_matching_distributions:"
+          echo "$distributions" | jq -r ".[]"
+          exit 1
+        fi
+
+        distribution_id="$(echo "$distributions" | jq -r ".[0]")"
+        echo "result=$distribution_id" >> "$GITHUB_OUTPUT"
+
+    - name: Sync files to S3 bucket
+      shell: bash
+      run: |
+        # NOTE: To avoid inconsistencies we first upload non-HTML assets,
+        # then HTML files (which typically reference those assets)
+        aws s3 sync "${{ inputs.site-path }}/" "s3://${{ inputs.s3-bucket-name }}/" --exclude '*.html'
+        aws s3 sync "${{ inputs.site-path }}/" "s3://${{ inputs.s3-bucket-name }}/" --exclude '*' --include '*.html'
+
+    - name: Create CloudFront invalidation
+      shell: bash
+      env:
+        AWS_MAX_ATTEMPTS: 10
+        DISTRIBUTION_ID: ${{ steps.distribution.outputs.result }}
+      run: |
+        aws cloudfront create-invalidation \
+          --distribution-id "$DISTRIBUTION_ID" \
+          --paths "/*"
+
+branding:
+  icon: 'cloud'
+  color: 'blue'
