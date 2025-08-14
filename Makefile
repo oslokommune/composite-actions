@@ -1,7 +1,5 @@
-.PHONY: aider a
+.PHONY: docs
 
-aider:
-	export AWS_REGION="eu-central-1" && \
-	aider --model 'anthropic.claude-3-5-sonnet-20240620-v1:0' --no-show-model-warnings
-
-a: aider
+# Update README.md files from action.yml
+docs:
+	find . -name "action.yml" -type f -exec sh -c './action_to_md.py "$$1" | ./replace_between.py --target "$$(dirname "$$1")/README.md" --section BOILERPLATE --in-place --create' _ {} \;
