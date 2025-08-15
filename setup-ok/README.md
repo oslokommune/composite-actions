@@ -13,11 +13,11 @@ Setup and install ok and its dependencies
 |        Input        |                        Description                        |Required|  Default  |
 |---------------------|-----------------------------------------------------------|--------|-----------|
 |`ok_version`         |Version of ok to install. Examples: v0.1.0, latest         |yes     |``v5.13.0``|
-|`boilerplate_version`|Version of Boilerplate to install. Examples: 0.5.16, latest|yes     |``v0.6.3`` |
+|`boilerplate_version`|Version of Boilerplate to install. Examples: 0.5.16, latest|yes     |``v0.9.0`` |
 |`terraform_version`  |Version of Terraform to install. Examples: 1.10.1, latest  |yes     |``1.12.2`` |
-|`terragrunt_version` |Version of Terragrunt to install. Examples: 0.71.1, latest |yes     |``v0.82.4``|
-|`yq_version`         |Version of yq to install. Examples: v4.44.6, latest        |yes     |``v4.45.4``|
-|`tfswitch_version`   |Version of tfswitch to install. Examples: v1.4.5, latest   |yes     |``v1.4.6`` |
+|`terragrunt_version` |Version of Terragrunt to install. Examples: 0.71.1, latest |yes     |``v0.84.1``|
+|`yq_version`         |Version of yq to install. Examples: v4.44.6, latest        |yes     |``v4.47.1``|
+|`tfswitch_version`   |Version of tfswitch to install. Examples: v1.4.5, latest   |yes     |``v1.5.0`` |
 
 ### Example
 

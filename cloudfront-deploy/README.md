@@ -107,8 +107,6 @@ Ensure your build process outputs files to the directory specified in the `site-
 
 Deploy pre-built static sites to S3 and CloudFront
 
-**Author:** oslokommune
-
 ## Usage
 
 ### Inputs
@@ -131,11 +129,6 @@ Deploy pre-built static sites to S3 and CloudFront
     s3-bucket-name: # Required
     # site-path: # Optional, default: ./site
 ```
-
-## Branding
-
-- **Icon:** cloud
-- **Color:** blue
 
 
 
