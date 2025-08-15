@@ -84,15 +84,11 @@ def generate_metadata_section(config: Dict[str, Any]) -> str:
 
     name = config.get("name", "Unnamed Action")
     description = config.get("description", "")
-    author = config.get("author", "")
 
     markdown += f"# {name}\n\n"
 
     if description:
         markdown += f"{description}\n\n"
-
-    if author:
-        markdown += f"**Author:** {author}\n\n"
 
     return markdown
 
@@ -267,18 +263,6 @@ def generate_markdown(config: Dict[str, Any], config_file: Path) -> str:
     if outputs:
         markdown += "## Outputs\n\n"
         markdown += generate_outputs_table(outputs)
-        markdown += "\n"
-
-    # Add branding section if present
-    branding = config.get("branding", {})
-    if branding:
-        markdown += "## Branding\n\n"
-        icon = branding.get("icon", "")
-        color = branding.get("color", "")
-        if icon:
-            markdown += f"- **Icon:** {icon}\n"
-        if color:
-            markdown += f"- **Color:** {color}\n"
         markdown += "\n"
 
     return markdown
