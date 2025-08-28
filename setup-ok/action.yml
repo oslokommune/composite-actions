@@ -16,12 +16,12 @@ inputs:
     description: "Version of Terraform to install. Examples: 1.10.1, latest"
     required: true
     # renovate: datasource=github-releases depName=hashicorp/terraform extractVersion=^v?(?<version>.*)$
-    default: "1.12.2"
+    default: "1.13.0"
   terragrunt_version:
     description: "Version of Terragrunt to install. Examples: 0.71.1, latest"
     required: true
     # renovate: datasource=github-releases depName=gruntwork-io/terragrunt
-    default: "v0.84.1"
+    default: "v0.86.2"
   yq_version:
     description: "Version of yq to install. Examples: v4.44.6, latest"
     required: true
