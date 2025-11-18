@@ -59,9 +59,12 @@ archive_folder_source() {
 }
 
 # Append file extension to the tag so consumers can infer artifact type.
+# Use shell parameter expansion to derive the extension efficiently.
 append_file_extension_suffix() {
-  local extension
-  extension="$(printf '%s\n' "$source_location" | sed -n 's/^.*\.\(.*\)$/\1/p')"
+  local extension=""
+  if [[ "$source_location" == *.* ]]; then
+    extension="${source_location##*.}"
+  fi
   if [[ -n "$extension" ]]; then
     tag="$tag.$extension"
   fi
