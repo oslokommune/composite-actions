@@ -50,8 +50,8 @@ configure_aws_profiles() {
   export AWS_CONFIG_FILE="$aws_config_file"
 }
 
-# Zip a folder source into a temporary archive so it can be uploaded as a file.
-package_folder_source_into_archive() {
+# Zip a folder source into a temporary archive so it can be uploaded as a single file.
+archive_folder_source() {
   package_tmp_dir="$(mktemp -d)"
   (cd "$source_location" && zip -r "$package_tmp_dir/archive.zip" .)
   source_location="$package_tmp_dir/archive.zip"
@@ -138,13 +138,13 @@ EOF
 main() {
   configure_aws_profiles
 
-  # Package once before iterating environments so every target reuses the same artifact.
   case "$source_type" in
     folder)
-      log_info "Packaging folder artifact for upload to S3"
-      package_folder_source_into_archive
+      log_info "Compressing folder artifact into archive for upload"
+      archive_folder_source
       ;;
     file | docker-image)
+      # Explicitly list the supported types so we don't fall through to the error arm below.
       ;;
     *)
       die "Unsupported source type: $source_type"
@@ -154,8 +154,6 @@ main() {
   if [[ "$source_type" == "file" ]]; then
     log_info "Preparing file artifact for upload to S3"
     append_file_extension_suffix
-  elif [[ "$source_type" == "docker-image" ]]; then
-    log_info "Preparing Docker image artifact for push to ECR"
   fi
 
   # TODO: iterate environments dynamically from CONFIG instead of hardcoding dev/prod.
