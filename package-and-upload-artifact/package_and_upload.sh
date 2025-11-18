@@ -60,12 +60,21 @@ append_file_extension_suffix() {
   fi
 }
 
-upload_file_artifact() {
-  local item="$1"
-  local environment bucket_name
+environment_defined() {
+  local environment="$1"
+  printf '%s' "$CONFIG" | jq -e ".${environment} != null" >/dev/null 2>&1
+}
 
-  environment="$(printf '%s' "$item" | jq -e -r .key)"
-  bucket_name="$(printf '%s' "$item" | jq -e -r .value.artifactBucketName)"
+environment_value() {
+  local environment="$1" key="$2"
+  printf '%s' "$CONFIG" | jq -e -r ".${environment}.${key}"
+}
+
+upload_file_artifact() {
+  local environment="$1"
+  local bucket_name
+
+  bucket_name="$(environment_value "$environment" artifactBucketName)"
 
   log_info "Uploading $source_location to S3 as $tag in $environment"
 
@@ -74,14 +83,13 @@ upload_file_artifact() {
 }
 
 upload_image_artifact() {
-  local item="$1"
-  local environment account_id ecr_repository_name default_region
+  local environment="$1"
+  local account_id ecr_repository_name default_region
   local login_password ecr_repository_uri image_tag
 
-  environment="$(printf '%s' "$item" | jq -e -r .key)"
-  account_id="$(printf '%s' "$item" | jq -e -r .value.accountId)"
-  ecr_repository_name="$(printf '%s' "$item" | jq -e -r .value.artifactEcrRepositoryName)"
-  default_region="$(printf '%s' "$item" | jq -e -r .value.defaultRegion)"
+  account_id="$(environment_value "$environment" accountId)"
+  ecr_repository_name="$(environment_value "$environment" artifactEcrRepositoryName)"
+  default_region="$(environment_value "$environment" defaultRegion)"
 
   export AWS_PROFILE="$environment"
   login_password="$(aws ecr get-login-password --region "$default_region")"
@@ -136,19 +144,23 @@ main() {
       ;;
   esac
 
-  while read -r item; do
+  for environment in dev prod; do
+    if ! environment_defined "$environment"; then
+      continue
+    fi
+
     case "$source_type" in
       file)
-        upload_file_artifact "$item"
+        upload_file_artifact "$environment"
         ;;
       docker-image)
-        upload_image_artifact "$item"
+        upload_image_artifact "$environment"
         ;;
       *)
         log_error "Unrecognized source type $source_type - skipping"
         ;;
     esac
-  done < <(printf '%s' "$CONFIG" | jq -c '{dev,prod} | to_entries | .[]')
+  done
 
   summarize_publication
 }
