@@ -9,9 +9,9 @@ Generate a unique tag to use for an artifact
 
 ### Inputs
 
-|   Input    |                     Description                     |Required| Default |
-|------------|-----------------------------------------------------|--------|---------|
-|`identifier`|The main identifier (e.g., `app-km`)                 |yes     |``n/a``  |
+|   Input    |            Description             |Required|Default|
+|------------|------------------------------------|--------|-------|
+|`identifier`|The main identifier (e.g., `app-km`)|yes     |``n/a``|
 
 ### Example
 
@@ -24,9 +24,9 @@ Generate a unique tag to use for an artifact
 
 ## Outputs
 
-|  Name  |        Description        |                Value                |
-|--------|---------------------------|-------------------------------------|
-|`result`|The generated tag          |``${{ steps.tag.outputs.result }}``  |
+|  Name  |   Description   |               Value               |
+|--------|-----------------|-----------------------------------|
+|`result`|The generated tag|``${{ steps.tag.outputs.result }}``|
 
 
 

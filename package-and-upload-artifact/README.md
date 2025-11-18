@@ -9,12 +9,12 @@ Packages and uploads an artifact
 
 ### Inputs
 
-|      Input      |                     Description                     |Required| Default |
-|-----------------|-----------------------------------------------------|--------|---------|
-|`config`         |JSON-encoded config (.gp.cicd.json)                  |yes     |``n/a``  |
-|`tag`            |The main tag to apply to the artifact                |yes     |``n/a``  |
-|`source-location`|A Docker image ID, file or folder                    |yes     |``n/a``  |
-|`source-type`    |docker-image \| file \| folder                       |yes     |``n/a``  |
+|      Input      |             Description             |Required|Default|
+|-----------------|-------------------------------------|--------|-------|
+|`config`         |JSON-encoded config (.gp.cicd.json)  |yes     |``n/a``|
+|`tag`            |The main tag to apply to the artifact|yes     |``n/a``|
+|`source-location`|A Docker image ID, file or folder    |yes     |``n/a``|
+|`source-type`    |docker-image \| file \| folder         |yes     |``n/a``|
 
 ### Example
 
@@ -30,9 +30,9 @@ Packages and uploads an artifact
 
 ## Outputs
 
-|  Name  |           Description           |                Value                |
-|--------|---------------------------------|-------------------------------------|
-|`result`|The final tag value              |``${{ steps.upload.outputs.tag }}``  |
+|  Name  |    Description    |               Value               |
+|--------|-------------------|-----------------------------------|
+|`result`|The final tag value|``${{ steps.upload.outputs.tag }}``|
 
 
 
