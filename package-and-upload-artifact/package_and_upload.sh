@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+IFS=$'\n\t'
 
 : "${AWSCREDS:?Missing AWSCREDS}"
 : "${CONFIG:?Missing CONFIG}"
@@ -16,24 +17,42 @@ source_location="$SOURCE_LOCATION"
 tag="$TAG"
 
 aws_config_file="$(mktemp)"
+package_tmp_dir=""
 
 cleanup() {
   rm -f "$aws_config_file"
+  if [[ -n "$package_tmp_dir" && -d "$package_tmp_dir" ]]; then
+    rm -rf "$package_tmp_dir"
+  fi
 }
 trap cleanup EXIT
 
-configure_aws_credentials() {
+log_info() {
+  printf '[INFO] %s\n' "$*"
+}
+
+log_error() {
+  printf '[ERROR] %s\n' "$*" >&2
+}
+
+die() {
+  log_error "$1"
+  exit 1
+}
+
+configure_aws_profiles() {
   printf '%s\n' "$AWSCREDS" >"$aws_config_file"
   export AWS_CONFIG_FILE="$aws_config_file"
 }
 
-package_folder_source() {
-  (cd "$source_location" && zip -r ../archive.zip .)
-  source_location="archive.zip"
+package_folder_source_into_archive() {
+  package_tmp_dir="$(mktemp -d)"
+  (cd "$source_location" && zip -r "$package_tmp_dir/archive.zip" .)
+  source_location="$package_tmp_dir/archive.zip"
   source_type="file"
 }
 
-append_extension_to_tag() {
+append_file_extension_suffix() {
   local extension
   extension="$(printf '%s\n' "$source_location" | sed -n 's/^.*\.\(.*\)$/\1/p')"
   if [[ -n "$extension" ]]; then
@@ -41,32 +60,43 @@ append_extension_to_tag() {
   fi
 }
 
-package_artifact() {
-  if [[ "$source_type" == "folder" ]]; then
-    package_folder_source
-  fi
-
-  if [[ "$source_type" == "file" ]]; then
-    append_extension_to_tag
-  fi
+prepare_artifact_payload() {
+  case "$source_type" in
+    folder)
+      log_info "Packaging folder artifact"
+      package_folder_source_into_archive
+      append_file_extension_suffix
+      ;;
+    file)
+      log_info "Preparing file artifact"
+      append_file_extension_suffix
+      ;;
+    docker-image)
+      log_info "Preparing docker image artifact"
+      ;;
+    *)
+      die "Unsupported source type: $source_type"
+      ;;
+  esac
 }
 
-upload_file_to_s3() {
+upload_file_artifact() {
   local item="$1"
   local environment bucket_name
 
   environment="$(printf '%s' "$item" | jq -e -r .key)"
   bucket_name="$(printf '%s' "$item" | jq -e -r .value.artifactBucketName)"
 
-  printf 'Uploading %s to S3 with key %s in %s\n' "$source_location" "$tag" "$environment"
+  log_info "Uploading $source_location to S3 as $tag in $environment"
 
   export AWS_PROFILE="$environment"
   aws s3 cp "$source_location" "s3://$bucket_name/$tag"
 }
 
-push_image_to_ecr() {
+upload_image_artifact() {
   local item="$1"
   local environment account_id ecr_repository_name default_region
+  local login_password ecr_repository_uri image_tag
 
   environment="$(printf '%s' "$item" | jq -e -r .key)"
   account_id="$(printf '%s' "$item" | jq -e -r .value.accountId)"
@@ -81,39 +111,39 @@ push_image_to_ecr() {
   image_tag="$ecr_repository_uri/$ecr_repository_name:$tag"
 
   printf '%s\n' "$login_password" | docker login --username AWS --password-stdin "$ecr_repository_uri"
-  printf 'Tagging image with image tag: %s\n' "$image_tag"
+  log_info "Tagging image with image tag: $image_tag"
   docker tag "$source_location" "$image_tag"
-  printf 'Pushing image with tag: %s\n' "$image_tag"
+  log_info "Pushing image with tag: $image_tag"
   docker push "$image_tag"
 }
 
-process_environment() {
+publish_artifact_to_environment() {
   local item="$1"
 
   case "$source_type" in
     file)
-      upload_file_to_s3 "$item"
+      upload_file_artifact "$item"
       ;;
     docker-image)
-      push_image_to_ecr "$item"
+      upload_image_artifact "$item"
       ;;
     *)
-      printf 'Unrecognized source type %s - skipping\n' "$source_type" >&2
+      log_error "Unrecognized source type $source_type - skipping"
       ;;
   esac
 }
 
-iterate_environments() {
+deployment_environments() {
   printf '%s' "$CONFIG" | jq -c '{dev,prod} | to_entries | .[]'
 }
 
-upload_artifact_to_environments() {
-  iterate_environments | while read -r item; do
-    process_environment "$item"
-  done
+publish_artifact_to_environments() {
+  while read -r item; do
+    publish_artifact_to_environment "$item"
+  done < <(deployment_environments)
 }
 
-summarize_upload() {
+summarize_publication() {
   local workflow_filename workflow_dispatch_url
   workflow_filename="$(basename "${GITHUB_WORKFLOW_REF%%@*}")"
   workflow_dispatch_url="$PARTIAL_WORKFLOW_DISPATCH_URL/$workflow_filename"
@@ -132,10 +162,10 @@ EOF
 }
 
 main() {
-  configure_aws_credentials
-  package_artifact
-  upload_artifact_to_environments
-  summarize_upload
+  configure_aws_profiles
+  prepare_artifact_payload
+  publish_artifact_to_environments
+  summarize_publication
 }
 
 main "$@"
