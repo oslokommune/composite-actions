@@ -18,6 +18,9 @@ on:
       - "setup-boilerplate/*"
       - "setup-ok/*"
       - "renovate-metadata/*"
+      - "terraform-deploy/*"
+      - "generate-tag/*"
+      - "package-and-upload-artifact/*"
 
 
 jobs:
