@@ -1,0 +1,35 @@
+name: "Generate unique tag"
+description: Generate a unique tag to use for an artifact
+inputs:
+  identifier:
+    description: "The main identifier (e.g., `app-km`)"
+    required: true
+
+outputs:
+  result:
+    description: The generated tag
+    value: ${{ steps.tag.outputs.result }}
+
+runs:
+  using: composite
+  steps:
+    - id: tag
+      shell: bash --noprofile --norc -euo pipefail {0}
+      env:
+        IS_DEFAULT_BRANCH: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+        IDENTIFIER: ${{ inputs.identifier }}
+      run: |
+        # Prepare tag
+        prefix="$IDENTIFIER"
+        if [ "$IS_DEFAULT_BRANCH" != "true" ]; then
+          # We mark artifacts not from default branch with a specific prefix. This allows us to
+          # more easily configure automatic clean-up rules
+          prefix="xx-$prefix"
+        fi
+        timestamp="$(date -u "+%Y%m%d%H%M%S")"
+        build_id="$GITHUB_RUN_ID"
+        sanitized_branch_name="${GITHUB_REF#refs/heads/}"
+        sanitized_branch_name="${sanitized_branch_name//[^a-zA-Z0-9_-]/}"
+        short_sha="$(echo "$GITHUB_SHA" | cut -c -8)"
+        tag="$prefix-$timestamp-$build_id-$short_sha-$sanitized_branch_name"
+        echo "result=$tag" >> "$GITHUB_OUTPUT"
