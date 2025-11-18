@@ -105,7 +105,7 @@ upload_image_artifact() {
   docker push "$image_tag"
 }
 
-summarize_publication() {
+write_github_summary() {
   local workflow_filename workflow_dispatch_url
   workflow_filename="$(basename "${GITHUB_WORKFLOW_REF%%@*}")"
   workflow_dispatch_url="$PARTIAL_WORKFLOW_DISPATCH_URL/$workflow_filename"
@@ -144,6 +144,7 @@ main() {
       ;;
   esac
 
+  # TODO: iterate environments dynamically from CONFIG instead of hardcoding dev/prod.
   for environment in dev prod; do
     if ! environment_defined "$environment"; then
       continue
@@ -162,7 +163,7 @@ main() {
     esac
   done
 
-  summarize_publication
+  write_github_summary
 }
 
 main "$@"
