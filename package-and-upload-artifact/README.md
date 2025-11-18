@@ -3,7 +3,8 @@
 
 # Package and upload artifact
 
-Packages and uploads an artifact
+Packages Docker images or files/folders per environment using data from a JSON config: docker sources are pushed to ECR for later Terraform-driven ECS deploys, while file/folder sources are zipped if needed and uploaded to S3 for a Lambda + CloudFront deployment flow. Each environment entry (e.g. dev/prod) in the config carries its AWS account, bucket, role, and repository metadata so the action can iterate over every defined target.
+
 
 ## Usage
 
