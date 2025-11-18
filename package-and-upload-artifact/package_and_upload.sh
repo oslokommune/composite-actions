@@ -142,16 +142,16 @@ main() {
   configure_aws_profiles
 
   case "$source_type" in
-    folder)
-      log_info "Compressing folder artifact into archive for upload"
-      archive_folder_source
-      ;;
-    file | docker-image)
-      # Explicitly list the supported types so we don't fall through to the error arm below.
-      ;;
-    *)
-      die "Unsupported source type: $source_type"
-      ;;
+  folder)
+    log_info "Compressing folder artifact into archive for upload"
+    archive_folder_source
+    ;;
+  file | docker-image)
+    # Explicitly list the supported types so we don't fall through to the error arm below.
+    ;;
+  *)
+    die "Unsupported source type: $source_type"
+    ;;
   esac
 
   if [[ "$source_type" == "file" ]]; then
@@ -167,12 +167,12 @@ main() {
 
     # Upload separately per environment, reusing the prepared artifact above.
     case "$source_type" in
-      file)
-        upload_file_artifact "$environment"
-        ;;
-      docker-image)
-        upload_image_artifact "$environment"
-        ;;
+    file)
+      upload_file_artifact "$environment"
+      ;;
+    docker-image)
+      upload_image_artifact "$environment"
+      ;;
     esac
   done
 
