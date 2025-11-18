@@ -60,26 +60,6 @@ append_file_extension_suffix() {
   fi
 }
 
-prepare_artifact_payload() {
-  case "$source_type" in
-    folder)
-      log_info "Packaging folder artifact"
-      package_folder_source_into_archive
-      append_file_extension_suffix
-      ;;
-    file)
-      log_info "Preparing file artifact"
-      append_file_extension_suffix
-      ;;
-    docker-image)
-      log_info "Preparing docker image artifact"
-      ;;
-    *)
-      die "Unsupported source type: $source_type"
-      ;;
-  esac
-}
-
 upload_file_artifact() {
   local item="$1"
   local environment bucket_name
@@ -117,32 +97,6 @@ upload_image_artifact() {
   docker push "$image_tag"
 }
 
-publish_artifact_to_environment() {
-  local item="$1"
-
-  case "$source_type" in
-    file)
-      upload_file_artifact "$item"
-      ;;
-    docker-image)
-      upload_image_artifact "$item"
-      ;;
-    *)
-      log_error "Unrecognized source type $source_type - skipping"
-      ;;
-  esac
-}
-
-deployment_environments() {
-  printf '%s' "$CONFIG" | jq -c '{dev,prod} | to_entries | .[]'
-}
-
-publish_artifact_to_environments() {
-  while read -r item; do
-    publish_artifact_to_environment "$item"
-  done < <(deployment_environments)
-}
-
 summarize_publication() {
   local workflow_filename workflow_dispatch_url
   workflow_filename="$(basename "${GITHUB_WORKFLOW_REF%%@*}")"
@@ -163,8 +117,39 @@ EOF
 
 main() {
   configure_aws_profiles
-  prepare_artifact_payload
-  publish_artifact_to_environments
+
+  case "$source_type" in
+    folder)
+      log_info "Packaging folder artifact"
+      package_folder_source_into_archive
+      append_file_extension_suffix
+      ;;
+    file)
+      log_info "Preparing file artifact"
+      append_file_extension_suffix
+      ;;
+    docker-image)
+      log_info "Preparing docker image artifact"
+      ;;
+    *)
+      die "Unsupported source type: $source_type"
+      ;;
+  esac
+
+  while read -r item; do
+    case "$source_type" in
+      file)
+        upload_file_artifact "$item"
+        ;;
+      docker-image)
+        upload_image_artifact "$item"
+        ;;
+      *)
+        log_error "Unrecognized source type $source_type - skipping"
+        ;;
+    esac
+  done < <(printf '%s' "$CONFIG" | jq -c '{dev,prod} | to_entries | .[]')
+
   summarize_publication
 }
 
