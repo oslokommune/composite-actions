@@ -52,6 +52,7 @@ runs:
       shell: bash --noprofile --norc -euo pipefail {0}
       id: upload-s3-artifact
       env:
+        ACTION_PATH: ${{ github.action_path }}
         AWSCREDS: |
           [profile dev]
           aws_access_key_id=${{ steps.aws-credentials-dev.outputs.aws-access-key-id }}
@@ -68,13 +69,14 @@ runs:
         SOURCE_TYPE: ${{ inputs.source-type }}
         SOURCE_LOCATION: ${{ inputs.source-location }}
         TAG: ${{ inputs.tag }}
-      run: package-and-upload-artifact/scripts/upload-s3-artifact.sh
+      run: "$ACTION_PATH/scripts/upload-s3-artifact.sh"
 
     - name: Push Docker image to ECR
       if: ${{ inputs.source-type == 'docker-image' }}
       shell: bash --noprofile --norc -euo pipefail {0}
       id: push-ecr-image
       env:
+        ACTION_PATH: ${{ github.action_path }}
         AWSCREDS: |
           [profile dev]
           aws_access_key_id=${{ steps.aws-credentials-dev.outputs.aws-access-key-id }}
@@ -91,7 +93,7 @@ runs:
         SOURCE_TYPE: ${{ inputs.source-type }}
         SOURCE_LOCATION: ${{ inputs.source-location }}
         TAG: ${{ inputs.tag }}
-      run: package-and-upload-artifact/scripts/push-ecr-image.sh
+      run: "$ACTION_PATH/scripts/push-ecr-image.sh"
 
     - name: Record artifact tag
       shell: bash --noprofile --norc -euo pipefail {0}
