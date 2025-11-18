@@ -38,6 +38,18 @@
     "renovate-metadata": {
       "component": "renovate-metadata",
       "release-type": "simple"
+    },
+    "generate-tag": {
+      "component": "generate-tag",
+      "release-type": "simple"
+    },
+    "package-and-upload-artifact": {
+      "component": "package-and-upload-artifact",
+      "release-type": "simple"
+    },
+    "terraform-deploy": {
+      "component": "terraform-deploy",
+      "release-type": "simple"
     }
   }
 }

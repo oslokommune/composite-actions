@@ -1,0 +1,144 @@
+name: "Package and upload artifact"
+description: Packages and uploads an artifact
+inputs:
+  config:
+    description: "JSON-encoded config (.gp.cicd.json)"
+    required: true
+  tag:
+    description: "The main tag to apply to the artifact"
+    required: true
+  source-location:
+    description: "A Docker image ID, file or folder"
+    required: true
+  source-type:
+    description: "docker-image | file | folder"
+    required: true
+
+outputs:
+  result:
+    description: The final tag value
+    value: ${{ steps.upload.outputs.tag }}
+
+runs:
+  using: composite
+  steps:
+    - name: Configure AWS credentials in dev
+      if: ${{ fromJSON(inputs.config).dev != null }}
+      id: aws-credentials-dev
+      uses: aws-actions/configure-aws-credentials@00943011d9042930efac3dcd3a170e4273319bc8 # v5.1.0
+      with:
+        aws-region: ${{ fromJSON(inputs.config).dev.defaultRegion }}
+        role-to-assume: ${{ fromJSON(inputs.config).dev.artifactRoleArn }}
+        output-env-credentials: false
+        output-credentials: true
+
+    - name: Configure AWS credentials in prod
+      if: ${{ fromJSON(inputs.config).prod != null }}
+      id: aws-credentials-prod
+      uses: aws-actions/configure-aws-credentials@00943011d9042930efac3dcd3a170e4273319bc8 # v5.1.0
+      with:
+        aws-region: ${{ fromJSON(inputs.config).prod.defaultRegion }}
+        role-to-assume: ${{ fromJSON(inputs.config).prod.artifactRoleArn }}
+        output-env-credentials: false
+        output-credentials: true
+
+    - name: Package and upload artifact
+      shell: bash --noprofile --norc -euo pipefail {0}
+      id: upload
+      env:
+        AWSCREDS: |
+          [profile dev]
+          aws_access_key_id=${{ steps.aws-credentials-dev.outputs.aws-access-key-id }}
+          aws_secret_access_key=${{ steps.aws-credentials-dev.outputs.aws-secret-access-key }}
+          aws_session_token=${{ steps.aws-credentials-dev.outputs.aws-session-token }}
+
+          [profile prod]
+          aws_access_key_id=${{ steps.aws-credentials-prod.outputs.aws-access-key-id }}
+          aws_secret_access_key=${{ steps.aws-credentials-prod.outputs.aws-secret-access-key }}
+          aws_session_token=${{ steps.aws-credentials-prod.outputs.aws-session-token }}
+        TZ: "Europe/Oslo"
+        CONFIG: ${{ inputs.config }}
+        PARTIAL_WORKFLOW_DISPATCH_URL: "${{ github.server_url}}/${{ github.repository }}/actions/workflows"
+        SOURCE_TYPE: ${{ inputs.source-type }}
+        SOURCE_LOCATION: ${{ inputs.source-location }}
+        TAG: ${{ inputs.tag }}
+      run: |
+        tag="$TAG"
+        echo "$AWSCREDS" > /tmp/awscreds
+        export AWS_CONFIG_FILE="/tmp/awscreds"
+
+        if [ "$SOURCE_TYPE" = "folder" ]; then
+          (cd "$SOURCE_LOCATION" && zip -r ../archive.zip . ;)
+          SOURCE_LOCATION="archive.zip"
+          SOURCE_TYPE="file"
+        fi
+
+        if [ "$SOURCE_TYPE" = "file" ]; then
+          file_extension="$(echo "$SOURCE_LOCATION" | sed -n 's/^.*\.\(.*\)$/\1/p')"
+          tag="$tag.$file_extension"
+        fi
+
+        echo "$CONFIG" | jq -c '{dev,prod} | to_entries | .[]' | while read -r item; do (
+          if [ "$SOURCE_TYPE" = "file" ]; then
+            environment="$(echo "$item" | jq -e -r .key)"
+            account_id="$(echo "$item" | jq -e -r .value.accountId)"
+            bucket_name="$(echo "$item" | jq -e -r .value.artifactBucketName)"
+
+            echo "Uploading $SOURCE_LOCATION to S3 with key $tag in $environment"
+
+            export AWS_PROFILE="$environment"
+            aws s3 cp "$SOURCE_LOCATION" "s3://$bucket_name/$tag"
+          elif [ "$SOURCE_TYPE" = "docker-image" ]; then
+            environment="$(echo "$item" | jq -e -r .key)"
+            account_id="$(echo "$item" | jq -e -r .value.accountId)"
+            ecr_repository_name="$(echo "$item" | jq -e -r .value.artifactEcrRepositoryName)"
+            default_region="$(echo "$item" | jq -e -r .value.defaultRegion)"
+
+            export AWS_PROFILE="$environment"
+            login_password="$(aws ecr get-login-password --region "$default_region")"
+            echo "::add-mask::$login_password"
+
+            ecr_repository_uri="$account_id.dkr.ecr.$default_region.amazonaws.com"
+            image_tag="$ecr_repository_uri/$ecr_repository_name:$tag"
+
+            echo "$login_password" | docker login --username AWS --password-stdin "$ecr_repository_uri"
+            echo "Tagging image with image tag: $image_tag"
+            docker tag "$SOURCE_LOCATION" "$ecr_repository_uri/$ecr_repository_name:$tag"
+            echo "Pushing image with tag: $image_tag"
+            docker push "$image_tag"
+          else
+            echo "Unrecognized source type '$SOURCE_TYPE' - skipping" >&2
+          fi
+        ); done
+
+        rm /tmp/awscreds
+
+        # $GITHUB_WORKFLOW_REF looks like this: <org>/<repo>/.github/workflows/<workflow-filename>@<git-reference>
+        workflow_filename="$(basename "${GITHUB_WORKFLOW_REF%%@*}")"
+        workflow_dispatch_url="$PARTIAL_WORKFLOW_DISPATCH_URL/$workflow_filename"
+
+        echo "tag=$tag" >> "$GITHUB_OUTPUT"
+        cat <<EOF >> "$GITHUB_STEP_SUMMARY"
+        Built and uploaded artifact with tag:
+        \`\`\`
+        $tag
+        \`\`\`
+
+        ---
+
+        _To manually deploy the artifact, copy the tag and pass it in through a [workflow dispatch]($workflow_dispatch_url)_
+        EOF
+    - name: Store artifact tag in commit status
+      shell: bash --noprofile --norc -euo pipefail {0}
+      env:
+        COMMIT_SHA: ${{ github.sha }}
+        GH_TOKEN: ${{ github.token }}
+        DESCRIPTION: ${{ steps.upload.outputs.tag }}
+        WORKFLOW: ${{ github.workflow }}
+        TARGET_URL: "${{ github.server_url}}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      run: |
+        gh api "repos/${GITHUB_REPOSITORY}/statuses/${COMMIT_SHA}" \
+          -f state="success" \
+          -f context="$WORKFLOW / artifact-tag" \
+          -f target_url="$TARGET_URL" \
+          -f description="$DESCRIPTION"

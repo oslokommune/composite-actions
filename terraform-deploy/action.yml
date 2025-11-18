@@ -1,0 +1,144 @@
+name: "Terraform apply"
+description: Deploy application through infrastructure
+inputs:
+  config:
+    description: "JSON-encoded config (.gp.cicd.json)"
+    required: true
+  stack-dir:
+    required: true
+    description: "The path to the application stack (e.g., `stacks/dev/app-km`)"
+  environment:
+    required: true
+    description: "The semantic name of the environment (e.g., `dev`, `prod`)"
+  tag:
+    required: false
+    default: ""
+    description: "The tag of an artifact to deploy"
+  target-repository:
+    description: "The name of the repository (e.g., `pirates-iac`) to checkout code from"
+    required: true
+  github-app-id:
+    description: "ID of GitHub App used to get read access to the repository containing IaC"
+    required: true
+  github-app-private-key:
+    description: "Private key of GitHub App used to get read access to the repository containing IaC"
+    required: true
+  github-deploy-key:
+    description: "Repository deploy key that grants read access to shared libraries (e.g., golden-path-iac)"
+    required: true
+
+outputs:
+  # NOTE: A composite action can't have dynamic outputs, so
+  # we dump everything into a JSON-encoded string instead
+  terraform-outputs:
+    description: JSON-encoded Terraform outputs
+    value: ${{ steps.apply.outputs.result }}
+
+runs:
+  using: composite
+  steps:
+    - name: Get GitHub App token
+      uses: actions/create-github-app-token@67018539274d69449ef7c02e8e71183d1719ab42 # v2.1.4
+      id: get_token
+      with:
+        app-id: ${{ inputs.github-app-id }}
+        private-key: ${{ inputs.github-app-private-key }}
+        owner: ${{ github.repository_owner }}
+        repositories: ${{ inputs.target-repository }}
+
+    - name: Checkout
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      id: checkout
+      with:
+        repository: "${{ github.repository_owner }}/${{ inputs.target-repository }}"
+        token: "${{ steps.get_token.outputs.token }}"
+        # TODO: A more unique name to avoid potentially reusing name of an existing folder?
+        path: "iac"
+        fetch-depth: 1
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@00943011d9042930efac3dcd3a170e4273319bc8 # v5.1.0
+      with:
+        aws-region: ${{ fromJSON(inputs.config)[inputs.environment].defaultRegion }}
+        role-to-assume: ${{ fromJSON(inputs.config)[inputs.environment].deploymentRoleArn }}
+
+    - name: Load golden-path-iac SSH deploy key
+      uses: webfactory/ssh-agent@a6f90b1f127823b31d4d4a8d96047790581349bd # v0.9.1
+      with:
+        ssh-private-key: ${{ inputs.github-deploy-key }}
+
+    - name: Extract Terraform version
+      id: v
+      shell: bash --noprofile --norc -euo pipefail {0}
+      working-directory: iac/${{ inputs.stack-dir }}
+      run: ls -lah; echo "TERRAFORM_VERSION=$(grep required_version *.tf | sed -E 's/[^"]+"([^"]+)"+/\1/')" >> "$GITHUB_OUTPUT"
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+      with:
+        terraform_version: ${{ steps.v.outputs.TERRAFORM_VERSION }}
+
+    - name: Initialize the working directory containing Terraform configuration files
+      id: init
+      shell: bash --noprofile --norc -euo pipefail {0}
+      working-directory: iac/${{ inputs.stack-dir }}
+      continue-on-error: true
+      run: |
+        terraform init -input=false
+
+    - name: Update SSM parameter
+      if: >-
+        ${{
+          steps.init.outcome == 'success' &&
+          inputs.tag
+        }}
+      shell: bash --noprofile --norc -euo pipefail {0}
+      env:
+        TAG: ${{ inputs.tag }}
+        STACK_DIR: ${{ inputs.stack-dir }}
+        ENVIRONMENT_NAME: ${{ fromJSON(inputs.config)[inputs.environment].name }}
+      run: |
+        stack_name="$(basename "$STACK_DIR")"
+        parameter_name="/$ENVIRONMENT_NAME/artifacts/$stack_name"
+        aws ssm put-parameter \
+          --name "$parameter_name" \
+          --value "$TAG" \
+          --type "String" \
+          --overwrite
+
+    - name: Verify that latest code is checked out
+      shell: bash --noprofile --norc -euo pipefail {0}
+      env:
+        GH_TOKEN: ${{ steps.get_token.outputs.token }}
+        LOCAL_SHA: ${{ steps.checkout.outputs.commit }}
+        REPOSITORY_OWNER: ${{ github.repository_owner }}
+        TARGET_REPOSITORY: ${{ inputs.target-repository }}
+      run: |
+        remote_sha="$(gh api repos/$REPOSITORY_OWNER/$TARGET_REPOSITORY/commits/HEAD --jq '.sha')"
+        if [ "$LOCAL_SHA" != "$remote_sha" ]; then
+          echo "Error: New commits detected after checkout"
+          echo "Checked out: $LOCAL_SHA"
+          echo "Latest: $remote_sha"
+          echo
+          echo "Solution: Trigger workflow again."
+          exit 1
+        fi
+        echo "Verified: checked out SHA matches latest commit ($LOCAL_SHA)"
+
+    - name: Apply the Terraform code
+      id: apply
+      if: steps.init.outcome == 'success'
+      shell: bash --noprofile --norc -euo pipefail {0}
+      working-directory: iac/${{ inputs.stack-dir }}
+      run: |
+        terraform apply -auto-approve -lock-timeout=5m
+        result="$(terraform output -json \
+          | jq -c 'with_entries(select(.value.sensitive == false) | .value = .value.value)'
+        )"
+        echo "result=$result" >> "$GITHUB_OUTPUT"
+
+    - name: Fail job if terraform apply failed or didn't run
+      if: steps.apply.outcome != 'success'
+      shell: bash --noprofile --norc -euo pipefail {0}
+      run: |
+        exit 1
