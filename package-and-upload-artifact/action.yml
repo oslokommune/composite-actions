@@ -47,9 +47,10 @@ runs:
         output-env-credentials: false
         output-credentials: true
 
-    - name: Package and upload artifact
+    - name: Upload artifact to S3
+      if: ${{ inputs.source-type == 'file' || inputs.source-type == 'folder' }}
       shell: bash --noprofile --norc -euo pipefail {0}
-      id: upload
+      id: upload-s3-artifact
       env:
         AWSCREDS: |
           [profile dev]
@@ -67,7 +68,37 @@ runs:
         SOURCE_TYPE: ${{ inputs.source-type }}
         SOURCE_LOCATION: ${{ inputs.source-location }}
         TAG: ${{ inputs.tag }}
-      run: package-and-upload-artifact/package_and_upload.sh
+      run: package-and-upload-artifact/scripts/upload-s3-artifact.sh
+
+    - name: Push Docker image to ECR
+      if: ${{ inputs.source-type == 'docker-image' }}
+      shell: bash --noprofile --norc -euo pipefail {0}
+      id: push-ecr-image
+      env:
+        AWSCREDS: |
+          [profile dev]
+          aws_access_key_id=${{ steps.aws-credentials-dev.outputs.aws-access-key-id }}
+          aws_secret_access_key=${{ steps.aws-credentials-dev.outputs.aws-secret-access-key }}
+          aws_session_token=${{ steps.aws-credentials-dev.outputs.aws-session-token }}
+
+          [profile prod]
+          aws_access_key_id=${{ steps.aws-credentials-prod.outputs.aws-access-key-id }}
+          aws_secret_access_key=${{ steps.aws-credentials-prod.outputs.aws-secret-access-key }}
+          aws_session_token=${{ steps.aws-credentials-prod.outputs.aws-session-token }}
+        TZ: "Europe/Oslo"
+        CONFIG: ${{ inputs.config }}
+        PARTIAL_WORKFLOW_DISPATCH_URL: "${{ github.server_url}}/${{ github.repository }}/actions/workflows"
+        SOURCE_TYPE: ${{ inputs.source-type }}
+        SOURCE_LOCATION: ${{ inputs.source-location }}
+        TAG: ${{ inputs.tag }}
+      run: package-and-upload-artifact/scripts/push-ecr-image.sh
+
+    - name: Record artifact tag
+      shell: bash --noprofile --norc -euo pipefail {0}
+      id: upload
+      run: |
+        : "${ARTIFACT_TAG:?Missing ARTIFACT_TAG}"
+        printf 'tag=%s\n' "$ARTIFACT_TAG" >>"$GITHUB_OUTPUT"
     - name: Store artifact tag in commit status
       shell: bash --noprofile --norc -euo pipefail {0}
       env:
