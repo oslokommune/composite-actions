@@ -22,7 +22,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-write_aws_credentials() {
+configure_aws_credentials() {
   printf '%s\n' "$AWSCREDS" >"$aws_config_file"
   export AWS_CONFIG_FILE="$aws_config_file"
 }
@@ -41,7 +41,7 @@ append_extension_to_tag() {
   fi
 }
 
-prepare_source() {
+package_artifact() {
   if [[ "$source_type" == "folder" ]]; then
     package_folder_source
   fi
@@ -107,7 +107,13 @@ iterate_environments() {
   printf '%s' "$CONFIG" | jq -c '{dev,prod} | to_entries | .[]'
 }
 
-emit_summary() {
+upload_artifact_to_environments() {
+  iterate_environments | while read -r item; do
+    process_environment "$item"
+  done
+}
+
+summarize_upload() {
   local workflow_filename workflow_dispatch_url
   workflow_filename="$(basename "${GITHUB_WORKFLOW_REF%%@*}")"
   workflow_dispatch_url="$PARTIAL_WORKFLOW_DISPATCH_URL/$workflow_filename"
@@ -126,14 +132,10 @@ EOF
 }
 
 main() {
-  write_aws_credentials
-  prepare_source
-
-  iterate_environments | while read -r item; do
-    process_environment "$item"
-  done
-
-  emit_summary
+  configure_aws_credentials
+  package_artifact
+  upload_artifact_to_environments
+  summarize_upload
 }
 
 main "$@"
