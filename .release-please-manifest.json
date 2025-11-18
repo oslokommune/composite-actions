@@ -6,5 +6,8 @@
   "ecs-update-and-deploy-task-definition": "2.1.1",
   "setup-boilerplate": "1.1.0",
   "setup-ok": "1.6.1",
-  "renovate-metadata": "1.0.1"
+  "renovate-metadata": "1.0.1",
+  "generate-tag": "1.0.0",
+  "package-and-upload-artifact": "1.0.0",
+  "terraform-deploy": "1.0.0"
 }
