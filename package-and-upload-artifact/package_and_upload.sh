@@ -19,6 +19,7 @@ tag="$TAG"
 aws_config_file="$(mktemp)"
 package_tmp_dir=""
 
+# Remove temporary AWS config and archive before exiting.
 cleanup() {
   rm -f "$aws_config_file"
   if [[ -n "$package_tmp_dir" && -d "$package_tmp_dir" ]]; then
@@ -27,24 +28,29 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# Print informational message with a consistent prefix.
 log_info() {
   printf '[INFO] %s\n' "$*"
 }
 
+# Print errors to stderr with a consistent prefix.
 log_error() {
   printf '[ERROR] %s\n' "$*" >&2
 }
 
+# Exit with an error message.
 die() {
   log_error "$1"
   exit 1
 }
 
+# Write inline AWS credentials to a temp config file used by AWS CLI.
 configure_aws_profiles() {
   printf '%s\n' "$AWSCREDS" >"$aws_config_file"
   export AWS_CONFIG_FILE="$aws_config_file"
 }
 
+# Zip a folder source into a temporary archive so it can be uploaded as a file.
 package_folder_source_into_archive() {
   package_tmp_dir="$(mktemp -d)"
   (cd "$source_location" && zip -r "$package_tmp_dir/archive.zip" .)
@@ -52,6 +58,7 @@ package_folder_source_into_archive() {
   source_type="file"
 }
 
+# Append file extension to the tag so consumers can infer artifact type.
 append_file_extension_suffix() {
   local extension
   extension="$(printf '%s\n' "$source_location" | sed -n 's/^.*\.\(.*\)$/\1/p')"
@@ -60,16 +67,19 @@ append_file_extension_suffix() {
   fi
 }
 
+# Return success when the config contains the target environment key.
 environment_defined() {
   local environment="$1"
   printf '%s' "$CONFIG" | jq -e ".${environment} != null" >/dev/null 2>&1
 }
 
+# Extract a single value from the config for the given environment.
 environment_value() {
   local environment="$1" key="$2"
   printf '%s' "$CONFIG" | jq -e -r ".${environment}.${key}"
 }
 
+# Upload a prepared file artifact to the environment-specific S3 bucket.
 upload_file_artifact() {
   local environment="$1"
   local bucket_name
@@ -82,6 +92,7 @@ upload_file_artifact() {
   aws s3 cp "$source_location" "s3://$bucket_name/$tag"
 }
 
+# Push a Docker image artifact to the environment-specific ECR repository.
 upload_image_artifact() {
   local environment="$1"
   local account_id ecr_repository_name default_region
@@ -105,6 +116,7 @@ upload_image_artifact() {
   docker push "$image_tag"
 }
 
+# Write the resulting tag to the GitHub Action summary and outputs.
 write_github_summary() {
   local workflow_filename workflow_dispatch_url
   workflow_filename="$(basename "${GITHUB_WORKFLOW_REF%%@*}")"
@@ -126,23 +138,25 @@ EOF
 main() {
   configure_aws_profiles
 
+  # Package once before iterating environments so every target reuses the same artifact.
   case "$source_type" in
     folder)
-      log_info "Packaging folder artifact"
+      log_info "Packaging folder artifact for upload to S3"
       package_folder_source_into_archive
-      append_file_extension_suffix
       ;;
-    file)
-      log_info "Preparing file artifact"
-      append_file_extension_suffix
-      ;;
-    docker-image)
-      log_info "Preparing docker image artifact"
+    file | docker-image)
       ;;
     *)
       die "Unsupported source type: $source_type"
       ;;
   esac
+
+  if [[ "$source_type" == "file" ]]; then
+    log_info "Preparing file artifact for upload to S3"
+    append_file_extension_suffix
+  elif [[ "$source_type" == "docker-image" ]]; then
+    log_info "Preparing Docker image artifact for push to ECR"
+  fi
 
   # TODO: iterate environments dynamically from CONFIG instead of hardcoding dev/prod.
   for environment in dev prod; do
@@ -150,15 +164,13 @@ main() {
       continue
     fi
 
+    # Upload separately per environment, reusing the prepared artifact above.
     case "$source_type" in
       file)
         upload_file_artifact "$environment"
         ;;
       docker-image)
         upload_image_artifact "$environment"
-        ;;
-      *)
-        log_error "Unrecognized source type $source_type - skipping"
         ;;
     esac
   done
