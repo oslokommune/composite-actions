@@ -27,42 +27,12 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Configure AWS credentials in dev
-      if: ${{ fromJSON(inputs.config).dev != null }}
-      id: aws-credentials-dev
-      uses: aws-actions/configure-aws-credentials@00943011d9042930efac3dcd3a170e4273319bc8 # v5.1.0
-      with:
-        aws-region: ${{ fromJSON(inputs.config).dev.defaultRegion }}
-        role-to-assume: ${{ fromJSON(inputs.config).dev.artifactRoleArn }}
-        output-env-credentials: false
-        output-credentials: true
-
-    - name: Configure AWS credentials in prod
-      if: ${{ fromJSON(inputs.config).prod != null }}
-      id: aws-credentials-prod
-      uses: aws-actions/configure-aws-credentials@00943011d9042930efac3dcd3a170e4273319bc8 # v5.1.0
-      with:
-        aws-region: ${{ fromJSON(inputs.config).prod.defaultRegion }}
-        role-to-assume: ${{ fromJSON(inputs.config).prod.artifactRoleArn }}
-        output-env-credentials: false
-        output-credentials: true
-
     - name: Upload artifact to S3
       if: ${{ inputs.source-type == 'file' || inputs.source-type == 'folder' }}
       shell: bash --noprofile --norc -euo pipefail {0}
       id: upload-s3-artifact
       env:
         ACTION_PATH: ${{ github.action_path }}
-        AWSCREDS: |
-          [profile dev]
-          aws_access_key_id=${{ steps.aws-credentials-dev.outputs.aws-access-key-id }}
-          aws_secret_access_key=${{ steps.aws-credentials-dev.outputs.aws-secret-access-key }}
-          aws_session_token=${{ steps.aws-credentials-dev.outputs.aws-session-token }}
-
-          [profile prod]
-          aws_access_key_id=${{ steps.aws-credentials-prod.outputs.aws-access-key-id }}
-          aws_secret_access_key=${{ steps.aws-credentials-prod.outputs.aws-secret-access-key }}
-          aws_session_token=${{ steps.aws-credentials-prod.outputs.aws-session-token }}
         TZ: "Europe/Oslo"
         CONFIG: ${{ inputs.config }}
         PARTIAL_WORKFLOW_DISPATCH_URL: "${{ github.server_url}}/${{ github.repository }}/actions/workflows"
@@ -77,16 +47,6 @@ runs:
       id: push-ecr-image
       env:
         ACTION_PATH: ${{ github.action_path }}
-        AWSCREDS: |
-          [profile dev]
-          aws_access_key_id=${{ steps.aws-credentials-dev.outputs.aws-access-key-id }}
-          aws_secret_access_key=${{ steps.aws-credentials-dev.outputs.aws-secret-access-key }}
-          aws_session_token=${{ steps.aws-credentials-dev.outputs.aws-session-token }}
-
-          [profile prod]
-          aws_access_key_id=${{ steps.aws-credentials-prod.outputs.aws-access-key-id }}
-          aws_secret_access_key=${{ steps.aws-credentials-prod.outputs.aws-secret-access-key }}
-          aws_session_token=${{ steps.aws-credentials-prod.outputs.aws-session-token }}
         TZ: "Europe/Oslo"
         CONFIG: ${{ inputs.config }}
         PARTIAL_WORKFLOW_DISPATCH_URL: "${{ github.server_url}}/${{ github.repository }}/actions/workflows"

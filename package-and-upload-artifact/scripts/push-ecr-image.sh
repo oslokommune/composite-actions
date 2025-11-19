@@ -15,15 +15,6 @@ source_type="$SOURCE_TYPE"
 source_location="$SOURCE_LOCATION"
 tag="$TAG"
 
-cleanup() {
-  if [[ -n "${aws_config_file:-}" ]]; then
-    rm -f "$aws_config_file"
-  fi
-}
-trap cleanup EXIT
-
-configure_aws
-
 if [[ "$source_type" != "docker-image" ]]; then
   die "push-ecr-image.sh only supports docker-image sources (received $source_type)"
 fi
@@ -37,7 +28,6 @@ upload_image_artifact() {
   ecr_repository_name="$(environment_value "$environment" artifactEcrRepositoryName)"
   default_region="$(environment_value "$environment" defaultRegion)"
 
-  export AWS_PROFILE="$environment"
   login_password="$(aws ecr get-login-password --region "$default_region")"
   printf '::add-mask::%s\n' "$login_password"
 
@@ -51,10 +41,25 @@ upload_image_artifact() {
   docker push "$image_tag"
 }
 
-for environment in dev prod; do
-  if environment_defined "$environment"; then
-    upload_image_artifact "$environment"
+environments="$(printf '%s' "$CONFIG" | jq -r 'to_entries[] | select(.value.artifactRoleArn != null) | .key')"
+if [[ -z "$environments" ]]; then
+  die "No environments with artifactRoleArn defined in config"
+fi
+
+for environment in $environments; do
+  if ! environment_defined "$environment"; then
+    continue
   fi
+
+  role_arn="$(environment_value "$environment" artifactRoleArn)"
+  default_region="$(environment_value "$environment" defaultRegion)"
+
+  authenticate_via_oidc "$role_arn" "$default_region"
+  export AWS_REGION="$default_region"
+  export AWS_DEFAULT_REGION="$default_region"
+
+  upload_image_artifact "$environment"
+  clear_credentials
 done
 
 write_github_summary "$tag"

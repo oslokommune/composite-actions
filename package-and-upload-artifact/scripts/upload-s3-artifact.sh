@@ -17,16 +17,11 @@ tag="$TAG"
 package_tmp_dir=""
 
 cleanup() {
-  if [[ -n "${aws_config_file:-}" ]]; then
-    rm -f "$aws_config_file"
-  fi
   if [[ -n "$package_tmp_dir" && -d "$package_tmp_dir" ]]; then
     rm -rf "$package_tmp_dir"
   fi
 }
 trap cleanup EXIT
-
-configure_aws
 
 archive_folder_source() {
   package_tmp_dir="$(mktemp -d)"
@@ -53,7 +48,6 @@ upload_file_artifact() {
 
   log_info "Uploading $source_location to S3 as $tag in $environment"
 
-  export AWS_PROFILE="$environment"
   aws s3 cp "$source_location" "s3://$bucket_name/$tag"
 }
 
@@ -74,10 +68,25 @@ esac
 log_info "Preparing file artifact for upload to S3"
 append_file_extension_suffix
 
-for environment in dev prod; do
-  if environment_defined "$environment"; then
-    upload_file_artifact "$environment"
+environments="$(printf '%s' "$CONFIG" | jq -r 'to_entries[] | select(.value.artifactRoleArn != null) | .key')"
+if [[ -z "$environments" ]]; then
+  die "No environments with artifactRoleArn defined in config"
+fi
+
+for environment in $environments; do
+  if ! environment_defined "$environment"; then
+    continue
   fi
+
+  role_arn="$(environment_value "$environment" artifactRoleArn)"
+  default_region="$(environment_value "$environment" defaultRegion)"
+
+  authenticate_via_oidc "$role_arn" "$default_region"
+  export AWS_REGION="$default_region"
+  export AWS_DEFAULT_REGION="$default_region"
+
+  upload_file_artifact "$environment"
+  clear_credentials
 done
 
 write_github_summary "$tag"
