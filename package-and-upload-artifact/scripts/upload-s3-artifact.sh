@@ -57,9 +57,6 @@ folder)
   archive_folder_source
   ;;
 file) ;;
-docker-image)
-  die "upload-s3-artifact.sh only supports file or folder sources"
-  ;;
 *)
   die "Unsupported source type: $source_type"
   ;;
