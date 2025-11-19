@@ -39,6 +39,7 @@ upload_image_artifact() {
   docker tag "$source_location" "$image_tag"
   log_info "Pushing image with tag: $image_tag"
   docker push "$image_tag"
+  docker logout "$ecr_repository_uri"
 }
 
 environments="$(printf '%s' "$CONFIG" | jq -r 'to_entries[] | select(.value.artifactRoleArn != null) | .key')"

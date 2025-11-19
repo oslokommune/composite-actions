@@ -35,7 +35,7 @@ append_file_extension_suffix() {
   if [[ "$source_location" == *.* ]]; then
     extension="${source_location##*.}"
   fi
-  if [[ -n "$extension" ]]; then
+  if [[ -n "$extension" && "$tag" != *."$extension" ]]; then
     tag="$tag.$extension"
   fi
 }
@@ -76,7 +76,7 @@ for environment in $environments; do
   fi
 
   role_arn="$(environment_value "$environment" artifactRoleArn)"
-  default_region="$(environment_value "$environment" defaultRegion)"
+  default_region="$(environment_value "$environment" defaultRegion)" || die "Missing defaultRegion for $environment"
 
   authenticate_via_oidc "$role_arn" "$default_region"
   export AWS_REGION="$default_region"

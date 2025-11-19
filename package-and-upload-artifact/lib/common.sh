@@ -19,6 +19,9 @@ require_cmd() {
   command -v "$cmd" >/dev/null 2>&1 || die "Missing required command: $cmd"
 }
 
+require_cmd jq
+require_cmd aws
+
 authenticate_via_oidc() {
   local role_arn="$1"
   local aws_region="${2:-eu-north-1}"
@@ -29,8 +32,6 @@ authenticate_via_oidc() {
   : "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:?Missing ACTIONS_ID_TOKEN_REQUEST_TOKEN}"
 
   require_cmd curl
-  require_cmd jq
-  require_cmd aws
 
   log_info "Authenticating to $role_arn via OIDC..."
 
@@ -75,13 +76,13 @@ clear_credentials() {
 environment_defined() {
   : "${CONFIG:?Missing CONFIG}"
   local environment="$1"
-  printf '%s' "$CONFIG" | jq -e ".${environment} != null" >/dev/null 2>&1
+  printf '%s' "$CONFIG" | jq -e --arg env "$environment" '.[$env] != null' >/dev/null 2>&1
 }
 
 environment_value() {
   : "${CONFIG:?Missing CONFIG}"
   local environment="$1" key="$2"
-  printf '%s' "$CONFIG" | jq -e -r ".${environment}.${key}"
+  printf '%s' "$CONFIG" | jq -e -r --arg env "$environment" --arg k "$key" '.[$env][$k]'
 }
 
 write_github_summary() {
