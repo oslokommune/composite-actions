@@ -3,7 +3,8 @@
 
 # Package and upload artifact
 
-Packages and uploads an artifact
+Packages Docker images or files for every environment listed in the JSON config, using the AWS account, bucket, role, and repository data defined there. Docker sources are retagged and pushed to ECR so Terraform can deploy them to ECS. Files or folders are zipped if needed, copied to S3, and later published through the Terraform → Lambda → CloudFront flow.
+
 
 ## Usage
 
