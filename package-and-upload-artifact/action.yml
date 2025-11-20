@@ -87,7 +87,11 @@ runs:
             echo "Uploading $SOURCE_LOCATION to S3 with key $tag in $environment"
 
             export AWS_PROFILE="$environment"
-            aws s3 cp "$SOURCE_LOCATION" "s3://$bucket_name/$tag"
+            aws s3api put-object \
+              --bucket "$bucket_name" \
+              --key "$tag" \
+              --body "$SOURCE_LOCATION" \
+              --if-none-match "*"
           elif [ "$SOURCE_TYPE" = "docker-image" ]; then
             environment="$(echo "$item" | jq -e -r .key)"
             account_id="$(echo "$item" | jq -e -r .value.accountId)"
