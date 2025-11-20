@@ -7,8 +7,8 @@
   "setup-boilerplate": "1.1.0",
   "setup-ok": "1.6.1",
   "renovate-metadata": "1.0.1",
-  "generate-tag": "0.0.0",
-  "package-and-upload-artifact": "0.0.0",
-  "terraform-deploy": "0.0.0",
-  "determine-stacks": "0.0.0"
+  "generate-tag": "1.0.0",
+  "package-and-upload-artifact": "1.0.0",
+  "terraform-deploy": "1.0.0",
+  "determine-stacks": "1.0.0"
 }
