@@ -1,0 +1,108 @@
+name: 'Determine Terraform Stacks'
+description: 'Classify Terraform stacks into sequential and parallel deployment groups'
+
+inputs:
+  input_summary:
+    description: 'Outputs the glob filter to the GitHub summary'
+    type: boolean
+    required: false
+    default: true
+  glob_filter:
+    description: 'Deploy stacks matching glob pattern (e.g. "stacks/dev/{dns,iam}", "stacks/dev/app-*", "stacks/*/app-foo")'
+    required: true
+  patterns:
+    description: 'Ordered patterns for sequential deployment (first match wins)'
+    required: false
+  dev_files_path:
+    description: 'Path to dev stack (e.g. "stacks/dev")'
+    required: false
+  prod_files_path:
+    description: 'Path to prod stack (e.g. "stacks/prod")'
+    required: false
+
+outputs:
+  dev-sequential:
+    description: 'JSON array of dev stacks to deploy sequentially'
+    value: ${{ steps.stacks.outputs.dev-sequential }}
+  dev-parallel:
+    description: 'JSON array of dev stacks to deploy in parallel'
+    value: ${{ steps.stacks.outputs.dev-parallel }}
+  prod-sequential:
+    description: 'JSON array of prod stacks to deploy sequentially'
+    value: ${{ steps.stacks.outputs.prod-sequential }}
+  prod-parallel:
+    description: 'JSON array of prod stacks to deploy in parallel'
+    value: ${{ steps.stacks.outputs.prod-parallel }}
+  config:
+    description: 'CI/CD configuration from .gp.cicd.json'
+    value: ${{ steps.config.outputs.result }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Store config as output
+      id: config
+      shell: bash
+      run: |
+        config="$(jq -e -c . ".gp.cicd.json")"
+        echo "$config"
+        echo "result=$config" >> "$GITHUB_OUTPUT"
+
+    - name: Detect changed stack files
+      uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
+      id: filter
+      if: ${{ github.event_name != 'workflow_dispatch' }}
+      with:
+        list-files: json
+        filters: |
+          all:
+            - '**/*'
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
+
+    - name: Classify stacks into sequential and parallel deployment groups
+      id: stacks
+      shell: bash
+      env:
+        EVENT_NAME: ${{ github.event_name }}
+        GLOB_FILTER: ${{ inputs.glob_filter }}
+        FILES_FROM_FILTER: ${{ steps.filter.outputs.all_files }}
+        DEV_FILES_PATH: ${{ inputs.dev_files_path }}
+        PROD_FILES_PATH: ${{ inputs.prod_files_path }}
+        SCRIPT_PATH: ${{ github.action_path }}
+        PATTERNS: ${{ inputs.patterns }}
+      run: |
+        export CHANGED_FILES="${FILES_FROM_FILTER:-[]}"
+        export GITHUB_EVENT_NAME="$EVENT_NAME"
+
+        uv run "$SCRIPT_PATH/determine_stacks.py" >> "$GITHUB_OUTPUT"
+        
+        cat "$GITHUB_OUTPUT"
+
+    - name: Add redeploy comment
+      shell: bash
+      env:
+        DEV_SEQUENTIAL:  ${{ steps.stacks.outputs.dev-sequential }}
+        DEV_PARALLEL:    ${{ steps.stacks.outputs.dev-parallel }}
+        PROD_SEQUENTIAL: ${{ steps.stacks.outputs.prod-sequential }}
+        PROD_PARALLEL:   ${{ steps.stacks.outputs.prod-parallel }}
+        PARTIAL_WORKFLOW_DISPATCH_URL: "${{ github.server_url}}/${{ github.repository }}/actions/workflows"
+      run: |
+        result=$(jq --raw-output --null-input '
+          [env.DEV_SEQUENTIAL, env.DEV_PARALLEL, env.PROD_SEQUENTIAL, env.PROD_PARALLEL]
+          | map(fromjson // [])
+          | flatten
+          | join(",")
+        ')
+        
+        # $GITHUB_WORKFLOW_REF looks like this: <org>/<repo>/.github/workflows/<workflow-filename>@<git-reference>
+        workflow_filename="$(basename "${GITHUB_WORKFLOW_REF%%@*}")"
+        workflow_dispatch_url="$PARTIAL_WORKFLOW_DISPATCH_URL/$workflow_filename"
+        
+        {
+          echo "To redeploy the stacks used in this workflow, run a [workflow dispatch]($workflow_dispatch_url) using this glob pattern:"
+          echo '```'
+          echo "$result"
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"

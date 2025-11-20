@@ -50,6 +50,10 @@
     "terraform-deploy": {
       "component": "terraform-deploy",
       "release-type": "simple"
+    },
+    "determine-stacks": {
+      "component": "determine-stacks",
+      "release-type": "simple"
     }
   }
 }

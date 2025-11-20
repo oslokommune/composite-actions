@@ -1,0 +1,18 @@
+[project]
+name = "determine-stacks"
+version = "0.1.0"
+description = "Classify Terraform stacks into sequential and parallel deployment groups"
+requires-python = ">=3.13"
+dependencies = []
+
+[project.scripts]
+determine-stacks = "determine_stacks:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8.0.0",
+]

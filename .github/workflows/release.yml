@@ -21,6 +21,7 @@ on:
       - "terraform-deploy/*"
       - "generate-tag/*"
       - "package-and-upload-artifact/*"
+      - "determine-stacks/*"
 
 
 jobs:
