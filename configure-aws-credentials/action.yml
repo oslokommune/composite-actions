@@ -1,0 +1,22 @@
+name: "Configure AWS Credentials"
+description: >
+  Authenticates to AWS via OIDC for a specific environment defined in the config JSON.
+  Sets AWS credential environment variables for subsequent steps.
+inputs:
+  config:
+    description: "JSON-encoded config (.gp.cicd.json)"
+    required: true
+  environment:
+    description: "The environment name (e.g., 'dev', 'prod')"
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Configure AWS credentials
+      shell: bash --noprofile --norc -euo pipefail {0}
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        CONFIG: ${{ inputs.config }}
+        ENVIRONMENT: ${{ inputs.environment }}
+      run: "$ACTION_PATH/scripts/configure.sh"

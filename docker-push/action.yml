@@ -1,0 +1,57 @@
+name: "Push Docker image to ECR"
+description: >
+  Pushes a Docker image to ECR for every environment listed in the JSON config,
+  using the AWS account, role, and repository data defined there. The Docker
+  image is retagged and pushed to ECR so Terraform can deploy it to ECS.
+inputs:
+  config:
+    description: "JSON-encoded config (.gp.cicd.json)"
+    required: true
+  tag:
+    description: "The main tag to apply to the Docker image"
+    required: true
+  image-id:
+    description: "Docker image ID from docker build (e.g., from steps.docker-build.outputs.imageid)"
+    required: true
+
+outputs:
+  result:
+    description: The final tag value
+    value: ${{ steps.record-tag.outputs.tag }}
+
+runs:
+  using: composite
+  steps:
+    - name: Push Docker image to ECR
+      shell: bash --noprofile --norc -euo pipefail {0}
+      id: push-ecr-image
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        TZ: "Europe/Oslo"
+        CONFIG: ${{ inputs.config }}
+        PARTIAL_WORKFLOW_DISPATCH_URL: "${{ github.server_url}}/${{ github.repository }}/actions/workflows"
+        IMAGE_ID: ${{ inputs.image-id }}
+        TAG: ${{ inputs.tag }}
+      run: "$ACTION_PATH/scripts/push-image.sh"
+
+    - name: Record artifact tag
+      shell: bash --noprofile --norc -euo pipefail {0}
+      id: record-tag
+      run: |
+        : "${ARTIFACT_TAG:?Missing ARTIFACT_TAG}"
+        printf 'tag=%s\n' "$ARTIFACT_TAG" >>"$GITHUB_OUTPUT"
+
+    - name: Store artifact tag in commit status
+      shell: bash --noprofile --norc -euo pipefail {0}
+      env:
+        COMMIT_SHA: ${{ github.sha }}
+        GH_TOKEN: ${{ github.token }}
+        DESCRIPTION: ${{ steps.record-tag.outputs.tag }}
+        WORKFLOW: ${{ github.workflow }}
+        TARGET_URL: "${{ github.server_url}}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      run: |
+        gh api "repos/${GITHUB_REPOSITORY}/statuses/${COMMIT_SHA}" \
+          -f state="success" \
+          -f context="$WORKFLOW / artifact-tag" \
+          -f target_url="$TARGET_URL" \
+          -f description="$DESCRIPTION"

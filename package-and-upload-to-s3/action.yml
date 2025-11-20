@@ -1,9 +1,8 @@
-name: "Package and upload artifact"
+name: "Package and upload to S3"
 description: >
-  Packages Docker images or files for every environment listed in the JSON config,
-  using the AWS account, bucket, role, and repository data defined there. Docker
-  sources are retagged and pushed to ECR so Terraform can deploy them to ECS. Files
-  or folders are zipped if needed, copied to S3, and later published through the
+  Packages files or folders for every environment listed in the JSON config,
+  using the AWS account, bucket, and role data defined there. Files or folders
+  are zipped if needed, copied to S3, and later published through the
   Terraform → Lambda → CloudFront flow.
 inputs:
   config:
@@ -13,22 +12,21 @@ inputs:
     description: "The main tag to apply to the artifact"
     required: true
   source-location:
-    description: "A Docker image ID, file or folder"
+    description: "A file or folder path"
     required: true
   source-type:
-    description: "docker-image | file | folder"
+    description: "file | folder"
     required: true
 
 outputs:
   result:
     description: The final tag value
-    value: ${{ steps.upload.outputs.tag }}
+    value: ${{ steps.record-tag.outputs.tag }}
 
 runs:
   using: composite
   steps:
     - name: Upload artifact to S3
-      if: ${{ inputs.source-type == 'file' || inputs.source-type == 'folder' }}
       shell: bash --noprofile --norc -euo pipefail {0}
       id: upload-s3-artifact
       env:
@@ -39,34 +37,21 @@ runs:
         SOURCE_TYPE: ${{ inputs.source-type }}
         SOURCE_LOCATION: ${{ inputs.source-location }}
         TAG: ${{ inputs.tag }}
-      run: "$ACTION_PATH/scripts/upload-s3-artifact.sh"
-
-    - name: Push Docker image to ECR
-      if: ${{ inputs.source-type == 'docker-image' }}
-      shell: bash --noprofile --norc -euo pipefail {0}
-      id: push-ecr-image
-      env:
-        ACTION_PATH: ${{ github.action_path 1}}
-        TZ: "Europe/Oslo"
-        CONFIG: ${{ inputs.config }}
-        PARTIAL_WORKFLOW_DISPATCH_URL: "${{ github.server_url}}/${{ github.repository }}/actions/workflows"
-        SOURCE_TYPE: ${{ inputs.source-type }}
-        SOURCE_LOCATION: ${{ inputs.source-location }}
-        TAG: ${{ inputs.tag }}
-      run: "$ACTION_PATH/scripts/push-ecr-image.sh"
+      run: "$ACTION_PATH/scripts/upload-to-s3.sh"
 
     - name: Record artifact tag
       shell: bash --noprofile --norc -euo pipefail {0}
-      id: upload
+      id: record-tag
       run: |
         : "${ARTIFACT_TAG:?Missing ARTIFACT_TAG}"
         printf 'tag=%s\n' "$ARTIFACT_TAG" >>"$GITHUB_OUTPUT"
+
     - name: Store artifact tag in commit status
       shell: bash --noprofile --norc -euo pipefail {0}
       env:
         COMMIT_SHA: ${{ github.sha }}
         GH_TOKEN: ${{ github.token }}
-        DESCRIPTION: ${{ steps.upload.outputs.tag }}
+        DESCRIPTION: ${{ steps.record-tag.outputs.tag }}
         WORKFLOW: ${{ github.workflow }}
         TARGET_URL: "${{ github.server_url}}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
       run: |
