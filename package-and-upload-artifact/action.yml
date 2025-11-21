@@ -46,7 +46,7 @@ runs:
       shell: bash --noprofile --norc -euo pipefail {0}
       id: push-ecr-image
       env:
-        ACTION_PATH: ${{ github.action_path 1}}
+        ACTION_PATH: ${{ github.action_path }}
         TZ: "Europe/Oslo"
         CONFIG: ${{ inputs.config }}
         PARTIAL_WORKFLOW_DISPATCH_URL: "${{ github.server_url}}/${{ github.repository }}/actions/workflows"
