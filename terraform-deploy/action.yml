@@ -15,8 +15,9 @@ inputs:
     default: ""
     description: "The tag of an artifact to deploy"
   target-repository:
-    description: "The name of the repository (e.g., `pirates-iac`) to checkout code from"
-    required: true
+    description: "The name of the repository (e.g., `pirates-iac`) to checkout code from. Use empty string to use the current repository."
+    required: false
+    default: ""
   github-app-id:
     description: "ID of GitHub App used to get read access to the repository containing IaC"
     required: true
@@ -37,6 +38,12 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Get stack directory
+      id: stack_dir
+      shell: bash --noprofile --norc -euo pipefail {0}
+      run: |
+        echo "stack_dir=${{ (inputs.target-repository == '' && inputs.stack-dir) || format('iac-random123/{0}', inputs.stack-dir) }}" >> "$GITHUB_OUTPUT"
+
     - name: Get GitHub App token
       uses: actions/create-github-app-token@67018539274d69449ef7c02e8e71183d1719ab42 # v2.1.4
       id: get_token
@@ -47,13 +54,13 @@ runs:
         repositories: ${{ inputs.target-repository }}
 
     - name: Checkout
+      if: inputs.target-repository != ''
       uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       id: checkout
       with:
         repository: "${{ github.repository_owner }}/${{ inputs.target-repository }}"
         token: "${{ steps.get_token.outputs.token }}"
-        # TODO: A more unique name to avoid potentially reusing name of an existing folder?
-        path: "iac"
+        path: "iac-random123"
         fetch-depth: 1
 
     - name: Configure AWS credentials
@@ -70,7 +77,7 @@ runs:
     - name: Extract Terraform version
       id: v
       shell: bash --noprofile --norc -euo pipefail {0}
-      working-directory: iac/${{ inputs.stack-dir }}
+      working-directory: ${{ steps.stack_dir.outputs.stack_dir }}
       run: ls -lah; echo "TERRAFORM_VERSION=$(grep required_version *.tf | sed -E 's/[^"]+"([^"]+)"+/\1/')" >> "$GITHUB_OUTPUT"
 
     - name: Setup Terraform
@@ -81,7 +88,7 @@ runs:
     - name: Initialize the working directory containing Terraform configuration files
       id: init
       shell: bash --noprofile --norc -euo pipefail {0}
-      working-directory: iac/${{ inputs.stack-dir }}
+      working-directory: ${{ steps.stack_dir.outputs.stack_dir }}
       continue-on-error: true
       run: |
         terraform init -input=false
@@ -129,7 +136,7 @@ runs:
       id: apply
       if: steps.init.outcome == 'success'
       shell: bash --noprofile --norc -euo pipefail {0}
-      working-directory: iac/${{ inputs.stack-dir }}
+      working-directory: ${{ steps.stack_dir.outputs.stack_dir }}
       run: |
         terraform apply -auto-approve -lock-timeout=5m
         result="$(terraform output -json \
