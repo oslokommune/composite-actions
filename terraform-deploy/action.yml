@@ -51,6 +51,7 @@ runs:
         echo "stack_dir=${{ (inputs.target-repository == '' && inputs.stack-dir) || format('iac-random123/{0}', inputs.stack-dir) }}" >> "$GITHUB_OUTPUT"
 
     - name: Get GitHub App token
+      if: inputs.target-repository != ''
       uses: actions/create-github-app-token@67018539274d69449ef7c02e8e71183d1719ab42 # v2.1.4
       id: get_token
       with:
@@ -66,7 +67,7 @@ runs:
       with:
         repository: "${{ github.repository_owner }}/${{ inputs.target-repository }}"
         token: "${{ steps.get_token.outputs.token }}"
-        path: "iac-random123"
+        path: "${{ steps.stack_dir.outputs.checkout-path }}"
         fetch-depth: 1
 
     - name: Configure AWS credentials
@@ -120,6 +121,7 @@ runs:
           --overwrite
 
     - name: Verify that latest code is checked out
+      if: inputs.target-repository != ''
       shell: bash --noprofile --norc -euo pipefail {0}
       env:
         GH_TOKEN: ${{ steps.get_token.outputs.token }}
