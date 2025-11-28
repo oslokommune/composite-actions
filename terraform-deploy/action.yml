@@ -41,7 +41,13 @@ runs:
     - name: Get stack directory
       id: stack_dir
       shell: bash --noprofile --norc -euo pipefail {0}
+      env:
+        STACK_DIR: ${{ inputs.stack-dir }}
       run: |
+        checkout_path="$(date +%s)"
+        stack_dir="$checkout_path/$STACK_DIR"
+        echo "checkout-path=$checkout_path" >> "$GITHUB_OUTPUT"
+        echo "stack-dir=$stack_dir" >> "$GITHUB_OUTPUT"
         echo "stack_dir=${{ (inputs.target-repository == '' && inputs.stack-dir) || format('iac-random123/{0}', inputs.stack-dir) }}" >> "$GITHUB_OUTPUT"
 
     - name: Get GitHub App token
