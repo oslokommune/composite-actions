@@ -39,7 +39,7 @@ runs:
   using: composite
   steps:
     - name: Get stack directory
-      id: get_stack_dir
+      id: get-stack-dir
       shell: bash --noprofile --norc -euo pipefail {0}
       env:
         EVENT_REPO: ${{ github.event.repository.name }}
@@ -53,7 +53,7 @@ runs:
           exit 0
         fi
         
-        checkout_path="$(date +%s)"
+        checkout_path="tf-checkout-$(date +%s)"
         full_dir="$checkout_path/$STACK_DIR"
 
         echo "checkout-path=$checkout_path"
@@ -65,7 +65,7 @@ runs:
     - name: Get GitHub App token
       if: inputs.target-repository != github.event.repository.name
       uses: actions/create-github-app-token@67018539274d69449ef7c02e8e71183d1719ab42 # v2.1.4
-      id: get_token
+      id: get-token
       with:
         app-id: ${{ inputs.github-app-id }}
         private-key: ${{ inputs.github-app-private-key }}
@@ -78,8 +78,8 @@ runs:
       id: checkout
       with:
         repository: "${{ github.repository_owner }}/${{ inputs.target-repository }}"
-        token: "${{ steps.get_token.outputs.token }}"
-        path: "${{ steps.get_stack_dir.outputs.checkout-path }}"
+        token: "${{ steps.get-token.outputs.token }}"
+        path: "${{ steps.get-stack-dir.outputs.checkout-path }}"
         fetch-depth: 1
 
     - name: Configure AWS credentials
@@ -96,7 +96,7 @@ runs:
     - name: Extract Terraform version
       id: v
       shell: bash --noprofile --norc -euo pipefail {0}
-      working-directory: ${{ steps.get_stack_dir.outputs.stack-dir }}
+      working-directory: ${{ steps.get-stack-dir.outputs.stack-dir }}
       run: |
         echo Extract Terraform version
         pwd
@@ -111,7 +111,7 @@ runs:
     - name: Initialize the working directory containing Terraform configuration files
       id: init
       shell: bash --noprofile --norc -euo pipefail {0}
-      working-directory: ${{ steps.get_stack_dir.outputs.stack-dir }}
+      working-directory: ${{ steps.get-stack-dir.outputs.stack-dir }}
       continue-on-error: true
       run: |
         terraform init -input=false
@@ -140,7 +140,7 @@ runs:
       if: inputs.target-repository != github.event.repository.name
       shell: bash --noprofile --norc -euo pipefail {0}
       env:
-        GH_TOKEN: ${{ steps.get_token.outputs.token }}
+        GH_TOKEN: ${{ steps.get-token.outputs.token }}
         LOCAL_SHA: ${{ steps.checkout.outputs.commit }}
         REPOSITORY_OWNER: ${{ github.repository_owner }}
         TARGET_REPOSITORY: ${{ inputs.target-repository }}
@@ -160,7 +160,7 @@ runs:
       id: apply
       if: steps.init.outcome == 'success'
       shell: bash --noprofile --norc -euo pipefail {0}
-      working-directory: ${{ steps.get_stack_dir.outputs.stack-dir }}
+      working-directory: ${{ steps.get-stack-dir.outputs.stack-dir }}
       run: |
         terraform apply -auto-approve -lock-timeout=5m
         result="$(terraform output -json \
