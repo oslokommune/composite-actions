@@ -111,7 +111,7 @@ runs:
     - name: Initialize the working directory containing Terraform configuration files
       id: init
       shell: bash --noprofile --norc -euo pipefail {0}
-      working-directory: ${{ steps.get_stack_dir.outputs.stackddir }}
+      working-directory: ${{ steps.get_stack_dir.outputs.stack-dir }}
       continue-on-error: true
       run: |
         terraform init -input=false
