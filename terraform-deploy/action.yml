@@ -39,7 +39,7 @@ runs:
   using: composite
   steps:
     - name: Get stack directory
-      id: stack_dir
+      id: get_stack_dir
       shell: bash --noprofile --norc -euo pipefail {0}
       env:
         STACK_DIR: ${{ inputs.stack-dir }}
@@ -66,7 +66,7 @@ runs:
       with:
         repository: "${{ github.repository_owner }}/${{ inputs.target-repository }}"
         token: "${{ steps.get_token.outputs.token }}"
-        path: "${{ steps.stack_dir.outputs.checkout-path }}"
+        path: "${{ steps.get_stack_dir.outputs.checkout-path }}"
         fetch-depth: 1
 
     - name: Configure AWS credentials
@@ -83,7 +83,7 @@ runs:
     - name: Extract Terraform version
       id: v
       shell: bash --noprofile --norc -euo pipefail {0}
-      working-directory: ${{ steps.stack_dir.outputs.stack_dir }}
+      working-directory: ${{ steps.get_stack_dir.outputs.stack_dir }}
       run: ls -lah; echo "TERRAFORM_VERSION=$(grep required_version *.tf | sed -E 's/[^"]+"([^"]+)"+/\1/')" >> "$GITHUB_OUTPUT"
 
     - name: Setup Terraform
@@ -94,7 +94,7 @@ runs:
     - name: Initialize the working directory containing Terraform configuration files
       id: init
       shell: bash --noprofile --norc -euo pipefail {0}
-      working-directory: ${{ steps.stack_dir.outputs.stack_dir }}
+      working-directory: ${{ steps.get_stack_dir.outputs.stack_dir }}
       continue-on-error: true
       run: |
         terraform init -input=false
@@ -143,7 +143,7 @@ runs:
       id: apply
       if: steps.init.outcome == 'success'
       shell: bash --noprofile --norc -euo pipefail {0}
-      working-directory: ${{ steps.stack_dir.outputs.stack_dir }}
+      working-directory: ${{ steps.get_stack_dir.outputs.stack_dir }}
       run: |
         terraform apply -auto-approve -lock-timeout=5m
         result="$(terraform output -json \
