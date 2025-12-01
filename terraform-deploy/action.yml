@@ -178,6 +178,7 @@ runs:
         ENVIRONMENT: ${{ inputs.environment }}
         VERSION: ${{ inputs.tag }}
         STACK_DIR: ${{ inputs.stack-dir }}
+        GITHUB_TOKEN: ${{ github.token }}
       run: |
         started_at="$(gh run view --attempt "$GITHUB_RUN_ATTEMPT" "$GITHUB_RUN_ID" --json startedAt --jq '.startedAt | fromdate')"
         finished_at="$(date -u +%s)"
