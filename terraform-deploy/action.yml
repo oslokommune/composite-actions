@@ -15,7 +15,7 @@ inputs:
     default: ""
     description: "The tag of an artifact to deploy"
   target-repository:
-    description: "The name of the repository (e.g., `pirates-iac`) to checkout code from. Use empty string to use the current repository."
+    description: "The name of the repository (e.g., `pirates-iac`) to checkout code from. Leave empty to use the current repository."
     required: false
     default: ${{ github.event.repository.name }}
   github-app-id:
