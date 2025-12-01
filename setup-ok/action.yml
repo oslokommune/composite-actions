@@ -6,32 +6,32 @@ inputs:
     description: "Version of ok to install. Examples: v0.1.0, latest"
     required: true
     # renovate: datasource=github-releases depName=oslokommune/ok
-    default: "v5.13.0"
+    default: "v5.14.0"
   boilerplate_version:
     description: "Version of Boilerplate to install. Examples: 0.5.16, latest"
     required: true
     # renovate: datasource=github-releases depName=gruntwork-io/boilerplate
-    default: "v0.9.0"
+    default: "v0.10.1"
   terraform_version:
     description: "Version of Terraform to install. Examples: 1.10.1, latest"
     required: true
     # renovate: datasource=github-releases depName=hashicorp/terraform extractVersion=^v?(?<version>.*)$
-    default: "1.12.2"
+    default: "1.14.0"
   terragrunt_version:
     description: "Version of Terragrunt to install. Examples: 0.71.1, latest"
     required: true
     # renovate: datasource=github-releases depName=gruntwork-io/terragrunt
-    default: "v0.84.1"
+    default: "v0.93.11"
   yq_version:
     description: "Version of yq to install. Examples: v4.44.6, latest"
     required: true
     # renovate: datasource=github-releases depName=mikefarah/yq
-    default: "v4.47.1"
+    default: "v4.49.2"
   tfswitch_version:
     description: "Version of tfswitch to install. Examples: v1.4.5, latest"
     required: true
     # renovate: datasource=github-releases depName=warrensbox/terraform-switcher
-    default: "v1.5.0"
+    default: "v1.10.0"
 
 runs:
   using: "composite"
