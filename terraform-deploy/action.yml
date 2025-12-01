@@ -44,8 +44,16 @@ runs:
       env:
         STACK_DIR: ${{ inputs.stack-dir }}
       run: |
-        checkout_path="$(date +%s)"
-        full_dir="$checkout_path/$STACK_DIR"
+        if [[ -z "${STACK_DIR}" ]]; then
+          full_dir="$$STACK_DIR"
+        else
+          checkout_path="$(date +%s)"
+          full_dir="$checkout_path/$STACK_DIR"
+        fi
+
+        echo "checkout-path=$checkout_path"
+        echo "stack-dir=$full_dir"
+        
         echo "checkout-path=$checkout_path" >> "$GITHUB_OUTPUT"
         echo "stack-dir=$full_dir" >> "$GITHUB_OUTPUT"
 
@@ -84,7 +92,11 @@ runs:
       id: v
       shell: bash --noprofile --norc -euo pipefail {0}
       working-directory: ${{ steps.get_stack_dir.outputs.stack_dir }}
-      run: ls -lah; echo "TERRAFORM_VERSION=$(grep required_version *.tf | sed -E 's/[^"]+"([^"]+)"+/\1/')" >> "$GITHUB_OUTPUT"
+      run: |
+        echo Extract Terraform version
+        pwd
+        ls -lah
+        echo "TERRAFORM_VERSION=$(grep required_version *.tf | sed -E 's/[^"]+"([^"]+)"+/\1/')" >> "$GITHUB_OUTPUT"
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
