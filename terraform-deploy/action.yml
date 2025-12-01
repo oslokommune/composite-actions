@@ -40,7 +40,8 @@ runs:
   steps:
     - name: Get stack directory
       id: get-stack-dir
-      shell: bash --noprofile --norc -euo pipefail {0}
+      #shell: bash --noprofile --norc -euo pipefail {0}
+      shell: bash --noprofile --norc
       env:
         EVENT_REPO: ${{ github.event.repository.name }}
         REPO: ${{ inputs.target-repository }}
