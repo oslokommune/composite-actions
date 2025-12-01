@@ -27,6 +27,10 @@ inputs:
   github-deploy-key:
     description: "Repository deploy key that grants read access to shared libraries (e.g., golden-path-iac)"
     required: true
+  send-deployment-event:
+    description: "Whether to send an event to Datadog after successful deployment"
+    default: "${{ github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)) }}"
+    required: false
 
 outputs:
   # NOTE: A composite action can't have dynamic outputs, so
@@ -47,12 +51,12 @@ runs:
         STACK_DIR: ${{ inputs.stack-dir }}
       run: |
         echo Get stack directory
-        
+
         if [[ "${REPO}" == "${EVENT_REPO}" ]]; then
           echo "stack-dir=$STACK_DIR" >> "$GITHUB_OUTPUT"
           exit 0
         fi
-        
+
         checkout_path="tf-checkout-$(date +%s)"
         full_dir="$checkout_path/$STACK_DIR"
 
@@ -164,6 +168,47 @@ runs:
           | jq -c 'with_entries(select(.value.sensitive == false) | .value = .value.value)'
         )"
         echo "result=$result" >> "$GITHUB_OUTPUT"
+
+    - name: Send deployment event to Datadog
+      if: ${{ inputs.send-deployment-event == 'true' }}
+      shell: bash --noprofile --norc -euo pipefail {0}
+      # Probably don't want to halt deployments due to issues with deployment events
+      continue-on-error: true
+      env:
+        ENVIRONMENT: ${{ inputs.environment }}
+        VERSION: ${{ inputs.tag }}
+        STACK_DIR: ${{ inputs.stack-dir }}
+      run: |
+        started_at="$(gh run view --attempt "$GITHUB_RUN_ATTEMPT" "$GITHUB_RUN_ID" --json startedAt --jq '.startedAt | fromdate')"
+        finished_at="$(date -u +%s)"
+        service="${DD_SERVICE:-}"
+        if [ "$service" = "" ]; then
+          # Use stack name as fallback of DD_SERVICE not set
+          service="$(basename "$STACK_DIR")"
+        fi
+        # Allow overwriting Datadog environment through DD_ENV
+        env="${DD_ENV:-$ENVIRONMENT}"
+        curl -X POST "https://api.datadoghq.eu/api/v2/dora/deployment" \
+          -H "Accept: application/json" \
+          -H "Content-Type: application/json" \
+          -H "DD-API-KEY: ${DD_API_KEY}" \
+          -d @- << EOF
+        {
+          "data": {
+            "attributes": {
+              "started_at": $started_at,
+              "finished_at": $finished_at,
+              "git": {
+                "commit_sha": "$GITHUB_SHA",
+                "repository_url": "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
+              },
+              "service": "$service",
+              "env": "$env",
+              "version": "$VERSION"
+            }
+          }
+        }
+        EOF
 
     - name: Fail job if terraform apply failed or didn't run
       if: steps.apply.outcome != 'success'
