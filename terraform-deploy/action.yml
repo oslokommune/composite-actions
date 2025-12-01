@@ -44,6 +44,8 @@ runs:
       env:
         STACK_DIR: ${{ inputs.stack-dir }}
       run: |
+        echo Get stack directory
+        
         if [[ -z "${STACK_DIR}" ]]; then
           full_dir="$$STACK_DIR"
         else
