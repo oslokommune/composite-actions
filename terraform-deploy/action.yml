@@ -93,7 +93,7 @@ runs:
     - name: Extract Terraform version
       id: v
       shell: bash --noprofile --norc -euo pipefail {0}
-      working-directory: ${{ steps.get_stack_dir.outputs.stack_dir }}
+      working-directory: ${{ steps.get_stack_dir.outputs.stack-dir }}
       run: |
         echo Extract Terraform version
         pwd
