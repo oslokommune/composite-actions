@@ -160,7 +160,7 @@ runs:
       id: apply
       if: steps.init.outcome == 'success'
       shell: bash --noprofile --norc -euo pipefail {0}
-      working-directory: ${{ steps.get_stack_dir.outputs.stack_dir }}
+      working-directory: ${{ steps.get_stack_dir.outputs.stack-dir }}
       run: |
         terraform apply -auto-approve -lock-timeout=5m
         result="$(terraform output -json \
