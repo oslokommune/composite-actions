@@ -42,16 +42,19 @@ runs:
       id: get_stack_dir
       shell: bash --noprofile --norc -euo pipefail {0}
       env:
+        EVENT_REPO: ${{ github.event.repository.name }}
+        REPO: ${{ inputs.target-repository }}
         STACK_DIR: ${{ inputs.stack-dir }}
       run: |
         echo Get stack directory
         
-        if [[ -z "${STACK_DIR}" ]]; then
-          full_dir="$$STACK_DIR"
-        else
-          checkout_path="$(date +%s)"
-          full_dir="$checkout_path/$STACK_DIR"
+        if [[ "${REPO}" == "${EVENT_REPO}" ]]; then
+          echo "stack-dir=$STACK_DIR" >> "$GITHUB_OUTPUT"
+          exit 0
         fi
+        
+        checkout_path="$(date +%s)"
+        full_dir="$checkout_path/$STACK_DIR"
 
         echo "checkout-path=$checkout_path"
         echo "stack-dir=$full_dir"
