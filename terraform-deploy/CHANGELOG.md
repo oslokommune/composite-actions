@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.2.0](https://github.com/oslokommune/composite-actions/compare/terraform-deploy-v1.1.0...terraform-deploy-v1.2.0) (2025-12-01)
+
+
+### Features
+
+* add support for datadog deployment event ([#168](https://github.com/oslokommune/composite-actions/issues/168)) ([0165ca5](https://github.com/oslokommune/composite-actions/commit/0165ca5e29aed8e3a9e7ab4a3d95ca0b811bb999))
+
+
+### Bug fixes
+
+* add missing github token ([5948e4d](https://github.com/oslokommune/composite-actions/commit/5948e4dfd4631ffdc68935e456e4a4da8f1fd07a))
+* syntax error in composite action ([6c65645](https://github.com/oslokommune/composite-actions/commit/6c656456d0aa73c9057a7d81093aa28623977d65))
+
 ## [1.1.0](https://github.com/oslokommune/composite-actions/compare/terraform-deploy-v1.0.0...terraform-deploy-v1.1.0) (2025-12-01)
 
 
