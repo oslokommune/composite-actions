@@ -9,16 +9,16 @@ Deploy application through infrastructure
 
 ### Inputs
 
-|         Input          |                                       Description                                       |Required|Default|
-|------------------------|-----------------------------------------------------------------------------------------|--------|-------|
-|`config`                |JSON-encoded config (.gp.cicd.json)                                                      |yes     |``n/a``|
-|`stack-dir`             |The path to the application stack (e.g., `stacks/dev/app-km`)                            |yes     |``n/a``|
-|`environment`           |The semantic name of the environment (e.g., `dev`, `prod`)                               |yes     |``n/a``|
-|`tag`                   |The tag of an artifact to deploy                                                         |no      |````   |
-|`target-repository`     |The name of the repository (e.g., `pirates-iac`) to checkout code from                   |yes     |``n/a``|
-|`github-app-id`         |ID of GitHub App used to get read access to the repository containing IaC                |yes     |``n/a``|
-|`github-app-private-key`|Private key of GitHub App used to get read access to the repository containing IaC       |yes     |``n/a``|
-|`github-deploy-key`     |Repository deploy key that grants read access to shared libraries (e.g., golden-path-iac)|yes     |``n/a``|
+| Input                    | Description                                                                                                                          | Required | Default                                 |
+|--------------------------|--------------------------------------------------------------------------------------------------------------------------------------|----------|-----------------------------------------|
+| `config`                 | JSON-encoded config (.gp.cicd.json)                                                                                                  | yes      | ``n/a``                                 |
+| `stack-dir`              | The path to the application stack (e.g., `stacks/dev/app-km`)                                                                        | yes      | ``n/a``                                 |
+| `environment`            | The semantic name of the environment (e.g., `dev`, `prod`)                                                                           | yes      | ``n/a``                                 |
+| `tag`                    | The tag of an artifact to deploy                                                                                                     | no       | ````                                    |
+| `target-repository`      | The name of the repository (e.g., `pirates-iac`) to checkout code from. Leave empty to skip checkout and use the current repository. | no       | ``${{ github.event.repository.name }}`` |
+| `github-app-id`          | ID of GitHub App used to get read access to the repository containing IaC                                                            | yes      | ``n/a``                                 |
+| `github-app-private-key` | Private key of GitHub App used to get read access to the repository containing IaC                                                   | yes      | ``n/a``                                 |
+| `github-deploy-key`      | Repository deploy key that grants read access to shared libraries (e.g., golden-path-iac)                                            | yes      | ``n/a``                                 |
 
 ### Example
 
@@ -29,8 +29,8 @@ Deploy application through infrastructure
     config: # Required
     stack-dir: # Required
     environment: # Required
-    # tag: # Optional, default: 
-    target-repository: # Required
+    # tag: # Optional, default:
+    # target-repository: # Optional, default: ${{ github.event.repository.name }}
     github-app-id: # Required
     github-app-private-key: # Required
     github-deploy-key: # Required
