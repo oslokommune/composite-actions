@@ -9,6 +9,6 @@
   "renovate-metadata": "1.0.1",
   "generate-tag": "1.0.0",
   "package-and-upload-artifact": "1.1.0",
-  "terraform-deploy": "1.1.0",
+  "terraform-deploy": "1.2.0",
   "determine-stacks": "1.0.0"
 }
