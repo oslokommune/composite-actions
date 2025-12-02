@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/oslokommune/composite-actions/compare/terraform-deploy-v1.2.0...terraform-deploy-v1.2.1) (2025-12-02)
+
+
+### Bug fixes
+
+* make github app ID and private key optional ([ae64195](https://github.com/oslokommune/composite-actions/commit/ae641953a64bb69157df760e6c5fd694a26785ae))
+
 ## [1.2.0](https://github.com/oslokommune/composite-actions/compare/terraform-deploy-v1.1.0...terraform-deploy-v1.2.0) (2025-12-01)
 
 
