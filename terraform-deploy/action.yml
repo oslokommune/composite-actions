@@ -20,10 +20,10 @@ inputs:
     default: ${{ github.event.repository.name }}
   github-app-id:
     description: "ID of GitHub App used to get read access to the repository containing IaC"
-    required: true
+    required: false
   github-app-private-key:
     description: "Private key of GitHub App used to get read access to the repository containing IaC"
-    required: true
+    required: false
   github-deploy-key:
     description: "Repository deploy key that grants read access to shared libraries (e.g., golden-path-iac)"
     required: true
