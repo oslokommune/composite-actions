@@ -5,21 +5,6 @@
 
 Classify Terraform stacks into sequential and parallel deployment groups
 
-## Overview
-
-This action analyzes Terraform stacks and classifies them based on deployment order requirements. Infrastructure components with dependencies (networking, IAM, databases) are grouped for sequential deployment, while independent application stacks are grouped for parallel deployment.
-
-This enables optimized CI/CD pipelines that deploy foundational infrastructure in the correct order while maximizing parallelization for application deployments.
-
-## How It Works
-
-1. **Stack Selection**: Accepts a glob pattern to select which stacks to deploy (e.g., `stacks/dev/*`, `stacks/*/app-*`)
-2. **Pattern Matching**: Compares stacks against ordered deployment patterns (default or custom)
-3. **Classification**: Stacks matching patterns deploy sequentially in order; others deploy in parallel
-4. **Environment Separation**: Produces separate outputs for dev and prod environments
-
-Stacks not matching any pattern deploy in parallel (typically application stacks).
-
 ## Usage
 
 ### Inputs
@@ -36,24 +21,13 @@ Stacks not matching any pattern deploy in parallel (typically application stacks
 
 ```yaml
 - name: Determine Terraform Stacks
-  id: determine
   uses: oslokommune/composite-actions/determine-stacks@main
   with:
-    glob_filter: 'stacks/dev/*'
-
-- name: Use outputs
-  run: |
-    echo "Dev sequential: ${{ steps.determine.outputs.dev-sequential }}"
-    # Dev sequential: ["stacks/dev/networking","stacks/dev/iam","stacks/dev/databases"]
-
-    echo "Dev parallel: ${{ steps.determine.outputs.dev-parallel }}"
-    # Dev parallel: ["stacks/dev/app-foo","stacks/dev/app-bar"]
-
-    echo "Prod sequential: ${{ steps.determine.outputs.prod-sequential }}"
-    # Prod sequential: ["stacks/prod/networking","stacks/prod/iam","stacks/prod/databases"]
-
-    echo "Prod parallel: ${{ steps.determine.outputs.prod-parallel }}"
-    # Prod parallel: ["stacks/prod/app-foo","stacks/prod/app-bar"]
+    # input_summary: # Optional, default: true
+    glob_filter: # Required
+    # patterns: # Optional
+    # dev_files_path: # Optional
+    # prod_files_path: # Optional
 ```
 
 ## Outputs
