@@ -22,6 +22,7 @@ on:
       - "generate-tag/*"
       - "package-and-upload-artifact/*"
       - "determine-stacks/*"
+      - "detect-stale-job/*"
 
 
 jobs:
