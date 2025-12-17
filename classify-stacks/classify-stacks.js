@@ -149,36 +149,82 @@ function splitByEnvironment(stacks, environments) {
 
 function buildStagesForEnv(stacks, patterns) {
   const { sequential, parallel } = classifyStacks(stacks, patterns);
+  return { sequential, parallel };
+}
 
-  const stages = [];
-  if (sequential.length > 0) {
-    stages.push({ name: 'sequential', stacks: sequential, parallel: false });
+function expandGlob(pattern) {
+  const glob = require('path');
+  const results = [];
+
+  // Simple glob expansion using fs
+  function walkDir(dir, basePattern) {
+    try {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          results.push(fullPath);
+          walkDir(fullPath, basePattern);
+        }
+      }
+    } catch {
+      // Directory doesn't exist or not readable
+    }
   }
-  if (parallel.length > 0) {
-    stages.push({ name: 'parallel', stacks: parallel, parallel: true });
+
+  // Start from current directory
+  walkDir('.', pattern);
+
+  // Filter results by glob pattern
+  const regex = globToRegex(pattern);
+  return results.filter(p => regex.test(p));
+}
+
+function getStacksFromGlob(globFilter, validatorMode) {
+  if (!globFilter || !globFilter.trim()) {
+    return [];
   }
-  return stages;
+
+  const patterns = globFilter.split(',').map(p => p.trim()).filter(p => p);
+  const allDirs = new Set();
+
+  for (const pattern of patterns) {
+    const matches = expandGlob(pattern);
+    matches.forEach(m => allDirs.add(m));
+  }
+
+  return Array.from(allDirs)
+    .filter(dir => isValidStack(dir, validatorMode))
+    .sort();
 }
 
 function main() {
   const changedFiles = parseChangedFiles(process.env.CHANGED_FILES);
+  const globFilter = process.env.GLOB_FILTER || '';
   const environments = parseEnvironments(process.env.ENVIRONMENTS);
   const patterns = parsePatterns(process.env.PATTERNS);
   const validatorMode = process.env.STACK_VALIDATOR || 'backend-s3';
 
+  console.error('Glob filter:', globFilter || '(none)');
   console.error('Changed files:', changedFiles.length);
   console.error('Environments:', Object.keys(environments).join(', '));
   console.error('Patterns:', patterns.length);
   console.error('Validator mode:', validatorMode);
 
-  // Extract directories from changed files
-  const directories = filesToDirectories(changedFiles);
-  console.error('Directories from changed files:', directories.length);
+  let validStacks;
 
-  // Filter to valid Terraform stacks
-  const validStacks = directories.filter(dir => isValidStack(dir, validatorMode));
+  if (globFilter) {
+    // Workflow dispatch mode: expand glob pattern
+    validStacks = getStacksFromGlob(globFilter, validatorMode);
+    console.error('Stacks from glob:', validStacks.length);
+  } else {
+    // PR/push mode: use changed files
+    const directories = filesToDirectories(changedFiles);
+    console.error('Directories from changed files:', directories.length);
+    validStacks = directories.filter(dir => isValidStack(dir, validatorMode));
+  }
+
   console.error('Valid stacks:', validStacks.length);
-
   if (validStacks.length > 0) {
     console.error('Stacks:', validStacks.join(', '));
   }
@@ -186,19 +232,26 @@ function main() {
   // Split by environment
   const stacksByEnv = splitByEnvironment(validStacks, environments);
 
-  // Build stages per environment
-  const stagesByEnv = {};
+  // Build stages per environment: {sequential: [...], parallel: [...]}
+  const result = {};
   for (const [envName, envStacks] of Object.entries(stacksByEnv)) {
-    stagesByEnv[envName] = buildStagesForEnv(envStacks, patterns);
+    result[envName] = buildStagesForEnv(envStacks, patterns);
   }
 
-  // Output results
+  // Ensure all configured environments have entries (even if empty)
+  for (const envName of Object.keys(environments)) {
+    if (!result[envName]) {
+      result[envName] = { sequential: [], parallel: [] };
+    }
+  }
+
   const allStacks = validStacks.sort();
   const hasChanges = allStacks.length > 0;
 
-  // Write to GITHUB_OUTPUT format
-  console.log(`dev-stages=${JSON.stringify(stagesByEnv.dev || [])}`);
-  console.log(`prod-stages=${JSON.stringify(stagesByEnv.prod || [])}`);
+  // Write outputs - one per environment plus metadata
+  for (const [envName, stages] of Object.entries(result)) {
+    console.log(`${envName}=${JSON.stringify(stages)}`);
+  }
   console.log(`all-stacks=${JSON.stringify(allStacks)}`);
   console.log(`has-changes=${hasChanges}`);
 }

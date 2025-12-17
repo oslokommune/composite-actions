@@ -3,8 +3,13 @@ description: 'Classify Terraform stacks into sequential and parallel deployment 
 
 inputs:
   changed-files:
-    description: 'JSON array of changed file paths'
-    required: true
+    description: 'JSON array of changed file paths (for PR/push triggers)'
+    required: false
+    default: '[]'
+  glob-filter:
+    description: 'Glob pattern to match stacks (for workflow_dispatch triggers)'
+    required: false
+    default: ''
   environments:
     description: 'JSON object mapping env names to path prefixes'
     required: false
@@ -32,12 +37,12 @@ inputs:
     default: 'backend-s3'
 
 outputs:
-  dev-stages:
-    description: 'JSON array of dev stage objects (name, stacks, parallel)'
-    value: ${{ steps.classify.outputs.dev-stages }}
-  prod-stages:
-    description: 'JSON array of prod stage objects (name, stacks, parallel)'
-    value: ${{ steps.classify.outputs.prod-stages }}
+  dev:
+    description: 'Dev stacks: {sequential: [...], parallel: [...]}'
+    value: ${{ steps.classify.outputs.dev }}
+  prod:
+    description: 'Prod stacks: {sequential: [...], parallel: [...]}'
+    value: ${{ steps.classify.outputs.prod }}
   all-stacks:
     description: 'Flat JSON array of all valid stacks'
     value: ${{ steps.classify.outputs.all-stacks }}
@@ -53,6 +58,7 @@ runs:
       shell: bash
       env:
         CHANGED_FILES: ${{ inputs.changed-files }}
+        GLOB_FILTER: ${{ inputs.glob-filter }}
         ENVIRONMENTS: ${{ inputs.environments }}
         PATTERNS: ${{ inputs.patterns }}
         STACK_VALIDATOR: ${{ inputs.stack-validator }}
