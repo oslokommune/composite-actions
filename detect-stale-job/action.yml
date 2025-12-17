@@ -27,7 +27,7 @@ runs:
         # NOTE: Run numbers are not guaranteed to be in order of commits, but it should be
         # good enough for most cases. For better accuracy, we could use something like:
         #   git merge-base --is-ancestor "$GITHUB_SHA" "$SHA_OF_POTENTIAL_DESCENDANT"
-        # but that would require fetching, git history which may be slow.
+        # but that would require fetching git history, which may be slow.
 
         # Get list of workflow runs for current workflow on current branch with a run number greater than the current run
         runs="$(gh run list \
