@@ -33,6 +33,9 @@ outputs:
   prod-parallel:
     description: 'JSON array of prod stacks to deploy in parallel'
     value: ${{ steps.stacks.outputs.prod-parallel }}
+  all-stacks:
+    description: 'JSON array of all validated Terraform stacks (combined dev and prod)'
+    value: ${{ steps.stacks.outputs.all-stacks }}
   config:
     description: 'CI/CD configuration from .gp.cicd.json'
     value: ${{ steps.config.outputs.result }}

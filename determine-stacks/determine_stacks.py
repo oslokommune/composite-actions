@@ -41,6 +41,22 @@ DEFAULT_PATTERNS = [
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
+
+def is_terraform_stack(root: Path, directory: str) -> bool:
+    """Check if directory looks like a Terraform root module.
+
+    A directory is considered a Terraform stack if it contains at least one
+    .tf file with a backend "s3" configuration.
+    """
+    dir_path = root / directory
+    for tf_file in dir_path.glob("*.tf"):
+        try:
+            if 'backend "s3"' in tf_file.read_text():
+                return True
+        except Exception:
+            pass
+    return False
+
 # Example:
 #   Input: 'stacks/dev/dns,stacks/**/iam,stacks/dev/app-*'
 #   Output: ['stacks/dev/app-hello', 'stacks/dev/dns', 'stacks/prod/iam'] # Order might be different.
@@ -178,16 +194,26 @@ def run(writer, root:Path):
     else:
         dirs = parents_to_dirs(os.environ.get("CHANGED_FILES", "[]"), treat_as_dir=manually_triggered)
 
-    dev_dirs, prod_dirs = separate_environment(dirs, dev_files_path, prod_files_path)
+    # Filter to only include valid Terraform stacks
+    valid_dirs = [d for d in dirs if is_terraform_stack(root, d)]
+    skipped = set(dirs) - set(valid_dirs)
+    if skipped:
+        eprint(f"Skipped non-Terraform directories: {sorted(skipped)}")
+
+    dev_dirs, prod_dirs = separate_environment(valid_dirs, dev_files_path, prod_files_path)
 
     patterns = get_patterns()
     seq_dev, par_dev = classify(dev_dirs, patterns)
     seq_prod, par_prod = classify(prod_dirs, patterns)
 
+    # Combine all stacks into a flat list
+    all_stacks = sorted(set(seq_dev + par_dev + seq_prod + par_prod))
+
     writer.write(f"dev-sequential={json.dumps(seq_dev)}\n")
     writer.write(f"dev-parallel={json.dumps(par_dev)}\n")
     writer.write(f"prod-sequential={json.dumps(seq_prod)}\n")
     writer.write(f"prod-parallel={json.dumps(par_prod)}\n")
+    writer.write(f"all-stacks={json.dumps(all_stacks)}\n")
 
 def main():
     eprint("Calculating stacks groups...")

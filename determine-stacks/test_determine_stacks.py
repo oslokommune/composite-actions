@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from determine_stacks import run, DEFAULT_PATTERNS
+from determine_stacks import run, DEFAULT_PATTERNS, is_terraform_stack
 
 
 def run_main(changed_files=None, glob_filter="", event_name="push"):
@@ -51,6 +51,14 @@ def test_mixed_stacks():
     assert result["dev-parallel"] == ["stacks/dev/app-custom", "stacks/dev/app-too-tikki"]
     assert result["prod-sequential"] == ["stacks/prod/dns"]
     assert result["prod-parallel"] == ["stacks/prod/app-hello"]
+    assert result["all-stacks"] == [
+        "stacks/dev/app-custom",
+        "stacks/dev/app-too-tikki",
+        "stacks/dev/iam",
+        "stacks/dev/networking",
+        "stacks/prod/app-hello",
+        "stacks/prod/dns",
+    ]
 
 
 def test_non_matching_glob_pattern():
@@ -61,6 +69,7 @@ def test_non_matching_glob_pattern():
     assert result["dev-parallel"] == []
     assert result["prod-sequential"] == []
     assert result["prod-parallel"] == []
+    assert result["all-stacks"] == []
 
 
 def test_glob_pattern():
@@ -68,6 +77,46 @@ def test_glob_pattern():
     result = run_main(changed_files=None, glob_filter="stacks/*/app-*", event_name="workflow_dispatch")
 
     assert result["dev-sequential"] == []
-    assert result["dev-parallel"] == ["stacks/dev/app-too-tikki"]
+    assert result["dev-parallel"] == ["stacks/dev/app-custom", "stacks/dev/app-too-tikki"]
     assert result["prod-sequential"] == []
-    assert result["prod-parallel"] == ["stacks/prod/app-too-tikki"]
+    assert result["prod-parallel"] == ["stacks/prod/app-hello", "stacks/prod/app-too-tikki"]
+    assert result["all-stacks"] == [
+        "stacks/dev/app-custom",
+        "stacks/dev/app-too-tikki",
+        "stacks/prod/app-hello",
+        "stacks/prod/app-too-tikki",
+    ]
+
+
+def test_is_terraform_stack_with_backend():
+    """Directory with backend "s3" in .tf file is a valid Terraform stack."""
+    root = Path("testdata")
+    assert is_terraform_stack(root, "stacks/dev/app-too-tikki") is True
+    assert is_terraform_stack(root, "stacks/dev/networking") is True
+
+
+def test_is_terraform_stack_without_backend():
+    """Directory without backend "s3" in .tf file is not a valid Terraform stack."""
+    root = Path("testdata")
+    # backup/bin has no .tf files
+    assert is_terraform_stack(root, "stacks/dev/backup/bin") is False
+
+
+def test_is_terraform_stack_nonexistent_dir():
+    """Non-existent directory is not a valid Terraform stack."""
+    root = Path("testdata")
+    assert is_terraform_stack(root, "stacks/dev/nonexistent") is False
+
+
+def test_filters_non_terraform_directories():
+    """Non-Terraform directories are filtered out from results."""
+    files = [
+        "stacks/dev/app-too-tikki/main.tf",
+        "stacks/dev/backup/bin/script.sh",  # Not a Terraform stack
+    ]
+    result = run_main(changed_files=files)
+
+    assert result["dev-parallel"] == ["stacks/dev/app-too-tikki"]
+    assert "stacks/dev/backup/bin" not in result["dev-parallel"]
+    assert "stacks/dev/backup/bin" not in result["dev-sequential"]
+    assert result["all-stacks"] == ["stacks/dev/app-too-tikki"]
