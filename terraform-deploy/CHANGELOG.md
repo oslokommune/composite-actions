@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/oslokommune/composite-actions/compare/terraform-deploy-v1.2.1...terraform-deploy-v1.3.0) (2025-12-17)
+
+
+### Features
+
+* detect out of order deployments ([#176](https://github.com/oslokommune/composite-actions/issues/176)) ([a4367ab](https://github.com/oslokommune/composite-actions/commit/a4367ab0bd45fe80056b5b653a8a49bb566fc7fa))
+
 ## [1.2.1](https://github.com/oslokommune/composite-actions/compare/terraform-deploy-v1.2.0...terraform-deploy-v1.2.1) (2025-12-02)
 
 
