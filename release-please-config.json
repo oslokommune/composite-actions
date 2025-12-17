@@ -54,6 +54,10 @@
     "determine-stacks": {
       "component": "determine-stacks",
       "release-type": "simple"
+    },
+    "detect-stale-job": {
+      "component": "detect-stale-job",
+      "release-type": "simple"
     }
   }
 }
