@@ -49,7 +49,7 @@ runs:
 
         # NOTE: The reason we don't just cancel based on the presence of a newer run is that
         # the newer run may not actually be ahead of the current run - it may be queued, or it might
-        # be in progress but haven't made it's way to the current job yet. In which case,
+        # be in progress but haven't made its way to the current job yet. In which case,
         # we are not out of order and would be cancelling unnecessarily, which can lead to a subpar DX:
         # 1. Run A starts, reaches "Deploy" job, gets concurrency lock and wait for manual approval.
         # 2. Run B starts, Run A is still waiting for approval, Run B reaches job "Deploy" and is queued behind run A.
