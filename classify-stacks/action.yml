@@ -1,0 +1,60 @@
+name: 'Classify Terraform Stacks'
+description: 'Classify Terraform stacks into sequential and parallel deployment stages'
+
+inputs:
+  changed-files:
+    description: 'JSON array of changed file paths'
+    required: true
+  environments:
+    description: 'JSON object mapping env names to path prefixes'
+    required: false
+    default: '{"dev": "dev", "prod": "prod"}'
+  patterns:
+    description: 'Ordered patterns for sequential deployment (first match wins)'
+    required: false
+    default: |
+      **/remote-state
+      **/networking-data
+      **/networking
+      **/dns
+      **/certificates
+      **/load-balancing-*-data
+      **/load-balancing-*
+      **/iam
+      **/app-common
+      **/datadog-common
+      **/databases
+      **/rds-bastion
+      **/*-data
+  stack-validator:
+    description: 'Validation mode: backend-s3 (default), has-tf, none'
+    required: false
+    default: 'backend-s3'
+
+outputs:
+  dev-stages:
+    description: 'JSON array of dev stage objects (name, stacks, parallel)'
+    value: ${{ steps.classify.outputs.dev-stages }}
+  prod-stages:
+    description: 'JSON array of prod stage objects (name, stacks, parallel)'
+    value: ${{ steps.classify.outputs.prod-stages }}
+  all-stacks:
+    description: 'Flat JSON array of all valid stacks'
+    value: ${{ steps.classify.outputs.all-stacks }}
+  has-changes:
+    description: 'Whether any stacks were found'
+    value: ${{ steps.classify.outputs.has-changes }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Classify stacks
+      id: classify
+      shell: bash
+      env:
+        CHANGED_FILES: ${{ inputs.changed-files }}
+        ENVIRONMENTS: ${{ inputs.environments }}
+        PATTERNS: ${{ inputs.patterns }}
+        STACK_VALIDATOR: ${{ inputs.stack-validator }}
+        SCRIPT_PATH: ${{ github.action_path }}
+      run: node "$SCRIPT_PATH/classify-stacks.js" >> "$GITHUB_OUTPUT"
