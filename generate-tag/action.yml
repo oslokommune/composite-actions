@@ -32,4 +32,5 @@ runs:
         sanitized_branch_name="${sanitized_branch_name//[^a-zA-Z0-9_-]/}"
         short_sha="$(echo "$GITHUB_SHA" | cut -c -8)"
         tag="$prefix-$timestamp-$build_id-$short_sha-$sanitized_branch_name"
+        tag=$(echo $tag | cut -c1-128)
         echo "result=$tag" >> "$GITHUB_OUTPUT"
