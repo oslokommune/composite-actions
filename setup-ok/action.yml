@@ -66,13 +66,11 @@ runs:
         
           while ! VERSION="$(curl -L --fail-with-body "https://api.github.com/repos/$REPO/releases/latest" | jq --exit-status --raw-output '.tag_name')" && [ "$RETRY_COUNT" -lt "$MAX_RETRIES" ]; do
             RETRY_COUNT=$((RETRY_COUNT + 1))
-            if [[ -z "$VERSION" ]]; then
-              echo "Failed to fetch version for $REPO. Retrying ($RETRY_COUNT/$MAX_RETRIES)..." >&2
-              sleep 2
-            fi
+            echo "Failed to fetch version for $REPO. Retrying ($RETRY_COUNT/$MAX_RETRIES)..." >&2
+            sleep 2
           done
         
-          if [[ -z "$VERSION" ]]; then
+          if [[ -z "$VERSION" || "$VERSION" == "null" ]]; then
             echo "Error: Unable to fetch version for $REPO after $MAX_RETRIES retries." >&2
             exit 1
           fi
@@ -178,7 +176,24 @@ runs:
         if [[ "$CACHE_HIT" == 'true' ]]; then
           exit 0
         fi
-        
+
+        # Validate all versions before proceeding
+        validate_version() {
+          local NAME="$1"
+          local VERSION="$2"
+          if [[ -z "$VERSION" || "$VERSION" == "null" ]]; then
+            echo "Error: Invalid version for $NAME: '$VERSION'. Please specify a valid version or ensure GitHub API access." >&2
+            exit 1
+          fi
+        }
+
+        validate_version "ok" "$OK_VERSION"
+        validate_version "boilerplate" "$BOILERPLATE_VERSION"
+        validate_version "terraform" "$TERRAFORM_VERSION"
+        validate_version "terragrunt" "$TERRAGRUNT_VERSION"
+        validate_version "yq" "$YQ_VERSION"
+        validate_version "tfswitch" "$TFSWITCH_VERSION"
+
         gh_download() {
           local REPO="$1"
           local VERSION="$2" 
