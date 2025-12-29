@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.2](https://github.com/oslokommune/composite-actions/compare/setup-ok-v1.6.1...setup-ok-v1.6.2) (2025-12-29)
+
+
+### Bug fixes
+
+* **setup-ok:** fail early when version lookup returns null ([#183](https://github.com/oslokommune/composite-actions/issues/183)) ([44d07a0](https://github.com/oslokommune/composite-actions/commit/44d07a0de86eb3a0b859e929008a765178a92095)), closes [#182](https://github.com/oslokommune/composite-actions/issues/182)
+
 ## [1.6.1](https://github.com/oslokommune/composite-actions/compare/setup-ok-v1.6.0...setup-ok-v1.6.1) (2025-07-31)
 
 

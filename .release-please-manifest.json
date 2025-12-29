@@ -5,7 +5,7 @@
   "verify-created-release": "1.0.0",
   "ecs-update-and-deploy-task-definition": "2.1.1",
   "setup-boilerplate": "1.1.0",
-  "setup-ok": "1.6.1",
+  "setup-ok": "1.6.2",
   "renovate-metadata": "1.0.1",
   "generate-tag": "1.0.1",
   "package-and-upload-artifact": "1.1.0",
