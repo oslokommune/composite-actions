@@ -116,11 +116,30 @@ runs:
       with:
         terraform_version: ${{ steps.v.outputs.TERRAFORM_VERSION }}
 
+    - name: Prepare cache directory for Terraform providers
+      shell: bash --noprofile --norc -euo pipefail {0}
+      id: cache-dir
+      run: |
+        cache_dir="/tmp/.terraform-cache"
+        mkdir -p "$cache_dir"
+        echo "result=$cache_dir" >> "$GITHUB_OUTPUT"
+
+    - name: Configure Terraform cache
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      with:
+        path: ${{ steps.cache-dir.outputs.result }}
+        # NOTE: hashFiles searches $GITHUB_WORKSPACE, so the expression below
+        # will create a cache key based on ALL Terraform lockfiles it finds, not
+        # just for the current stack we're deploying
+        key: ${{ runner.os }}-terraform-${{ hashFiles('**/.terraform.lock.hcl') }}
+
     - name: Initialize the working directory containing Terraform configuration files
       id: init
       shell: bash --noprofile --norc -euo pipefail {0}
       working-directory: ${{ steps.get-stack-dir.outputs.stack-dir }}
       continue-on-error: true
+      env:
+        TF_PLUGIN_CACHE_DIR: ${{ steps.cache-dir.outputs.result }}
       run: |
         terraform init -input=false
 
