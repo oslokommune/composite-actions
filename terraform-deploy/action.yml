@@ -116,6 +116,14 @@ runs:
       with:
         terraform_version: ${{ steps.v.outputs.TERRAFORM_VERSION }}
 
+#    - name: Cache .terraform directory
+#      id: cache-tf
+#      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+#      continue-on-error: true
+#      with:
+#        path: ${{ matrix.stack }}/.terraform
+#        key: ${{ format('{0}-tf-{1}', runner.os, hashFiles(format('{0}/.terraform.lock.hcl', matrix.stack))) }}
+
     - name: Initialize the working directory containing Terraform configuration files
       id: init
       shell: bash --noprofile --norc -euo pipefail {0}
@@ -123,26 +131,6 @@ runs:
       continue-on-error: true
       run: |
         terraform init -input=false
-
-    - name: Update SSM parameter
-      if: >-
-        ${{
-          steps.init.outcome == 'success' &&
-          inputs.tag
-        }}
-      shell: bash --noprofile --norc -euo pipefail {0}
-      env:
-        TAG: ${{ inputs.tag }}
-        STACK_DIR: ${{ inputs.stack-dir }}
-        ENVIRONMENT_NAME: ${{ fromJSON(inputs.config)[inputs.environment].name }}
-      run: |
-        stack_name="$(basename "$STACK_DIR")"
-        parameter_name="/$ENVIRONMENT_NAME/artifacts/$stack_name"
-        aws ssm put-parameter \
-          --name "$parameter_name" \
-          --value "$TAG" \
-          --type "String" \
-          --overwrite
 
     - name: Verify that latest code is checked out
       if: inputs.target-repository != github.event.repository.name
@@ -164,6 +152,28 @@ runs:
         fi
         echo "Verified: checked out SHA matches latest commit ($LOCAL_SHA)"
 
+
+    # ToDo: Only needed for app deploys, not iac
+    - name: Update SSM parameter
+      if: >-
+        ${{
+          steps.init.outcome == 'success' &&
+          inputs.tag
+        }}
+      shell: bash --noprofile --norc -euo pipefail {0}
+      env:
+        TAG: ${{ inputs.tag }}
+        STACK_DIR: ${{ inputs.stack-dir }}
+        ENVIRONMENT_NAME: ${{ fromJSON(inputs.config)[inputs.environment].name }}
+      run: |
+        stack_name="$(basename "$STACK_DIR")"
+        parameter_name="/$ENVIRONMENT_NAME/artifacts/$stack_name"
+        aws ssm put-parameter \
+          --name "$parameter_name" \
+          --value "$TAG" \
+          --type "String" \
+          --overwrite
+
     - name: Apply the Terraform code
       id: apply
       if: steps.init.outcome == 'success'
@@ -176,6 +186,7 @@ runs:
         )"
         echo "result=$result" >> "$GITHUB_OUTPUT"
 
+    # TODO: only for app deploys
     - name: Send deployment event to Datadog
       if: ${{ inputs.send-deployment-event == 'true' }}
       shell: bash --noprofile --norc -euo pipefail {0}
