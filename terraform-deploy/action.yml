@@ -42,6 +42,7 @@ outputs:
 runs:
   using: composite
   steps:
+    # TODO test with permissions content: write
     - name: Detect stale job
       # NOTE: We only check on default branch as this is the only place where production deployments happen.
       # Probably OK to ignore workflow reruns as it requires explicit user action?
