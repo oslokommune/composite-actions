@@ -66,7 +66,7 @@ runs:
         IGNORED_STACKS: ${{ inputs.ignored-stacks }}
         CORE_STACKS: ${{ inputs.core-stacks }}
         OVERRIDE_CORE_STACKS: ${{ inputs.override-core-stacks }}
-        CHANGED_FILES: ${{ steps.filter.outcome == 'success' && join(steps.filter.outputs.all_files, ',') || '' }}
+        CHANGED_FILES: ${{ steps.filter.outcome == 'success' && join(fromJSON(steps.filter.outputs.all_files), ',') || '' }}
       run: |
         result="$(uv run "$GITHUB_ACTION_PATH/determine_stacks.py")"
         echo "Determined the following stacks:"
