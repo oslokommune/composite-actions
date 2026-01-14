@@ -1,0 +1,29 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+defaults:
+  run:
+    # NOTE: A bit stricter than the default bash options used by GitHub Actions
+    shell: bash --noprofile --norc -euo pipefail {0}
+
+jobs:
+  test-determine-stacks:
+    name: Test determine-stacks composite action
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Run tests
+        working-directory: ./determine-stacks
+        run: uv run pytest -v
