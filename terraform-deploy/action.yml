@@ -31,6 +31,10 @@ inputs:
     description: "Whether to send an event to Datadog after successful deployment. By default this is only sent on default branch deployments, and it requires 'tag' to be set."
     default: "${{ github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}"
     required: false
+  cancel-if-stale:
+    description: "Whether to cancel the job if a newer run has already progressed further than the current run."
+    default: "true"
+    required: false
 
 outputs:
   # NOTE: A composite action can't have dynamic outputs, so
@@ -45,9 +49,10 @@ runs:
     - name: Detect stale job
       # NOTE: We only check on default branch as this is the only place where production deployments happen.
       # Probably OK to ignore workflow reruns as it requires explicit user action?
-      if: ${{ github.run_attempt == 1 && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+      if: ${{ inputs.cancel-if-stale == 'true' && github.event_name == 'push' && github.run_attempt == 1 && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+      id: detect-stale-job
       # TODO: Pin after initial release
-      uses: oslokommune/composite-actions/detect-stale-job@main
+      uses: oslokommune/composite-actions/detect-stale-job@stale-job-stuff
 
     - name: Get stack directory
       id: get-stack-dir
