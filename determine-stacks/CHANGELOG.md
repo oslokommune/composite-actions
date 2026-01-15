@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/oslokommune/composite-actions/compare/determine-stacks-v1.1.0...determine-stacks-v1.1.1) (2026-01-15)
+
+
+### Bug fixes
+
+* improve composite actions ([#188](https://github.com/oslokommune/composite-actions/issues/188)) ([25e98ff](https://github.com/oslokommune/composite-actions/commit/25e98ff3f83ada1930e28618782fe544b2075aab))
+
 ## [1.1.0](https://github.com/oslokommune/composite-actions/compare/determine-stacks-v1.0.0...determine-stacks-v1.1.0) (2025-12-30)
 
 
