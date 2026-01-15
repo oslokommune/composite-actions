@@ -1,60 +1,54 @@
-name: 'Determine Terraform Stacks'
-description: 'Classify Terraform stacks into sequential and parallel deployment groups'
+name: "Determine Terraform stacks"
+description: "Determine which Terraform stacks to run operations on"
 
 inputs:
-  input_summary:
-    description: 'Outputs the glob filter to the GitHub summary'
-    type: boolean
+  selected-stacks:
+    description: "Comma/newline-delimited list of stack patterns to include. By default, only stacks with changed files are included. Set 'selected-stacks' to override this behavior."
+    default: ""
     required: false
-    default: true
-  glob_filter:
-    description: 'Deploy stacks matching glob pattern (e.g. "stacks/dev/{dns,iam}", "stacks/dev/app-*", "stacks/*/app-foo")'
-    required: true
-  patterns:
-    description: 'Ordered patterns for sequential deployment (first match wins)'
+  ignored-stacks:
+    description: "Comma/newline-delimited list of stack patterns to always ignore."
+    default: ""
     required: false
-  dev_files_path:
-    description: 'Path to dev stack (e.g. "stacks/dev")'
+  core-stacks:
+    description: "Comma/newline-delimited list of stack patterns to put into separate outputs. If 'override-core-stacks' is true, these will replace the default core stack patterns."
+    default: ""
     required: false
-  prod_files_path:
-    description: 'Path to prod stack (e.g. "stacks/prod")'
+  override-core-stacks:
+    description: "If true, replace the default core stack patterns with those provided in 'core-stacks' input. By default, 'core-stacks' is appended to a predefined list of patterns."
+    default: "false"
     required: false
 
 outputs:
-  dev-sequential:
-    description: 'JSON array of dev stacks to deploy sequentially'
-    value: ${{ steps.stacks.outputs.dev-sequential }}
-  dev-parallel:
-    description: 'JSON array of dev stacks to deploy in parallel'
-    value: ${{ steps.stacks.outputs.dev-parallel }}
-  prod-sequential:
-    description: 'JSON array of prod stacks to deploy sequentially'
-    value: ${{ steps.stacks.outputs.prod-sequential }}
-  prod-parallel:
-    description: 'JSON array of prod stacks to deploy in parallel'
-    value: ${{ steps.stacks.outputs.prod-parallel }}
+  dev-core-stacks:
+    description: "JSON array of dev core stacks (deployed sequentially in order)"
+    value: ${{ steps.stacks.outputs.dev-core-stacks }}
+  dev-apps-stacks:
+    description: "JSON array of dev dependent stacks (deployed in parallel)"
+    value: ${{ steps.stacks.outputs.dev-apps-stacks }}
+  prod-core-stacks:
+    description: "JSON array of prod core stacks (deployed sequentially in order)"
+    value: ${{ steps.stacks.outputs.prod-core-stacks }}
+  prod-apps-stacks:
+    description: "JSON array of prod dependent stacks (deployed in parallel)"
+    value: ${{ steps.stacks.outputs.prod-apps-stacks }}
+  all-dev-stacks:
+    description: "JSON array of all dev stacks"
+    value: ${{ steps.stacks.outputs.all-dev-stacks }}
+  all-prod-stacks:
+    description: "JSON array of all prod stacks"
+    value: ${{ steps.stacks.outputs.all-prod-stacks }}
   all-stacks:
-    description: 'JSON array of all validated Terraform stacks (combined dev and prod)'
+    description: "JSON array of all stacks (dev and prod combined)"
     value: ${{ steps.stacks.outputs.all-stacks }}
-  config:
-    description: 'CI/CD configuration from .gp.cicd.json'
-    value: ${{ steps.config.outputs.result }}
 
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
-    - name: Store config as output
-      id: config
-      shell: bash
-      run: |
-        config="$(jq -e -c . ".gp.cicd.json")"
-        echo "$config"
-        echo "result=$config" >> "$GITHUB_OUTPUT"
-
     - name: Detect changed stack files
       uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
       id: filter
-      if: ${{ github.event_name != 'workflow_dispatch' }}
+      if: ${{ inputs.selected-stacks == '' }}
       with:
         list-files: json
         filters: |
@@ -64,48 +58,17 @@ runs:
     - name: Install uv
       uses: astral-sh/setup-uv@v6
 
-    - name: Classify stacks into sequential and parallel deployment groups
+    - name: Determine stacks
       id: stacks
-      shell: bash
+      shell: bash --noprofile --norc -euo pipefail {0}
       env:
-        EVENT_NAME: ${{ github.event_name }}
-        GLOB_FILTER: ${{ inputs.glob_filter }}
-        FILES_FROM_FILTER: ${{ steps.filter.outputs.all_files }}
-        DEV_FILES_PATH: ${{ inputs.dev_files_path }}
-        PROD_FILES_PATH: ${{ inputs.prod_files_path }}
-        SCRIPT_PATH: ${{ github.action_path }}
-        PATTERNS: ${{ inputs.patterns }}
+        SELECTED_STACKS: ${{ inputs.selected-stacks }}
+        IGNORED_STACKS: ${{ inputs.ignored-stacks }}
+        CORE_STACKS: ${{ inputs.core-stacks }}
+        OVERRIDE_CORE_STACKS: ${{ inputs.override-core-stacks }}
+        CHANGED_FILES: ${{ steps.filter.outcome == 'success' && join(fromJSON(steps.filter.outputs.all_files), ',') || '' }}
       run: |
-        export CHANGED_FILES="${FILES_FROM_FILTER:-[]}"
-        export GITHUB_EVENT_NAME="$EVENT_NAME"
-
-        uv run "$SCRIPT_PATH/determine_stacks.py" >> "$GITHUB_OUTPUT"
-        
-        cat "$GITHUB_OUTPUT"
-
-    - name: Add redeploy comment
-      shell: bash
-      env:
-        DEV_SEQUENTIAL:  ${{ steps.stacks.outputs.dev-sequential }}
-        DEV_PARALLEL:    ${{ steps.stacks.outputs.dev-parallel }}
-        PROD_SEQUENTIAL: ${{ steps.stacks.outputs.prod-sequential }}
-        PROD_PARALLEL:   ${{ steps.stacks.outputs.prod-parallel }}
-        PARTIAL_WORKFLOW_DISPATCH_URL: "${{ github.server_url}}/${{ github.repository }}/actions/workflows"
-      run: |
-        result=$(jq --raw-output --null-input '
-          [env.DEV_SEQUENTIAL, env.DEV_PARALLEL, env.PROD_SEQUENTIAL, env.PROD_PARALLEL]
-          | map(fromjson // [])
-          | flatten
-          | join(",")
-        ')
-        
-        # $GITHUB_WORKFLOW_REF looks like this: <org>/<repo>/.github/workflows/<workflow-filename>@<git-reference>
-        workflow_filename="$(basename "${GITHUB_WORKFLOW_REF%%@*}")"
-        workflow_dispatch_url="$PARTIAL_WORKFLOW_DISPATCH_URL/$workflow_filename"
-        
-        {
-          echo "To redeploy the stacks used in this workflow, run a [workflow dispatch]($workflow_dispatch_url) using this glob pattern:"
-          echo '```'
-          echo "$result"
-          echo '```'
-        } >> "$GITHUB_STEP_SUMMARY"
+        result="$(uv run "$GITHUB_ACTION_PATH/determine_stacks.py")"
+        echo "Determined the following stacks:"
+        echo "$result"
+        echo "$result" >> "$GITHUB_OUTPUT"

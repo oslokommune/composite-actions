@@ -5,17 +5,11 @@ run: run-dispatch
 
 run-change:
 	@echo "Running determine_stacks.py with example input..."
-	@export GITHUB_EVENT_NAME="push" && \
-	export CHANGED_FILES='["testdata/stacks/dev/networking/main.tf", "testdata/stacks/dev/app-too-tikki/main.tf", "testdata/stacks/dev/databases/main.tf", "testdata/stacks/prod/remote-state/main.tf", "testdata/stacks/prod/iam/roles.tf"]' && \
-	export DEV_FILES_PATH="testdata/stacks/dev" && \
-	export PROD_FILES_PATH="testdata/stacks/prod" && \
+	@export CHANGED_FILES='testdata/stacks/dev/networking/main.tf,testdata/stacks/dev/app-too-tikki/main.tf,testdata/stacks/dev/databases/main.tf,testdata/stacks/prod/remote-state/main.tf,testdata/stacks/prod/iam/roles.tf' && \
 	uv run determine_stacks.py
 
 run-dispatch:
-	@export GLOB_FILTER="testdata/stacks/dev/*" && \
-	export GITHUB_EVENT_NAME="workflow_dispatch" && \
-	export DEV_FILES_PATH="testdata/stacks/dev" && \
-	export PROD_FILES_PATH="testdata/stacks/prod" && \
+	@export SELECTED_STACKS="testdata/stacks/dev/*" && \
 	uv run determine_stacks.py
 
 # Run unit tests

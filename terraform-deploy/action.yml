@@ -9,7 +9,7 @@ inputs:
     description: "The path to the application stack (e.g., `stacks/dev/app-km`)"
   environment:
     required: true
-    description: "The semantic name of the environment (e.g., `dev`, `prod`)"
+    description: "The type of environment (e.g., `dev`, `prod`). Must match environment in configuration file .gp.cicd.json."
   tag:
     required: false
     default: ""
@@ -28,7 +28,7 @@ inputs:
     description: "Repository deploy key that grants read access to shared libraries (e.g., golden-path-iac)"
     required: true
   send-deployment-event:
-    description: "Whether to send an event to Datadog after successful deployment"
+    description: "Whether to send an event to Datadog after successful deployment. By default this is only sent on default branch deployments, and it requires 'tag' to be set."
     default: "${{ github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}"
     required: false
 
@@ -124,26 +124,6 @@ runs:
       run: |
         terraform init -input=false
 
-    - name: Update SSM parameter
-      if: >-
-        ${{
-          steps.init.outcome == 'success' &&
-          inputs.tag
-        }}
-      shell: bash --noprofile --norc -euo pipefail {0}
-      env:
-        TAG: ${{ inputs.tag }}
-        STACK_DIR: ${{ inputs.stack-dir }}
-        ENVIRONMENT_NAME: ${{ fromJSON(inputs.config)[inputs.environment].name }}
-      run: |
-        stack_name="$(basename "$STACK_DIR")"
-        parameter_name="/$ENVIRONMENT_NAME/artifacts/$stack_name"
-        aws ssm put-parameter \
-          --name "$parameter_name" \
-          --value "$TAG" \
-          --type "String" \
-          --overwrite
-
     - name: Verify that latest code is checked out
       if: inputs.target-repository != github.event.repository.name
       shell: bash --noprofile --norc -euo pipefail {0}
@@ -164,6 +144,26 @@ runs:
         fi
         echo "Verified: checked out SHA matches latest commit ($LOCAL_SHA)"
 
+    - name: Update SSM parameter
+      if: >-
+        ${{
+          steps.init.outcome == 'success' &&
+          inputs.tag
+        }}
+      shell: bash --noprofile --norc -euo pipefail {0}
+      env:
+        TAG: ${{ inputs.tag }}
+        STACK_DIR: ${{ inputs.stack-dir }}
+        ENVIRONMENT_NAME: ${{ fromJSON(inputs.config)[inputs.environment].name }}
+      run: |
+        stack_name="$(basename "$STACK_DIR")"
+        parameter_name="/$ENVIRONMENT_NAME/artifacts/$stack_name"
+        aws ssm put-parameter \
+          --name "$parameter_name" \
+          --value "$TAG" \
+          --type "String" \
+          --overwrite
+
     - name: Apply the Terraform code
       id: apply
       if: steps.init.outcome == 'success'
@@ -177,7 +177,7 @@ runs:
         echo "result=$result" >> "$GITHUB_OUTPUT"
 
     - name: Send deployment event to Datadog
-      if: ${{ inputs.send-deployment-event == 'true' }}
+      if: ${{ inputs.send-deployment-event == 'true' && inputs.tag != '' }}
       shell: bash --noprofile --norc -euo pipefail {0}
       # Probably don't want to halt deployments due to issues with deployment events
       continue-on-error: true

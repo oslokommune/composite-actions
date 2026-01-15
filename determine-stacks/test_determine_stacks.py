@@ -1,42 +1,228 @@
-"""Unit tests for determine-stacks.py"""
+"""Unit tests for determine_stacks.py"""
 
-import sys
-import os
-import json
 import io
+import json
+import os
+import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from determine_stacks import run, DEFAULT_PATTERNS, is_terraform_stack
+from determine_stacks import (
+    classify_stacks,
+    determine_stack_environment,
+    files_to_dirs,
+    get_core_stacks,
+    is_terraform_stack,
+    main,
+    parse_string_list,
+    separate_by_environment,
+)
 
 
-def run_main(changed_files=None, glob_filter="", event_name="push"):
-    changed_files = changed_files or []
+def run_main(
+    changed_files: list[str] | str = "",
+    selected_stacks: str = "",
+    ignored_stacks: str = "",
+    core_stacks: str = "",
+    override_core_stacks: bool = False,
+):
+    """Helper to run the main function with test parameters."""
+    # Convert list to newline-delimited string
+    if isinstance(changed_files, list):
+        changed_files = ",".join(changed_files)
 
-    os.environ["GLOB_FILTER"] = glob_filter
-    os.environ["GITHUB_EVENT_NAME"] = event_name
-    os.environ["DEV_FILES_PATH"] = "stacks/dev"
-    os.environ["PROD_FILES_PATH"] = "stacks/prod"
-    os.environ["CHANGED_FILES"] = json.dumps(changed_files)
+    os.environ["CHANGED_FILES"] = changed_files
+    os.environ["SELECTED_STACKS"] = selected_stacks
+    os.environ["IGNORED_STACKS"] = ignored_stacks
+    os.environ["CORE_STACKS"] = core_stacks
+    os.environ["OVERRIDE_CORE_STACKS"] = "true" if override_core_stacks else "false"
 
     writer = io.StringIO()
-    root = Path("testdata")
-    run(writer, root)
-
-    lines = writer.getvalue().strip().split("\n")
+    main(writer, Path("testdata"))
 
     result = {}
-    for line in lines:
+    for line in writer.getvalue().strip().split("\n"):
         if line.strip():
             key, value = line.split("=", 1)
             result[key] = json.loads(value)
-
     return result
 
 
+# =============================================================================
+# parse_string_list() tests
+# =============================================================================
+
+
+def test_parse_string_list_empty():
+    """Empty and whitespace-only strings return empty list."""
+    assert parse_string_list("") == []
+    assert parse_string_list("   ") == []
+    assert parse_string_list(None) == []
+
+
+def test_parse_string_list_comma_separated():
+    """Comma-separated values are parsed correctly."""
+    assert parse_string_list("a") == ["a"]
+    assert parse_string_list("a,b,c") == ["a", "b", "c"]
+    assert parse_string_list("a, b, c") == ["a", "b", "c"]
+    assert parse_string_list("  a  ,  b  ") == ["a", "b"]
+
+
+def test_parse_string_list_newline_delimited():
+    """Newline-delimited values are parsed correctly."""
+    assert parse_string_list("a\nb\nc") == ["a", "b", "c"]
+    assert parse_string_list("a\n\nb") == ["a", "b"]
+
+
+# =============================================================================
+# determine_stack_environment() tests
+# =============================================================================
+
+
+def test_get_environment_mappings():
+    """All environment aliases map correctly."""
+    # Dev aliases
+    for env in ["dev", "qa", "test"]:
+        assert determine_stack_environment(f"stacks/{env}/app") == "dev", (
+            f"{env} should map to dev"
+        )
+    # Prod aliases
+    assert determine_stack_environment("stacks/prod/applications/app") == "prod"
+
+
+def test_get_environment_first_match_wins():
+    """First matching path component determines environment."""
+    assert determine_stack_environment("stacks/dev/prod-monitor") == "dev"
+    assert determine_stack_environment("stacks/prod/dev-tools") == "prod"
+
+
+def test_get_environment_no_match():
+    """Paths without known environment return None."""
+    assert determine_stack_environment("example/my-stack") is None
+    assert determine_stack_environment("stacks/shared/app") is None
+
+
+def test_get_environment_case_insensitive():
+    """Environment detection is case-insensitive."""
+    assert determine_stack_environment("stacks/DEV/app") == "dev"
+    assert determine_stack_environment("stacks/PROD/app") == "prod"
+
+
+def test_get_environment_no_substring_match():
+    """Only exact path components match, not substrings."""
+    assert determine_stack_environment("stacks/developer-tools/app") is None
+    assert determine_stack_environment("stacks/productivity/app") is None
+
+
+# =============================================================================
+# is_terraform_stack() tests
+# =============================================================================
+
+
+def test_is_terraform_stack():
+    """Terraform stack detection based on backend "s3" in .tf files."""
+    root = Path("testdata")
+    # Valid stacks
+    assert is_terraform_stack(root / "stacks/dev/app-too-tikki") is True
+    assert is_terraform_stack(root / "stacks/dev/networking") is True
+    # Not a stack (no .tf files with S3 backend)
+    assert is_terraform_stack(root / "stacks/dev/backup/bin") is False
+    # Non-existent
+    assert is_terraform_stack(root / "stacks/dev/nonexistent") is False
+
+
+# =============================================================================
+# files_to_dirs() tests
+# =============================================================================
+
+
+def test_files_to_dirs_basic():
+    """File paths are converted to parent directories."""
+    files = ["stacks/dev/app/main.tf", "stacks/prod/dns/config.tf"]
+    assert files_to_dirs(files) == ["stacks/dev/app", "stacks/prod/dns"]
+
+
+def test_files_to_dirs_deduplication():
+    """Duplicate directories are removed."""
+    files = [
+        "stacks/dev/app/main.tf",
+        "stacks/dev/app/variables.tf",
+        "stacks/dev/app/outputs.tf",
+    ]
+    assert files_to_dirs(files) == ["stacks/dev/app"]
+
+
+def test_files_to_dirs_boilerplate():
+    """Files in .boilerplate are mapped to parent stack directory."""
+    files = ["stacks/dev/app/.boilerplate/something"]
+    assert files_to_dirs(files) == ["stacks/dev/app"]
+
+
+# =============================================================================
+# separate_by_environment() tests
+# =============================================================================
+
+
+def test_separate_by_environment():
+    """Directories are correctly separated by environment."""
+    dirs = ["stacks/dev/app", "stacks/prod/dns", "stacks/shared/common"]
+    dev, prod, skipped = separate_by_environment(dirs)
+    assert dev == ["stacks/dev/app"]
+    assert prod == ["stacks/prod/dns"]
+    assert skipped == ["stacks/shared/common"]
+
+
+# =============================================================================
+# get_core_stacks() tests
+# =============================================================================
+
+
+def test_get_core_stacks_defaults():
+    """Default core stack patterns are returned."""
+    patterns = get_core_stacks()
+    assert "**/networking" in patterns
+    assert "**/dns" in patterns
+    assert "**/iam" in patterns
+
+
+def test_get_core_stacks_with_user_patterns():
+    """User patterns are appended to defaults."""
+    patterns = get_core_stacks(patterns=["**/custom-infra"])
+    assert "**/networking" in patterns
+    assert "**/custom-infra" in patterns
+
+
+def test_get_core_stacks_override():
+    """Override replaces defaults with user patterns."""
+    patterns = get_core_stacks(
+        patterns=["**/custom-only"], override_default_patterns=True
+    )
+    assert patterns == ["**/custom-only"]
+    assert "**/networking" not in patterns
+
+
+# =============================================================================
+# classify_stacks() tests
+# =============================================================================
+
+
+def test_classify_stacks():
+    """Stacks are classified into matching and non-matching."""
+    paths = ["stacks/dev/networking", "stacks/dev/app", "stacks/dev/dns"]
+    patterns = ["**/networking", "**/dns"]
+    hit, miss = classify_stacks(paths, patterns)
+    assert hit == ["stacks/dev/networking", "stacks/dev/dns"]
+    assert miss == ["stacks/dev/app"]
+
+
+# =============================================================================
+# Integration tests
+# =============================================================================
+
+
 def test_mixed_stacks():
-    """Mix of infrastructure and app stacks."""
+    """Mix of core and dependent stacks across environments."""
     files = [
         "stacks/dev/app-too-tikki/main.tf",
         "stacks/dev/networking/main.tf",
@@ -47,10 +233,20 @@ def test_mixed_stacks():
     ]
     result = run_main(changed_files=files)
 
-    assert result["dev-sequential"] == ["stacks/dev/networking", "stacks/dev/iam"]
-    assert result["dev-parallel"] == ["stacks/dev/app-custom", "stacks/dev/app-too-tikki"]
-    assert result["prod-sequential"] == ["stacks/prod/dns"]
-    assert result["prod-parallel"] == ["stacks/prod/app-hello"]
+    assert result["dev-core-stacks"] == ["stacks/dev/iam", "stacks/dev/networking"]
+    assert result["dev-apps-stacks"] == [
+        "stacks/dev/app-custom",
+        "stacks/dev/app-too-tikki",
+    ]
+    assert result["prod-core-stacks"] == ["stacks/prod/dns"]
+    assert result["prod-apps-stacks"] == ["stacks/prod/app-hello"]
+    assert result["all-dev-stacks"] == [
+        "stacks/dev/app-custom",
+        "stacks/dev/app-too-tikki",
+        "stacks/dev/iam",
+        "stacks/dev/networking",
+    ]
+    assert result["all-prod-stacks"] == ["stacks/prod/app-hello", "stacks/prod/dns"]
     assert result["all-stacks"] == [
         "stacks/dev/app-custom",
         "stacks/dev/app-too-tikki",
@@ -61,62 +257,98 @@ def test_mixed_stacks():
     ]
 
 
-def test_non_matching_glob_pattern():
-    """Non-matching glob pattern."""
-    result = run_main(changed_files=None, glob_filter="stacks/doesnotexist/*", event_name="workflow_dispatch")
-
-    assert result["dev-sequential"] == []
-    assert result["dev-parallel"] == []
-    assert result["prod-sequential"] == []
-    assert result["prod-parallel"] == []
-    assert result["all-stacks"] == []
-
-
 def test_glob_pattern():
-    """Mix of stacks, filter by glob pattern."""
-    result = run_main(changed_files=None, glob_filter="stacks/*/app-*", event_name="workflow_dispatch")
+    """Selection with glob pattern."""
+    result = run_main(selected_stacks="stacks/*/app-*")
 
-    assert result["dev-sequential"] == []
-    assert result["dev-parallel"] == ["stacks/dev/app-custom", "stacks/dev/app-too-tikki"]
-    assert result["prod-sequential"] == []
-    assert result["prod-parallel"] == ["stacks/prod/app-hello", "stacks/prod/app-too-tikki"]
-    assert result["all-stacks"] == [
+    assert result["dev-apps-stacks"] == [
         "stacks/dev/app-custom",
         "stacks/dev/app-too-tikki",
+    ]
+    assert result["prod-apps-stacks"] == [
         "stacks/prod/app-hello",
         "stacks/prod/app-too-tikki",
     ]
+    assert result["dev-core-stacks"] == []
+    assert result["prod-core-stacks"] == []
 
 
-def test_is_terraform_stack_with_backend():
-    """Directory with backend "s3" in .tf file is a valid Terraform stack."""
-    root = Path("testdata")
-    assert is_terraform_stack(root, "stacks/dev/app-too-tikki") is True
-    assert is_terraform_stack(root, "stacks/dev/networking") is True
+def test_non_matching_glob_pattern():
+    """Non-matching glob pattern returns empty arrays."""
+    result = run_main(selected_stacks="stacks/doesnotexist/*")
 
-
-def test_is_terraform_stack_without_backend():
-    """Directory without backend "s3" in .tf file is not a valid Terraform stack."""
-    root = Path("testdata")
-    # backup/bin has no .tf files
-    assert is_terraform_stack(root, "stacks/dev/backup/bin") is False
-
-
-def test_is_terraform_stack_nonexistent_dir():
-    """Non-existent directory is not a valid Terraform stack."""
-    root = Path("testdata")
-    assert is_terraform_stack(root, "stacks/dev/nonexistent") is False
+    assert result["dev-core-stacks"] == []
+    assert result["dev-apps-stacks"] == []
+    assert result["prod-core-stacks"] == []
+    assert result["prod-apps-stacks"] == []
+    assert result["all-stacks"] == []
 
 
 def test_filters_non_terraform_directories():
-    """Non-Terraform directories are filtered out from results."""
+    """Non-Terraform directories are filtered out."""
     files = [
         "stacks/dev/app-too-tikki/main.tf",
-        "stacks/dev/backup/bin/script.sh",  # Not a Terraform stack
+        "stacks/dev/backup/bin/script.sh",
     ]
     result = run_main(changed_files=files)
 
-    assert result["dev-parallel"] == ["stacks/dev/app-too-tikki"]
-    assert "stacks/dev/backup/bin" not in result["dev-parallel"]
-    assert "stacks/dev/backup/bin" not in result["dev-sequential"]
+    assert result["dev-apps-stacks"] == ["stacks/dev/app-too-tikki"]
     assert result["all-stacks"] == ["stacks/dev/app-too-tikki"]
+
+
+def test_ignored_stacks():
+    """Ignored stack patterns filter out matching stacks."""
+    files = [
+        "stacks/dev/app-too-tikki/main.tf",
+        "stacks/dev/networking/main.tf",
+        "stacks/prod/app-hello/main.tf",
+    ]
+    result = run_main(changed_files=files, ignored_stacks="**/app-*")
+
+    # app-* stacks should be filtered out
+    assert result["dev-core-stacks"] == ["stacks/dev/networking"]
+    assert result["dev-apps-stacks"] == []
+    assert result["prod-core-stacks"] == []
+    assert result["prod-apps-stacks"] == []
+
+
+def test_custom_core_stacks():
+    """Custom core stack patterns work alongside defaults."""
+    files = [
+        "stacks/dev/app-too-tikki/main.tf",
+        "stacks/dev/networking/main.tf",
+    ]
+    # Add app-too-tikki as a core stack
+    result = run_main(changed_files=files, core_stacks="**/app-too-tikki")
+
+    assert result["dev-core-stacks"] == [
+        "stacks/dev/app-too-tikki",
+        "stacks/dev/networking",
+    ]
+    assert result["dev-apps-stacks"] == []
+
+
+def test_override_core_stacks():
+    """Override core stacks replaces default patterns."""
+    files = [
+        "stacks/dev/app-too-tikki/main.tf",
+        "stacks/dev/networking/main.tf",
+    ]
+    # Only app-* should be considered core now
+    result = run_main(
+        changed_files=files, core_stacks="**/app-*", override_core_stacks=True
+    )
+
+    assert result["dev-core-stacks"] == ["stacks/dev/app-too-tikki"]
+    assert result["dev-apps-stacks"] == ["stacks/dev/networking"]
+
+
+def test_no_changes():
+    """No changed files results in empty outputs."""
+    result = run_main(changed_files=[])
+
+    assert result["dev-core-stacks"] == []
+    assert result["dev-apps-stacks"] == []
+    assert result["prod-core-stacks"] == []
+    assert result["prod-apps-stacks"] == []
+    assert result["all-stacks"] == []
