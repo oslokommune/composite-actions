@@ -68,7 +68,7 @@ runs:
         # 2. Run B starts, Run A is still waiting for approval, Run B reaches job "Deploy" and is queued behind run A.
         # 3. Run A is approved, but gets cancelled immediately because Run B is newer.
 
-        echo "$runs" | while read -r run_id; do
+        while read -r run_id; do
           if [ "$run_id" == "" ]; then
             continue
           fi
@@ -104,6 +104,6 @@ runs:
             echo "is-stale=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-        done
+        done <<< "$runs"
 
         echo "Current run is not stale - proceeding"
