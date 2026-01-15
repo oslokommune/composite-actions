@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/oslokommune/composite-actions/compare/terraform-deploy-v1.3.0...terraform-deploy-v1.3.1) (2026-01-15)
+
+
+### Bug fixes
+
+* improve composite actions ([#188](https://github.com/oslokommune/composite-actions/issues/188)) ([25e98ff](https://github.com/oslokommune/composite-actions/commit/25e98ff3f83ada1930e28618782fe544b2075aab))
+
 ## [1.3.0](https://github.com/oslokommune/composite-actions/compare/terraform-deploy-v1.2.1...terraform-deploy-v1.3.0) (2025-12-17)
 
 
