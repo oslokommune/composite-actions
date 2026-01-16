@@ -1,6 +1,17 @@
 name: Detect stale job
 description: Detect if a newer workflow run already has run the current job - making the current run stale. The job needs 'write' permissions to 'actions' in order to cancel a run.
 
+inputs:
+  cancel-if-stale:
+    description: "Whether to cancel the workflow if a newer run has already progressed further than the current run, or just output the status."
+    default: "true"
+    required: false
+
+outputs:
+  is-stale:
+    description: Whether the job was detected as stale
+    value: ${{ steps.stale.outputs.is-stale == 'true' }}
+
 runs:
   using: composite
   steps:
@@ -9,6 +20,8 @@ runs:
       env:
         GITHUB_TOKEN: ${{ github.token }}
         CHECK_RUN_ID: ${{ job.check_run_id }}
+        CANCEL_IF_STALE: ${{ inputs.cancel-if-stale }}
+      id: stale
       run: |
         current_sha="$GITHUB_SHA"
         current_run_id="$GITHUB_RUN_ID"
@@ -55,7 +68,7 @@ runs:
         # 2. Run B starts, Run A is still waiting for approval, Run B reaches job "Deploy" and is queued behind run A.
         # 3. Run A is approved, but gets cancelled immediately because Run B is newer.
 
-        echo "$runs" | while read -r run_id; do
+        while read -r run_id; do
           if [ "$run_id" == "" ]; then
             continue
           fi
@@ -79,13 +92,18 @@ runs:
           if [[ "$newer_job_started_at" < "$current_job_started_at" ]]; then
             echo ""
             echo "Current run $current_run_id started job $current_job_name at $current_job_started_at, but a newer run with ID $run_id already started at $newer_job_started_at" >&2
-            echo "Cancelling current run as it is stale" >&2
-            # There's a --force flag we could use here as well
-            gh run cancel --repo "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID"
-            echo "::error title=$current_job_name::Canceling to prevent out of order deployment"
-            # Need non-zero exit here to ensure the run does not progress further as cancellation does not take effect immediately.
-            exit 1
+            if [ "$CANCEL_IF_STALE" == "true" ]; then
+              echo "Cancelling current run as it is stale" >&2
+              # There's a --force flag we could use here as well
+              gh run cancel --repo "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID"
+              echo "::error title=$current_job_name::Canceling to prevent out of order deployment"
+              # Need non-zero exit here to ensure the run does not progress further as cancellation does not take effect immediately.
+              exit 1
+            fi
+            echo "::warning title=$current_job_name::Detected out of order deployment"
+            echo "is-stale=true" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
-        done
+        done <<< "$runs"
 
         echo "Current run is not stale - proceeding"
