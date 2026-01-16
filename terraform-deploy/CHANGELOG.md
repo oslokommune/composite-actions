@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.3](https://github.com/oslokommune/composite-actions/compare/terraform-deploy-v1.3.2...terraform-deploy-v1.3.3) (2026-01-16)
+
+
+### Dependency updates
+
+* pin composite action ([586ae06](https://github.com/oslokommune/composite-actions/commit/586ae062997ba7b65952e83355dbc4ea786b55da))
+
 ## [1.3.2](https://github.com/oslokommune/composite-actions/compare/terraform-deploy-v1.3.1...terraform-deploy-v1.3.2) (2026-01-16)
 
 
