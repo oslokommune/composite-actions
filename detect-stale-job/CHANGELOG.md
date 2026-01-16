@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/oslokommune/composite-actions/compare/detect-stale-job-v1.0.0...detect-stale-job-v1.0.1) (2026-01-16)
+
+
+### Bug fixes
+
+* option to detect instead of cancel stale job ([#190](https://github.com/oslokommune/composite-actions/issues/190)) ([005d431](https://github.com/oslokommune/composite-actions/commit/005d4313b956da3e65eba2c20315ad24ee3cf29e))
+
 ## 1.0.0 (2025-12-17)
 
 

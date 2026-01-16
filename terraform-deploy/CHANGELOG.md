@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.2](https://github.com/oslokommune/composite-actions/compare/terraform-deploy-v1.3.1...terraform-deploy-v1.3.2) (2026-01-16)
+
+
+### Bug fixes
+
+* option to detect instead of cancel stale job ([#190](https://github.com/oslokommune/composite-actions/issues/190)) ([005d431](https://github.com/oslokommune/composite-actions/commit/005d4313b956da3e65eba2c20315ad24ee3cf29e))
+
 ## [1.3.1](https://github.com/oslokommune/composite-actions/compare/terraform-deploy-v1.3.0...terraform-deploy-v1.3.1) (2026-01-15)
 
 
