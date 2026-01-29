@@ -1,0 +1,9 @@
+{
+  "name": "composite-actions",
+  "description": "Oslo Kommune composite GitHub Actions for CI/CD pipelines. Includes actions for AWS deployments (CloudFront, ECS, S3), Docker image operations (crane-copy-image), Terraform deployments, artifact packaging, release management, Renovate metadata, and CLI tool setup (ok, boilerplate, terraform). Used together with iac-platform skill for CI/CD pipelines",
+  "version": "1.0.0",
+  "author": {
+    "name": "Kjøremiljø"
+  },
+  "keywords": ["github-actions", "composite-actions", "ci-cd", "aws", "cloudfront", "ecs", "terraform", "oslo-kommune"]
+}
