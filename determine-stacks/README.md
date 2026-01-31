@@ -39,7 +39,6 @@ Determine which Terraform stacks to run operations on
 |`all-dev-stacks`  |JSON array of all dev stacks                                   |``${{ steps.stacks.outputs.all-dev-stacks }}``  |
 |`all-prod-stacks` |JSON array of all prod stacks                                  |``${{ steps.stacks.outputs.all-prod-stacks }}`` |
 |`all-stacks`      |JSON array of all stacks (dev and prod combined)               |``${{ steps.stacks.outputs.all-stacks }}``      |
-|`config`          |CI/CD configuration from .gp.cicd.json                         |``${{ steps.config.outputs.result }}``          |
 
 
 
