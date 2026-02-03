@@ -9,7 +9,7 @@ inputs:
     description: "The path to the application stack (e.g., `stacks/dev/app-km`)"
   environment:
     required: true
-    description: "The type of environment (e.g., `dev`, `prod`). Must match environment in configuration file .gp.cicd.json."
+    description: "The type of environment (e.g. `dev`, `prod`). Must match environment in configuration file .gp.cicd.json."
   tag:
     required: false
     default: ""
