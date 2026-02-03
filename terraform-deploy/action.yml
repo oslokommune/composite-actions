@@ -220,6 +220,7 @@ runs:
               },
               "service": "$service",
               "env": "$env",
+              "team": "${DD_TEAM:-n/a}",
               "version": "$VERSION"
             }
           }
