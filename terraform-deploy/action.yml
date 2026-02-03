@@ -35,6 +35,9 @@ inputs:
     description: "Whether to cancel the workflow if a newer run has already progressed further than the current run."
     default: "true"
     required: false
+  datadog-api-key:
+    description: "Datadog API key for sending deployment events"
+    required: false
 
 outputs:
   # NOTE: A composite action can't have dynamic outputs, so
@@ -190,6 +193,7 @@ runs:
         VERSION: ${{ inputs.tag }}
         STACK_DIR: ${{ inputs.stack-dir }}
         GITHUB_TOKEN: ${{ github.token }}
+        DD_API_KEY: ${{ inputs.datadog-api-key }}
       run: |
         started_at="$(gh run view --attempt "$GITHUB_RUN_ATTEMPT" "$GITHUB_RUN_ID" --json startedAt --jq '.startedAt | fromdate')"
         finished_at="$(date -u +%s)"
@@ -216,6 +220,7 @@ runs:
               },
               "service": "$service",
               "env": "$env",
+              "team": "${DD_TEAM:-n/a}",
               "version": "$VERSION"
             }
           }
