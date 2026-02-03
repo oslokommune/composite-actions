@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/oslokommune/composite-actions/compare/terraform-deploy-v1.3.3...terraform-deploy-v1.4.0) (2026-02-03)
+
+
+### Features
+
+* **terraform-deploy:** update environment description punctuation ([73fc148](https://github.com/oslokommune/composite-actions/commit/73fc148487828697fe4516112a988c257ae77b54))
+
 ## [1.3.3](https://github.com/oslokommune/composite-actions/compare/terraform-deploy-v1.3.2...terraform-deploy-v1.3.3) (2026-01-16)
 
 
