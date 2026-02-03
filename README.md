@@ -24,4 +24,4 @@ Composite Actions allow you to combine multiple tasks and operations into a sing
 
 ## Versioning
 
-[Conventional Commits](https://www.conventionalcommits.org) are used together with [`svu` (Semantic Version Util)](https://github.com/caarlos0/svu) to provide [Semantic Versioning](https://semver.org/) for the repository as a whole.
+[Conventional Commits](https://www.conventionalcommits.org) are used with [release-please](https://github.com/googleapis/release-please) to provide [Semantic Versioning](https://semver.org/).
