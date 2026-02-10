@@ -6,6 +6,8 @@ import os
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).parent))
 
 from determine_stacks import (
@@ -114,19 +116,16 @@ def test_expand_braces_multiple_groups():
 
 def test_expand_braces_invalid_syntax():
     """Invalid brace syntax raises ValueError."""
-    invalid_patterns = [
-        "{a,b",           # unmatched open
-        "a,b}",           # unmatched close
-        "{a,{b,c}}",      # nested
-        "stacks/{}/app",  # empty braces
-        "{a,,b}",         # empty alternative
-    ]
-    for pattern in invalid_patterns:
-        try:
-            expand_braces(pattern)
-            assert False, f"Expected ValueError for: {pattern}"
-        except ValueError:
-            pass
+    with pytest.raises(ValueError):
+        expand_braces("{a,b")  # unmatched open
+    with pytest.raises(ValueError):
+        expand_braces("a,b}")  # unmatched close
+    with pytest.raises(ValueError):
+        expand_braces("{a,{b,c}}")  # nested
+    with pytest.raises(ValueError):
+        expand_braces("stacks/{}/app")  # empty braces
+    with pytest.raises(ValueError):
+        expand_braces("{a,,b}")  # empty alternative
 
 
 # =============================================================================
