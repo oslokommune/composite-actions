@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from determine_stacks import (
     classify_stacks,
     determine_stack_environment,
+    expand_braces,
     files_to_dirs,
     get_core_stacks,
     is_terraform_stack,
@@ -73,6 +74,42 @@ def test_parse_string_list_newline_delimited():
     """Newline-delimited values are parsed correctly."""
     assert parse_string_list("a\nb\nc") == ["a", "b", "c"]
     assert parse_string_list("a\n\nb") == ["a", "b"]
+
+
+def test_parse_string_list_with_braces():
+    """Commas inside braces are preserved."""
+    assert parse_string_list("stacks/{a,b}") == ["stacks/{a,b}"]
+    assert parse_string_list("stacks/{a,b},stacks/c") == ["stacks/{a,b}", "stacks/c"]
+    assert parse_string_list("stacks/{a,b},stacks/{c,d}") == ["stacks/{a,b}", "stacks/{c,d}"]
+
+
+# =============================================================================
+# expand_braces() tests
+# =============================================================================
+
+
+def test_expand_braces_no_braces():
+    """Patterns without braces return unchanged."""
+    assert expand_braces("stacks/dev/app") == ["stacks/dev/app"]
+    assert expand_braces("stacks/*/app-*") == ["stacks/*/app-*"]
+
+
+def test_expand_braces_simple():
+    """Single brace group is expanded."""
+    assert expand_braces("stacks/{a,b}") == ["stacks/a", "stacks/b"]
+    assert expand_braces("stacks/{a,b,c}") == ["stacks/a", "stacks/b", "stacks/c"]
+    assert expand_braces("{a,b}/app") == ["a/app", "b/app"]
+
+
+def test_expand_braces_multiple_groups():
+    """Multiple brace groups are expanded."""
+    assert expand_braces("{a,b}/{c,d}") == ["a/c", "a/d", "b/c", "b/d"]
+    assert expand_braces("stacks/{dev,prod}/{app,dns}") == [
+        "stacks/dev/app",
+        "stacks/dev/dns",
+        "stacks/prod/app",
+        "stacks/prod/dns",
+    ]
 
 
 # =============================================================================
@@ -271,6 +308,16 @@ def test_glob_pattern():
     ]
     assert result["dev-core-stacks"] == []
     assert result["prod-core-stacks"] == []
+
+
+def test_glob_pattern_with_braces():
+    """Selection with brace expansion pattern."""
+    result = run_main(selected_stacks="stacks/prod/{app-hello,dns}")
+
+    assert result["prod-apps-stacks"] == ["stacks/prod/app-hello"]
+    assert result["prod-core-stacks"] == ["stacks/prod/dns"]
+    assert result["dev-apps-stacks"] == []
+    assert result["dev-core-stacks"] == []
 
 
 def test_non_matching_glob_pattern():

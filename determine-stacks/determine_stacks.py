@@ -7,6 +7,7 @@ To be used in CI/CD pipelines to identify which stacks to operate on.
 
 import json
 import os
+import re
 import sys
 from pathlib import Path, PurePosixPath
 from typing import TextIO
@@ -28,6 +29,30 @@ def determine_stack_environment(
         if part_lower in prod_envs:
             return "prod"
     return None
+
+
+def expand_braces(pattern: str) -> list[str]:
+    """
+    Expand bash-style brace patterns into multiple patterns.
+
+    Examples:
+        "stacks/{a,b}" -> ["stacks/a", "stacks/b"]
+        "stacks/{dev,prod}/app" -> ["stacks/dev/app", "stacks/prod/app"]
+        "{a,b}/{c,d}" -> ["a/c", "a/d", "b/c", "b/d"]
+        "no-braces" -> ["no-braces"]
+    """
+    match = re.search(r"\{([^{}]+)\}", pattern)
+    if not match:
+        return [pattern]
+
+    prefix = pattern[: match.start()]
+    suffix = pattern[match.end() :]
+    alternatives = match.group(1).split(",")
+
+    result = []
+    for alt in alternatives:
+        result.extend(expand_braces(prefix + alt + suffix))
+    return result
 
 
 def is_terraform_stack(path: Path) -> bool:
@@ -53,15 +78,16 @@ def get_dirs_from_glob(root: Path, globs: list[str]) -> list[str]:
     dirs: set[Path] = set()
 
     for pattern in globs:
-        for path in root.glob(pattern):
-            candidate = path if path.is_dir() else path.parent
-            # Only keep dirs under root
-            try:
-                candidate.relative_to(root)
-            except ValueError:
-                continue
-            if candidate.is_dir:
-                dirs.add(candidate)
+        for expanded in expand_braces(pattern):
+            for path in root.glob(expanded):
+                candidate = path if path.is_dir() else path.parent
+                # Only keep dirs under root
+                try:
+                    candidate.relative_to(root)
+                except ValueError:
+                    continue
+                if candidate.is_dir:
+                    dirs.add(candidate)
 
     return sorted(str(d.relative_to(root)) for d in dirs)
 
@@ -145,8 +171,9 @@ def parse_string_list(s: str | None) -> list[str]:
     if len(lines) > 1:
         return lines
     line = lines[0]
-    # Parse as comma-separated list
-    return [item.strip() for item in line.split(",") if item.strip()]
+    # Split on commas not inside braces (comma not followed by } without { between)
+    parts = re.split(r",(?![^{]*})", line)
+    return [p.strip() for p in parts if p.strip()]
 
 
 def main(writer: TextIO = sys.stdout, root: Path = Path()) -> dict:
