@@ -112,6 +112,22 @@ def test_expand_braces_multiple_groups():
     ]
 
 
+def test_expand_braces_invalid_syntax():
+    """Invalid brace syntax raises ValueError."""
+    import pytest
+
+    with pytest.raises(ValueError, match="Unmatched braces"):
+        expand_braces("{a,b")
+    with pytest.raises(ValueError, match="Unmatched braces"):
+        expand_braces("a,b}")
+    with pytest.raises(ValueError, match="Nested braces"):
+        expand_braces("{a,{b,c}}")
+    with pytest.raises(ValueError, match="Empty braces"):
+        expand_braces("stacks/{}/app")
+    with pytest.raises(ValueError, match="Empty alternative"):
+        expand_braces("{a,,b}")
+
+
 # =============================================================================
 # determine_stack_environment() tests
 # =============================================================================

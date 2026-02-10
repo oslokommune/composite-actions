@@ -40,7 +40,21 @@ def expand_braces(pattern: str) -> list[str]:
         "stacks/{dev,prod}/app" -> ["stacks/dev/app", "stacks/prod/app"]
         "{a,b}/{c,d}" -> ["a/c", "a/d", "b/c", "b/d"]
         "no-braces" -> ["no-braces"]
+
+    Raises ValueError on invalid syntax (unmatched/nested/empty braces).
     """
+    # Check for unmatched braces
+    if pattern.count("{") != pattern.count("}"):
+        raise ValueError(f"Unmatched braces in pattern: {pattern}")
+
+    # Check for nested braces
+    if re.search(r"\{[^{}]*\{", pattern):
+        raise ValueError(f"Nested braces not supported: {pattern}")
+
+    # Check for empty braces
+    if "{}" in pattern:
+        raise ValueError(f"Empty braces in pattern: {pattern}")
+
     match = re.search(r"\{([^{}]+)\}", pattern)
     if not match:
         return [pattern]
@@ -48,6 +62,10 @@ def expand_braces(pattern: str) -> list[str]:
     prefix = pattern[: match.start()]
     suffix = pattern[match.end() :]
     alternatives = match.group(1).split(",")
+
+    # Check for empty alternatives
+    if any(alt.strip() == "" for alt in alternatives):
+        raise ValueError(f"Empty alternative in braces: {pattern}")
 
     result = []
     for alt in alternatives:
