@@ -96,16 +96,15 @@ def get_dirs_from_glob(root: Path, globs: list[str]) -> list[str]:
     dirs: set[Path] = set()
 
     for pattern in globs:
-        for expanded in expand_braces(pattern):
-            for path in root.glob(expanded):
-                candidate = path if path.is_dir() else path.parent
-                # Only keep dirs under root
-                try:
-                    candidate.relative_to(root)
-                except ValueError:
-                    continue
-                if candidate.is_dir:
-                    dirs.add(candidate)
+        for path in root.glob(pattern):
+            candidate = path if path.is_dir() else path.parent
+            # Only keep dirs under root
+            try:
+                candidate.relative_to(root)
+            except ValueError:
+                continue
+            if candidate.is_dir:
+                dirs.add(candidate)
 
     return sorted(str(d.relative_to(root)) for d in dirs)
 
@@ -200,7 +199,7 @@ def expand_patterns(patterns: list[str]) -> list[str]:
 
 
 def main(writer: TextIO = sys.stdout, root: Path = Path()) -> dict:
-    selected_stacks = parse_string_list(os.environ.get("SELECTED_STACKS", ""))
+    selected_stacks = expand_patterns(parse_string_list(os.environ.get("SELECTED_STACKS", "")))
     ignored_stacks = expand_patterns(parse_string_list(os.environ.get("IGNORED_STACKS", "")))
     user_supplied_core_stacks = expand_patterns(parse_string_list(os.environ.get("CORE_STACKS", "")))
     override_core_stacks = os.environ.get("OVERRIDE_CORE_STACKS", "false") == "true"
