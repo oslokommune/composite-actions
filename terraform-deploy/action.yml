@@ -184,7 +184,7 @@ runs:
         echo "result=$result" >> "$GITHUB_OUTPUT"
 
     - name: Send deployment metric to Datadog
-      if: ${{ inputs.send-deployment-event == 'true' && inputs.datadog-api-key != '' }}
+      if: ${{ always() && inputs.send-deployment-event == 'true' && inputs.datadog-api-key != '' }}
       shell: bash --noprofile --norc -euo pipefail {0}
       continue-on-error: true
       env:
