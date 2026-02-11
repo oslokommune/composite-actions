@@ -3,15 +3,15 @@ description: "Determine which Terraform stacks to run operations on"
 
 inputs:
   selected-stacks:
-    description: "Comma/newline-delimited list of stack patterns to include. By default, only stacks with changed files are included. Set 'selected-stacks' to override this behavior."
+    description: "Comma/newline-delimited list of stack patterns. Supports glob wildcards (*, **) and brace expansion ({a,b}). By default, only stacks with changed files are included."
     default: ""
     required: false
   ignored-stacks:
-    description: "Comma/newline-delimited list of stack patterns to always ignore."
+    description: "Comma/newline-delimited list of stack patterns to ignore. Supports glob wildcards (*, **)."
     default: ""
     required: false
   core-stacks:
-    description: "Comma/newline-delimited list of stack patterns to put into separate outputs. If 'override-core-stacks' is true, these will replace the default core stack patterns."
+    description: "Comma/newline-delimited list of stack patterns for core stacks. Supports glob wildcards (*, **). If 'override-core-stacks' is true, replaces defaults."
     default: ""
     required: false
   override-core-stacks:
