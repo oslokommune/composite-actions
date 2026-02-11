@@ -194,10 +194,15 @@ def parse_string_list(s: str | None) -> list[str]:
     return [p.strip() for p in parts if p.strip()]
 
 
+def expand_patterns(patterns: list[str]) -> list[str]:
+    """Expand braces in a list of patterns."""
+    return [expanded for p in patterns for expanded in expand_braces(p)]
+
+
 def main(writer: TextIO = sys.stdout, root: Path = Path()) -> dict:
     selected_stacks = parse_string_list(os.environ.get("SELECTED_STACKS", ""))
-    ignored_stacks = parse_string_list(os.environ.get("IGNORED_STACKS", ""))
-    user_supplied_core_stacks = parse_string_list(os.environ.get("CORE_STACKS", ""))
+    ignored_stacks = expand_patterns(parse_string_list(os.environ.get("IGNORED_STACKS", "")))
+    user_supplied_core_stacks = expand_patterns(parse_string_list(os.environ.get("CORE_STACKS", "")))
     override_core_stacks = os.environ.get("OVERRIDE_CORE_STACKS", "false") == "true"
     changed_files = parse_string_list(os.environ.get("CHANGED_FILES", ""))
 

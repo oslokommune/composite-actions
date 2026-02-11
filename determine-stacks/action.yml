@@ -7,11 +7,11 @@ inputs:
     default: ""
     required: false
   ignored-stacks:
-    description: "Comma/newline-delimited list of stack patterns to ignore. Supports glob wildcards (*, **)."
+    description: "Comma/newline-delimited list of stack patterns to ignore. Supports glob wildcards (*, **) and brace expansion ({a,b})."
     default: ""
     required: false
   core-stacks:
-    description: "Comma/newline-delimited list of stack patterns for core stacks. Supports glob wildcards (*, **). If 'override-core-stacks' is true, replaces defaults."
+    description: "Comma/newline-delimited list of stack patterns for core stacks. Supports glob wildcards (*, **) and brace expansion ({a,b}). If 'override-core-stacks' is true, replaces defaults."
     default: ""
     required: false
   override-core-stacks:
