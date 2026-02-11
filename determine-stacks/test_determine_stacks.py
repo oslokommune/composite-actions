@@ -76,13 +76,17 @@ def test_parse_string_list_newline_delimited():
     """Newline-delimited values are parsed correctly."""
     assert parse_string_list("a\nb\nc") == ["a", "b", "c"]
     assert parse_string_list("a\n\nb") == ["a", "b"]
+    assert parse_string_list("a,b\nc,d") == ["a", "b", "c", "d"]
 
 
 def test_parse_string_list_with_braces():
     """Commas inside braces are preserved."""
     assert parse_string_list("stacks/{a,b}") == ["stacks/{a,b}"]
     assert parse_string_list("stacks/{a,b},stacks/c") == ["stacks/{a,b}", "stacks/c"]
-    assert parse_string_list("stacks/{a,b},stacks/{c,d}") == ["stacks/{a,b}", "stacks/{c,d}"]
+    assert parse_string_list("stacks/{a,b},stacks/{c,d}") == [
+        "stacks/{a,b}",
+        "stacks/{c,d}",
+    ]
 
 
 # =============================================================================
@@ -366,7 +370,7 @@ def test_ignored_stacks():
         "stacks/dev/networking/main.tf",
         "stacks/prod/app-hello/main.tf",
     ]
-    result = run_main(changed_files=files, ignored_stacks="**/app-*")
+    result = run_main(changed_files=files, ignored_stacks="**/{dev,prod}/app-*")
 
     # app-* stacks should be filtered out
     assert result["dev-core-stacks"] == ["stacks/dev/networking"]

@@ -183,14 +183,15 @@ def parse_string_list(s: str | None) -> list[str]:
     """Parse a comma-separated or newline-delimited string into a list."""
     if not s or not s.strip():
         return []
-    lines = [item.strip() for item in s.splitlines() if item.strip()]
-    # Parse as newline-delimited list
-    if len(lines) > 1:
-        return lines
-    line = lines[0]
-    # Split on commas not inside braces (comma not followed by } without { between)
-    parts = re.split(r",(?![^{]*})", line)
-    return [p.strip() for p in parts if p.strip()]
+    result = []
+    for line in s.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        # Split each line on commas not inside braces
+        parts = re.split(r",(?![^{]*})", line)
+        result.extend(p.strip() for p in parts if p.strip())
+    return result
 
 
 def expand_patterns(patterns: list[str]) -> list[str]:
