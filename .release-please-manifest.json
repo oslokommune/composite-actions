@@ -9,7 +9,7 @@
   "renovate-metadata": "1.0.1",
   "generate-tag": "1.0.1",
   "package-and-upload-artifact": "1.1.0",
-  "terraform-deploy": "1.4.0",
+  "terraform-deploy": "1.5.0",
   "determine-stacks": "1.1.1",
   "detect-stale-job": "1.0.1"
 }
