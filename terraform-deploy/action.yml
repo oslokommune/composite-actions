@@ -53,6 +53,7 @@ runs:
       if: ${{ github.event.inputs.artifact-tag != ''}}
       env:
         ARTIFACT_TAG: ${{ github.event.inputs.artifact-tag }}
+      shell: bash --noprofile --norc -euo pipefail {0}
       run: |
         cat << EOF >> $GITHUB_STEP_SUMMARY
         ℹ️ The workflow was manually triggered with the following image tag:
