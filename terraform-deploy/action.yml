@@ -49,19 +49,14 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: "Notify about custom tag"
+    - name: "Notify about manual trigger"
       if: ${{ github.event.inputs.artifact-tag != ''}}
+      shell: bash --noprofile --norc -euo pipefail {0}
       env:
         ARTIFACT_TAG: ${{ github.event.inputs.artifact-tag }}
-      shell: bash --noprofile --norc -euo pipefail {0}
+        ENVIRONMENT: ${{ inputs.environment }}
       run: |
-        cat << EOF >> $GITHUB_STEP_SUMMARY
-        ℹ️ The workflow was manually triggered with the following image tag:
-
-        \`\`\`
-        $ARTIFACT_TAG
-        \`\`\`
-        EOF
+        echo "::notice title=Deploy to $ENVIRONMENT::This workflow was manually triggered with the image tag: $ARTIFACT_TAG"
 
     - name: Cancel if stale
       # NOTE: We only check on default branch as this is the only place where production deployments happen.
