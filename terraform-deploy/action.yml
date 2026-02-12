@@ -49,11 +49,14 @@ outputs:
 runs:
   using: composite
   steps:
+    # Deploying a custom tag is outside of the normal flow
+    # Motivation for notification:
+    #
     - name: "Notify about manual trigger"
-      if: ${{ github.event.inputs.tag != ''}}
+      if: ${{ inputs.tag != ''}}
       shell: bash --noprofile --norc -euo pipefail {0}
       env:
-        ARTIFACT_TAG: ${{ github.event.inputs.artifact-tag }}
+        ARTIFACT_TAG: ${{ inputs.tag }}
         ENVIRONMENT: ${{ inputs.environment }}
       run: |
         echo "::notice title=Deploy to $ENVIRONMENT::Deployment was manually triggered with the artifact tag: $ARTIFACT_TAG"
