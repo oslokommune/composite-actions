@@ -49,6 +49,19 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: "Notify about manual trigger"
+      if: ${{ github.event.inputs.artifact-tag != ''}}
+      env:
+        ARTIFACT_TAG: ${{ github.event.inputs.artifact-tag }}
+      run: |
+        cat << EOF >> $GITHUB_STEP_SUMMARY
+        ::notice The workflow was manually triggered with the following image tag: 
+      
+        \`\`\`
+        $ARTIFACT_TAG
+        \`\`\`
+        EOF
+
     - name: Cancel if stale
       # NOTE: We only check on default branch as this is the only place where production deployments happen.
       # Probably OK to ignore workflow reruns as it requires explicit user action?
