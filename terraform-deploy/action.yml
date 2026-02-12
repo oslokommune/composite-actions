@@ -183,6 +183,58 @@ runs:
         )"
         echo "result=$result" >> "$GITHUB_OUTPUT"
 
+    - name: Send deployment metric to Datadog
+      if: ${{ always() && inputs.send-deployment-event == 'true' && inputs.datadog-api-key != '' }}
+      shell: bash --noprofile --norc -euo pipefail {0}
+      continue-on-error: true
+      env:
+        DD_API_KEY: ${{ inputs.datadog-api-key }}
+        ENVIRONMENT: ${{ inputs.environment }}
+        TAG: ${{ inputs.tag }}
+        STACK_DIR: ${{ inputs.stack-dir }}
+        APPLY_OUTCOME: ${{ steps.apply.outcome }}
+      run: |
+        timestamp="$(date +%s)"
+
+        if [ -n "$TAG" ]; then
+          deployment_type="app"
+        else
+          deployment_type="iac"
+        fi
+
+        if [ "$APPLY_OUTCOME" = "success" ]; then
+          success="true"
+        else
+          success="false"
+        fi
+
+        stack_name="$(basename "$STACK_DIR")"
+
+        curl -sS -X POST "https://api.datadoghq.eu/api/v1/series" \
+          -H "Content-Type: application/json" \
+          -H "DD-API-KEY: $DD_API_KEY" \
+          -d @- <<EOF
+        {
+          "series": [
+            {
+              "metric": "utviklerflyt.golden_path.terraform.deploy",
+              "type": "count",
+              "points": [[$timestamp, 1]],
+              "tags": [
+                "deployment_type:$deployment_type",
+                "success:$success",
+                "environment:$ENVIRONMENT",
+                "stack:$stack_name",
+                "repo:$GITHUB_REPOSITORY",
+                "workflow:$GITHUB_WORKFLOW",
+                "branch:$GITHUB_REF_NAME",
+                "env:utviklerflyt"
+              ]
+            }
+          ]
+        }
+        EOF
+
     - name: Send deployment event to Datadog
       if: ${{ inputs.send-deployment-event == 'true' && inputs.tag != '' }}
       shell: bash --noprofile --norc -euo pipefail {0}
