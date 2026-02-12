@@ -55,7 +55,7 @@ runs:
         ARTIFACT_TAG: ${{ github.event.inputs.artifact-tag }}
       run: |
         cat << EOF >> $GITHUB_STEP_SUMMARY
-        ℹ️The workflow was manually triggered with the following image tag:
+        ℹ️ The workflow was manually triggered with the following image tag:
 
         \`\`\`
         $ARTIFACT_TAG
