@@ -193,6 +193,9 @@ runs:
         TAG: ${{ inputs.tag }}
         STACK_DIR: ${{ inputs.stack-dir }}
         APPLY_OUTCOME: ${{ steps.apply.outcome }}
+        # Check if this was an automerged Renovate PR
+        # that updates Boilerplate templates
+        AUTOMERGED: ${{ github.actor == 'kjoremiljo-renovate[bot]' && contains(github.event.head_commit.message, 'update boilerplate templates') }}
       run: |
         timestamp="$(date +%s)"
 
@@ -228,6 +231,8 @@ runs:
                 "repo:$GITHUB_REPOSITORY",
                 "workflow:$GITHUB_WORKFLOW",
                 "branch:$GITHUB_REF_NAME",
+                "event:$GITHUB_EVENT_NAME",
+                "automerged:$AUTOMERGED",
                 "env:utviklerflyt"
               ]
             }
