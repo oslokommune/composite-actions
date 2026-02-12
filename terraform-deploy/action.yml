@@ -50,7 +50,7 @@ runs:
   using: composite
   steps:
     - name: "Notify about manual trigger"
-      if: ${{ github.event.inputs.artifact-tag != ''}}
+      if: ${{ github.event.inputs.tag != ''}}
       shell: bash --noprofile --norc -euo pipefail {0}
       env:
         ARTIFACT_TAG: ${{ github.event.inputs.artifact-tag }}
