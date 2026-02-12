@@ -56,7 +56,7 @@ runs:
         ARTIFACT_TAG: ${{ github.event.inputs.artifact-tag }}
         ENVIRONMENT: ${{ inputs.environment }}
       run: |
-        echo "::notice title=Deploy to $ENVIRONMENT::This workflow was manually triggered with the image tag: $ARTIFACT_TAG"
+        echo "::notice title=Deploy to $ENVIRONMENT::Deployment was manually triggered with the artifact tag: $ARTIFACT_TAG"
 
     - name: Cancel if stale
       # NOTE: We only check on default branch as this is the only place where production deployments happen.
