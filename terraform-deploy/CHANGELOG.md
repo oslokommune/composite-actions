@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/oslokommune/composite-actions/compare/terraform-deploy-v1.4.0...terraform-deploy-v1.5.0) (2026-02-12)
+
+
+### Features
+
+* add datadog metric for terraform deploy ([#205](https://github.com/oslokommune/composite-actions/issues/205)) ([c136d1a](https://github.com/oslokommune/composite-actions/commit/c136d1a66bab1b22af9ba563578c8649d85f684a))
+
 ## [1.4.0](https://github.com/oslokommune/composite-actions/compare/terraform-deploy-v1.3.3...terraform-deploy-v1.4.0) (2026-02-03)
 
 
