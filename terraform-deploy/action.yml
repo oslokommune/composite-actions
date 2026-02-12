@@ -49,10 +49,9 @@ outputs:
 runs:
   using: composite
   steps:
-    # Deploying a custom tag is outside of the normal flow
-    # Motivation for notification:
-    #
     - name: "Notify about manual trigger"
+      # Deploying a custom tag is outside the normal flow. Outputting that a custom tag is intended to be deployed will
+      # help potential future debugging efforts.
       if: ${{ inputs.tag != ''}}
       shell: bash --noprofile --norc -euo pipefail {0}
       env:
