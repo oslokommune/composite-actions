@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.6.0](https://github.com/oslokommune/composite-actions/compare/terraform-deploy-v1.5.0...terraform-deploy-v1.6.0) (2026-02-13)
+
+
+### Features
+
+* **terraform-deploy:** add job summary for manual triggers ([#209](https://github.com/oslokommune/composite-actions/issues/209)) ([c13d36e](https://github.com/oslokommune/composite-actions/commit/c13d36ebc90e9de6273c254506399410e5ced501))
+
+
+### Bug fixes
+
+* add more data to datadog metric ([#210](https://github.com/oslokommune/composite-actions/issues/210)) ([1314f9e](https://github.com/oslokommune/composite-actions/commit/1314f9e3fe4f442ad2752b8356d055504d5bd4f4))
+
 ## [1.5.0](https://github.com/oslokommune/composite-actions/compare/terraform-deploy-v1.4.0...terraform-deploy-v1.5.0) (2026-02-12)
 
 
