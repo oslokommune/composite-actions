@@ -7,6 +7,7 @@ To be used in CI/CD pipelines to identify which stacks to operate on.
 
 import json
 import os
+import re
 import sys
 from pathlib import Path, PurePosixPath
 from typing import TextIO
@@ -28,6 +29,48 @@ def determine_stack_environment(
         if part_lower in prod_envs:
             return "prod"
     return None
+
+
+def expand_braces(pattern: str) -> list[str]:
+    """
+    Expand bash-style brace patterns into multiple patterns.
+
+    Examples:
+        "stacks/{a,b}" -> ["stacks/a", "stacks/b"]
+        "stacks/{dev,prod}/app" -> ["stacks/dev/app", "stacks/prod/app"]
+        "{a,b}/{c,d}" -> ["a/c", "a/d", "b/c", "b/d"]
+        "no-braces" -> ["no-braces"]
+
+    Raises ValueError on invalid syntax (unmatched/nested/empty braces).
+    """
+    # Check for unmatched braces
+    if pattern.count("{") != pattern.count("}"):
+        raise ValueError(f"Unmatched braces in pattern: {pattern}")
+
+    # Check for nested braces
+    if re.search(r"\{[^{}]*\{", pattern):
+        raise ValueError(f"Nested braces not supported: {pattern}")
+
+    # Check for empty braces
+    if "{}" in pattern:
+        raise ValueError(f"Empty braces in pattern: {pattern}")
+
+    match = re.search(r"\{([^{}]+)\}", pattern)
+    if not match:
+        return [pattern]
+
+    prefix = pattern[: match.start()]
+    suffix = pattern[match.end() :]
+    alternatives = match.group(1).split(",")
+
+    # Check for empty alternatives
+    if any(alt.strip() == "" for alt in alternatives):
+        raise ValueError(f"Empty alternative in braces: {pattern}")
+
+    result = []
+    for alt in alternatives:
+        result.extend(expand_braces(prefix + alt + suffix))
+    return result
 
 
 def is_terraform_stack(path: Path) -> bool:
@@ -140,19 +183,26 @@ def parse_string_list(s: str | None) -> list[str]:
     """Parse a comma-separated or newline-delimited string into a list."""
     if not s or not s.strip():
         return []
-    lines = [item.strip() for item in s.splitlines() if item.strip()]
-    # Parse as newline-delimited list
-    if len(lines) > 1:
-        return lines
-    line = lines[0]
-    # Parse as comma-separated list
-    return [item.strip() for item in line.split(",") if item.strip()]
+    result = []
+    for line in s.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        # Split each line on commas not inside braces
+        parts = re.split(r",(?![^{]*})", line)
+        result.extend(p.strip() for p in parts if p.strip())
+    return result
+
+
+def expand_patterns(patterns: list[str]) -> list[str]:
+    """Expand braces in a list of patterns."""
+    return [expanded for p in patterns for expanded in expand_braces(p)]
 
 
 def main(writer: TextIO = sys.stdout, root: Path = Path()) -> dict:
-    selected_stacks = parse_string_list(os.environ.get("SELECTED_STACKS", ""))
-    ignored_stacks = parse_string_list(os.environ.get("IGNORED_STACKS", ""))
-    user_supplied_core_stacks = parse_string_list(os.environ.get("CORE_STACKS", ""))
+    selected_stacks = expand_patterns(parse_string_list(os.environ.get("SELECTED_STACKS", "")))
+    ignored_stacks = expand_patterns(parse_string_list(os.environ.get("IGNORED_STACKS", "")))
+    user_supplied_core_stacks = expand_patterns(parse_string_list(os.environ.get("CORE_STACKS", "")))
     override_core_stacks = os.environ.get("OVERRIDE_CORE_STACKS", "false") == "true"
     changed_files = parse_string_list(os.environ.get("CHANGED_FILES", ""))
 
