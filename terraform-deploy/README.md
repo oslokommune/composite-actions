@@ -9,16 +9,19 @@ Deploy application through infrastructure
 
 ### Inputs
 
-| Input                    | Description                                                                                                                          | Required | Default                                 |
-|--------------------------|--------------------------------------------------------------------------------------------------------------------------------------|----------|-----------------------------------------|
-| `config`                 | JSON-encoded config (.gp.cicd.json)                                                                                                  | yes      | ``n/a``                                 |
-| `stack-dir`              | The path to the application stack (e.g., `stacks/dev/app-km`)                                                                        | yes      | ``n/a``                                 |
-| `environment`            | The semantic name of the environment (e.g., `dev`, `prod`)                                                                           | yes      | ``n/a``                                 |
-| `tag`                    | The tag of an artifact to deploy                                                                                                     | no       | ````                                    |
-| `target-repository`      | The name of the repository (e.g., `pirates-iac`) to checkout code from. Leave empty to skip checkout and use the current repository. | no       | ``${{ github.event.repository.name }}`` |
-| `github-app-id`          | ID of GitHub App used to get read access to the repository containing IaC                                                            | yes      | ``n/a``                                 |
-| `github-app-private-key` | Private key of GitHub App used to get read access to the repository containing IaC                                                   | yes      | ``n/a``                                 |
-| `github-deploy-key`      | Repository deploy key that grants read access to shared libraries (e.g., golden-path-iac)                                            | yes      | ``n/a``                                 |
+|         Input          |                                                                         Description                                                                         |Required|                                                        Default                                                         |
+|------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|------------------------------------------------------------------------------------------------------------------------|
+|`config`                |JSON-encoded config (.gp.cicd.json)                                                                                                                          |yes     |``n/a``                                                                                                                 |
+|`stack-dir`             |The path to the application stack (e.g., `stacks/dev/app-km`)                                                                                                |yes     |``n/a``                                                                                                                 |
+|`environment`           |The type of environment (e.g. `dev`, `prod`). Must match environment in configuration file .gp.cicd.json.                                                    |yes     |``n/a``                                                                                                                 |
+|`tag`                   |The tag of an artifact to deploy                                                                                                                             |no      |````                                                                                                                    |
+|`target-repository`     |The name of the repository (e.g., `pirates-iac`) to checkout code from. Leave empty to skip checkout and use the current repository.                         |no      |``${{ github.event.repository.name }}``                                                                                 |
+|`github-app-id`         |ID of GitHub App used to get read access to the repository containing IaC                                                                                    |no      |``n/a``                                                                                                                 |
+|`github-app-private-key`|Private key of GitHub App used to get read access to the repository containing IaC                                                                           |no      |``n/a``                                                                                                                 |
+|`github-deploy-key`     |Repository deploy key that grants read access to shared libraries (e.g., golden-path-iac)                                                                    |yes     |``n/a``                                                                                                                 |
+|`send-deployment-event` |Whether to send an event to Datadog after successful deployment. By default this is only sent on default branch deployments, and it requires 'tag' to be set.|no      |``${{ github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}``|
+|`cancel-if-stale`       |Whether to cancel the workflow if a newer run has already progressed further than the current run.                                                           |no      |``true``                                                                                                                |
+|`datadog-api-key`       |Datadog API key for sending deployment events                                                                                                                |no      |``n/a``                                                                                                                 |
 
 ### Example
 
@@ -29,11 +32,14 @@ Deploy application through infrastructure
     config: # Required
     stack-dir: # Required
     environment: # Required
-    # tag: # Optional, default:
+    # tag: # Optional, default: 
     # target-repository: # Optional, default: ${{ github.event.repository.name }}
-    github-app-id: # Required
-    github-app-private-key: # Required
+    # github-app-id: # Optional
+    # github-app-private-key: # Optional
     github-deploy-key: # Required
+    # send-deployment-event: # Optional, default: ${{ github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+    # cancel-if-stale: # Optional, default: true
+    # datadog-api-key: # Optional
 ```
 
 ## Outputs
