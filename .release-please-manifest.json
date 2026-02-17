@@ -10,6 +10,6 @@
   "generate-tag": "1.0.1",
   "package-and-upload-artifact": "1.1.0",
   "terraform-deploy": "1.6.0",
-  "determine-stacks": "1.1.1",
+  "determine-stacks": "1.1.2",
   "detect-stale-job": "1.0.1"
 }

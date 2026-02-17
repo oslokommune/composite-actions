@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.2](https://github.com/oslokommune/composite-actions/compare/determine-stacks-v1.1.1...determine-stacks-v1.1.2) (2026-02-16)
+
+
+### Bug fixes
+
+* **determine-stacks:** add brace expansion support ([#204](https://github.com/oslokommune/composite-actions/issues/204)) ([0b91ec3](https://github.com/oslokommune/composite-actions/commit/0b91ec3ce3d913e126706690316e3f78de5abb68))
+
 ## [1.1.1](https://github.com/oslokommune/composite-actions/compare/determine-stacks-v1.1.0...determine-stacks-v1.1.1) (2026-01-15)
 
 
