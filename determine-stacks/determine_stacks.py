@@ -125,6 +125,7 @@ def get_core_stacks(
         "**/datadog-common",
         "**/databases",
         "**/rds-bastion",
+        "**/cicd-common",
         "**/*-data",
     ],
 ) -> list[str]:
