@@ -24,6 +24,7 @@ runs:
       id: evaluate
       shell: bash --noprofile --norc -euo pipefail {0}
       env:
+        GH_TOKEN: ${{ github.token }}
         GH_REPO: ${{ github.repository }}
         COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
         RULES: ${{ inputs.rules }}
