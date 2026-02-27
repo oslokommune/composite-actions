@@ -1,0 +1,35 @@
+name: "Evaluate automerge"
+description: "Evaluate whether Renovate upgrades to golden-path-boilerplate are safe to automerge"
+
+inputs:
+  commit-message:
+    description: "Full commit message to parse for upgrade info"
+    required: true
+  rules:
+    description: "JSON array of automerge rules. Each rule: {pattern, major?, minor?, patch?}. Policies: 'never', 'no-changes', 'any-changes'. First matching pattern wins. Unspecified types default to 'no-changes'."
+    required: true
+  stack-changes:
+    description: "JSON object mapping stack paths to booleans (true = has Terraform changes)"
+    required: true
+
+outputs:
+  automerge:
+    description: "Whether the upgrades are safe to automerge ('true' or 'false')"
+    value: ${{ steps.evaluate.outputs.automerge }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install uv
+      uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+
+    - name: Evaluate automerge
+      id: evaluate
+      shell: bash --noprofile --norc -euo pipefail {0}
+      env:
+        COMMIT_MESSAGE: ${{ inputs.commit-message }}
+        RULES: ${{ inputs.rules }}
+        STACK_CHANGES: ${{ inputs.stack-changes }}
+      run: |
+        automerge="$(uv run "$GITHUB_ACTION_PATH/evaluate_automerge.py" --commit-message "$COMMIT_MESSAGE" --rules "$RULES" --stack-changes "$STACK_CHANGES")"
+        echo "automerge=$automerge" >> "$GITHUB_OUTPUT"
