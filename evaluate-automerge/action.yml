@@ -31,5 +31,5 @@ runs:
         STACK_CHANGES: ${{ inputs.stack-changes }}
       run: |
         commit_message="$(gh api "repos/$GH_REPO/commits/$COMMIT_SHA" --jq '.commit.message')"
-        automerge="$(uv run "$GITHUB_ACTION_PATH/evaluate_automerge.py" --commit-message "$commit_message" --rules "$RULES" --stack-changes "$STACK_CHANGES")"
+        automerge="$(uv run --project "$GITHUB_ACTION_PATH" "$GITHUB_ACTION_PATH/evaluate_automerge.py" --commit-message "$commit_message" --rules "$RULES" --stack-changes "$STACK_CHANGES")"
         echo "automerge=$automerge" >> "$GITHUB_OUTPUT"
