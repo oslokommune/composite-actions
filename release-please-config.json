@@ -58,6 +58,10 @@
     "detect-stale-job": {
       "component": "detect-stale-job",
       "release-type": "simple"
+    },
+    "evaluate-automerge": {
+      "component": "evaluate-automerge",
+      "release-type": "simple"
     }
   }
 }
