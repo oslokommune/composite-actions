@@ -23,6 +23,7 @@ on:
       - "package-and-upload-artifact/*"
       - "determine-stacks/*"
       - "detect-stale-job/*"
+      - "evaluate-automerge/*"
 
 
 jobs:
