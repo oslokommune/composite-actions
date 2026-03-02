@@ -42,4 +42,4 @@ jobs:
 
       - name: Run tests
         working-directory: ./evaluate-automerge
-        run: uv run python -m unittest -v
+        run: make test
