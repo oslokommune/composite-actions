@@ -169,7 +169,7 @@ def classify_stacks(
         pp = PurePosixPath(p)
         matched = False
         for i, pat in enumerate(patterns):
-            if pp.match(pat):
+            if pp.full_match(pat):
                 hit.append(p)
                 matched = True
                 break
@@ -223,7 +223,7 @@ def main(writer: TextIO = sys.stdout, root: Path = Path()) -> dict:
     included_dirs = [
         d
         for d in terraform_dirs
-        if not any(PurePosixPath(d).match(pattern) for pattern in ignored_stacks)
+        if not any(PurePosixPath(d).full_match(pattern) for pattern in ignored_stacks)
     ]
 
     if ignored_dirs := sorted(set(terraform_dirs) - set(included_dirs)):
