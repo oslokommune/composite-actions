@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.4](https://github.com/oslokommune/composite-actions/compare/determine-stacks-v1.1.3...determine-stacks-v1.1.4) (2026-03-04)
+
+
+### Bug fixes
+
+* **determine-stacks:** use --project to ensure correct Python version ([#220](https://github.com/oslokommune/composite-actions/issues/220)) ([0a222be](https://github.com/oslokommune/composite-actions/commit/0a222bea39fc22819ecba5adac0f4c3366a9b388))
+
 ## [1.1.3](https://github.com/oslokommune/composite-actions/compare/determine-stacks-v1.1.2...determine-stacks-v1.1.3) (2026-03-04)
 
 
