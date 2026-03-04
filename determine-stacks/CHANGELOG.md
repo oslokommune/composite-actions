@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.3](https://github.com/oslokommune/composite-actions/compare/determine-stacks-v1.1.2...determine-stacks-v1.1.3) (2026-03-04)
+
+
+### Bug fixes
+
+* **determine-stacks:** use full_match for correct recursive glob matching ([#218](https://github.com/oslokommune/composite-actions/issues/218)) ([0bccd33](https://github.com/oslokommune/composite-actions/commit/0bccd332c2f3600e5cd56a2d48aeab6cf7a70dcb))
+
 ## [1.1.2](https://github.com/oslokommune/composite-actions/compare/determine-stacks-v1.1.1...determine-stacks-v1.1.2) (2026-02-16)
 
 
