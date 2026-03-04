@@ -68,7 +68,10 @@ runs:
         OVERRIDE_CORE_STACKS: ${{ inputs.override-core-stacks }}
         CHANGED_FILES: ${{ steps.filter.outcome == 'success' && join(fromJSON(steps.filter.outputs.all_files), ',') || '' }}
       run: |
-        result="$(uv run "$GITHUB_ACTION_PATH/determine_stacks.py")"
+        # --project ensures uv reads pyproject.toml from the action directory,
+        # so it respects requires-python and uses the correct Python version
+        # (the working directory is the caller's repo, not the action directory).
+        result="$(uv run --project "$GITHUB_ACTION_PATH" "$GITHUB_ACTION_PATH/determine_stacks.py")"
         echo "Determined the following stacks:"
         echo "$result"
         echo "$result" >> "$GITHUB_OUTPUT"
