@@ -379,6 +379,20 @@ def test_ignored_stacks():
     assert result["prod-apps-stacks"] == []
 
 
+def test_ignored_stacks_nested():
+    """Ignored stack patterns with ** match deeply nested stacks."""
+    files = [
+        "stacks/dev/networking/main.tf",
+        "stacks/prod/app-hello/main.tf",
+        "stacks/prod/applications/app-deep/main.tf",
+    ]
+    result = run_main(changed_files=files, ignored_stacks="stacks/prod/**")
+
+    assert result["dev-core-stacks"] == ["stacks/dev/networking"]
+    assert result["prod-core-stacks"] == []
+    assert result["prod-apps-stacks"] == []
+
+
 def test_custom_core_stacks():
     """Custom core stack patterns work alongside defaults."""
     files = [
