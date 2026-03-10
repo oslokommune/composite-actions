@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.5](https://github.com/oslokommune/composite-actions/compare/determine-stacks-v1.1.4...determine-stacks-v1.1.5) (2026-03-10)
+
+
+### Bug fixes
+
+* add new template to core-stacks ([#194](https://github.com/oslokommune/composite-actions/issues/194)) ([27304a8](https://github.com/oslokommune/composite-actions/commit/27304a8489916e7ebb9880ccdea63ade727804dc))
+
 ## [1.1.4](https://github.com/oslokommune/composite-actions/compare/determine-stacks-v1.1.3...determine-stacks-v1.1.4) (2026-03-04)
 
 
