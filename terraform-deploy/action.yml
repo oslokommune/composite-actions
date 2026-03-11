@@ -207,10 +207,13 @@ runs:
         # Check if this was an automerged Renovate PR
         # that updates Boilerplate templates
         AUTOMERGED: ${{ github.actor == 'kjoremiljo-renovate[bot]' && contains(github.event.head_commit.message, 'update boilerplate templates') }}
+        IS_SAME_REPO: ${{ inputs.target-repository == github.event.repository.name }}
       run: |
         timestamp="$(date +%s)"
 
-        if [ -n "$TAG" ]; then
+        if [ -n "$TAG" ] && [ "$IS_SAME_REPO" = "true" ]; then
+          deployment_type="hybrid"
+        elif [ -n "$TAG" ]; then
           deployment_type="app"
         else
           deployment_type="iac"
