@@ -9,12 +9,12 @@ Determine which Terraform stacks to run operations on
 
 ### Inputs
 
-|        Input         |                                                                            Description                                                                             |Required| Default |
-|----------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|---------|
-|`selected-stacks`     |Comma/newline-delimited list of stack patterns to include. By default, only stacks with changed files are included. Set 'selected-stacks' to override this behavior.|no      |````     |
-|`ignored-stacks`      |Comma/newline-delimited list of stack patterns to always ignore.                                                                                                    |no      |````     |
-|`core-stacks`         |Comma/newline-delimited list of stack patterns to put into separate outputs. If 'override-core-stacks' is true, these will replace the default core stack patterns. |no      |````     |
-|`override-core-stacks`|If true, replace the default core stack patterns with those provided in 'core-stacks' input. By default, 'core-stacks' is appended to a predefined list of patterns.|no      |``false``|
+|        Input         |                                                                                   Description                                                                                    |Required| Default |
+|----------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|---------|
+|`selected-stacks`     |Comma/newline-delimited list of stack patterns. Supports glob wildcards (*, **) and brace expansion ({a,b}). By default, only stacks with changed files are included.             |no      |````     |
+|`ignored-stacks`      |Comma/newline-delimited list of stack patterns to ignore. Supports glob wildcards (*, **) and brace expansion ({a,b}).                                                            |no      |````     |
+|`core-stacks`         |Comma/newline-delimited list of stack patterns for core stacks. Supports glob wildcards (*, **) and brace expansion ({a,b}). If 'override-core-stacks' is true, replaces defaults.|no      |````     |
+|`override-core-stacks`|If true, replace the default core stack patterns with those provided in 'core-stacks' input. By default, 'core-stacks' is appended to a predefined list of patterns.              |no      |``false``|
 
 ### Example
 
@@ -39,7 +39,6 @@ Determine which Terraform stacks to run operations on
 |`all-dev-stacks`  |JSON array of all dev stacks                                   |``${{ steps.stacks.outputs.all-dev-stacks }}``  |
 |`all-prod-stacks` |JSON array of all prod stacks                                  |``${{ steps.stacks.outputs.all-prod-stacks }}`` |
 |`all-stacks`      |JSON array of all stacks (dev and prod combined)               |``${{ steps.stacks.outputs.all-stacks }}``      |
-|`config`          |CI/CD configuration from .gp.cicd.json                         |``${{ steps.config.outputs.result }}``          |
 
 
 
