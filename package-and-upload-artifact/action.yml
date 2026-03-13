@@ -78,7 +78,7 @@ runs:
           tag="$tag.$file_extension"
         fi
 
-        echo "$CONFIG" | jq -c '{dev,prod} | to_entries | .[]' | while read -r item; do (
+        echo "$CONFIG" | jq -c '{dev,prod} | to_entries | map(select(.value != null)) | .[]' | while read -r item; do (
           if [ "$SOURCE_TYPE" = "file" ]; then
             environment="$(echo "$item" | jq -e -r .key)"
             account_id="$(echo "$item" | jq -e -r .value.accountId)"
