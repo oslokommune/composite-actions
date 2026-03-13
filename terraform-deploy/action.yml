@@ -295,7 +295,10 @@ runs:
         VERSION: ${{ inputs.tag }}
         STACK_DIR: ${{ inputs.stack-dir }}
         GITHUB_TOKEN: ${{ github.token }}
-        ENVIRONMENT: ${{ env.DD_ENV || inputs.environment }}
+        # We don't support overriding this (e.g., through DD_ENV) because DORA
+        # metrics should always use normalized environment types (dev/prod) to
+        # make it easy to filter in dashboards.
+        ENVIRONMENT: ${{ inputs.environment }}
         TEAM: ${{ env.DD_TEAM || fromJSON(inputs.config)[inputs.environment].team || 'n/a' }}
         SERVICE: ${{ env.DD_SERVICE || fromJSON(inputs.config)[inputs.environment].appName }}
         DD_API_KEY: ${{ inputs.datadog-api-key }}
@@ -303,11 +306,10 @@ runs:
         started_at="$(gh run view --attempt "$GITHUB_RUN_ATTEMPT" "$GITHUB_RUN_ID" --json startedAt --jq '.startedAt | fromdate')"
         finished_at="$(date -u +%s)"
         service="$SERVICE"
-        if [ "$SERVICE" == "" ]; then
+        if [ "$SERVICE" = "" ]; then
           stack_name="$(basename "$STACK_DIR")"
           service="$stack_name"
         fi
-        # Allow overwriting Datadog environment through DD_ENV
         curl -X POST "https://api.datadoghq.eu/api/v2/dora/deployment" \
           -H "Accept: application/json" \
           -H "Content-Type: application/json" \
