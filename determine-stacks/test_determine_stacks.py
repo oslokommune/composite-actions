@@ -379,13 +379,16 @@ def test_ignored_stacks_nested():
 
 
 def test_core_stacks():
-    """TODO:"""
+    """Checks the base case for core stack categorization"""
     files = [
         "stacks/dev/app-too-tikki/main.tf",
         "stacks/dev/networking/main.tf",
     ]
-    # Add app-too-tikki as a core stack
-    result = run_main(changed_files=files)
+
+    result = run_main(changed_files=files, core_stacks="""
+      **/networking
+      **/dns
+    """)
 
     assert result["dev-core-stacks"] == [
         "stacks/dev/networking",
@@ -401,9 +404,14 @@ def test_additional_core_stacks():
         "stacks/dev/my-custom-core-stack/main.tf",
         "stacks/dev/networking/main.tf",
     ]
-    # Add app-too-tikki as a core stack
+    # Add an additional custom core stack as a core stack
     result = run_main(
-        changed_files=files, additional_core_stacks="**/my-custom-core-stack"
+        changed_files=files,
+        core_stacks="""
+            **/networking
+            **/dns
+        """,
+        additional_core_stacks="**/my-custom-core-stack"
     )
 
     assert result["dev-core-stacks"] == [
