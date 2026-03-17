@@ -11,12 +11,26 @@ inputs:
     default: ""
     required: false
   core-stacks:
-    description: "Comma/newline-delimited list of stack patterns for core stacks. Supports glob wildcards (*, **) and brace expansion ({a,b}). If 'override-core-stacks' is true, replaces defaults."
-    default: ""
+    description: "Comma/newline-delimited list of stack patterns for core stacks. Supports glob wildcards (*, **) and brace expansion ({a,b})."
+    default: >-
+      **/remote-state
+      **/networking-data
+      **/networking
+      **/dns
+      **/certificates
+      **/load-balancing-*-data
+      **/load-balancing-*
+      **/iam
+      **/app-common
+      **/datadog-common
+      **/databases
+      **/rds-bastion
+      **/cicd-common
+      **/*-data
     required: false
-  override-core-stacks:
-    description: "If true, replace the default core stack patterns with those provided in 'core-stacks' input. By default, 'core-stacks' is appended to a predefined list of patterns."
-    default: "false"
+  additional-core-stacks:
+    description: "Comma/newline-delimited list of stack patterns to append to the list of core stacks. Supports glob wildcards (*, **) and brace expansion ({a,b})."
+    default: ""
     required: false
 
 outputs:
@@ -65,7 +79,7 @@ runs:
         SELECTED_STACKS: ${{ inputs.selected-stacks }}
         IGNORED_STACKS: ${{ inputs.ignored-stacks }}
         CORE_STACKS: ${{ inputs.core-stacks }}
-        OVERRIDE_CORE_STACKS: ${{ inputs.override-core-stacks }}
+        ADDITIONAL_CORE_STACKS: ${{ inputs.additional-core-stacks }}
         CHANGED_FILES: ${{ steps.filter.outcome == 'success' && join(fromJSON(steps.filter.outputs.all_files), ',') || '' }}
       run: |
         # --project ensures uv reads pyproject.toml from the action directory,
