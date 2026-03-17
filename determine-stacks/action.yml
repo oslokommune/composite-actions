@@ -29,7 +29,7 @@ inputs:
       **/*-data
     required: false
   additional-core-stacks:
-    description: "Comma/newline-delimited list of stack patterns for additional core stacks. Supports glob wildcards (*, **) and brace expansion ({a,b}). These stacks are appended to the list of core stacks."
+    description: "Comma/newline-delimited list of stack patterns to append to the list of core stacks. Supports glob wildcards (*, **) and brace expansion ({a,b})."
     default: ""
     required: false
 
