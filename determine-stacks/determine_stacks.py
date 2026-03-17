@@ -109,30 +109,6 @@ def get_dirs_from_glob(root: Path, globs: list[str]) -> list[str]:
     return sorted(str(d.relative_to(root)) for d in dirs)
 
 
-def get_core_stacks(
-    patterns=[],
-    override_default_patterns=False,
-    default_patterns=[
-        "**/remote-state",
-        "**/networking-data",
-        "**/networking",
-        "**/dns",
-        "**/certificates",
-        "**/load-balancing-*-data",
-        "**/load-balancing-*",
-        "**/iam",
-        "**/app-common",
-        "**/datadog-common",
-        "**/databases",
-        "**/rds-bastion",
-        "**/cicd-common",
-        "**/*-data",
-    ],
-) -> list[str]:
-    """Get core stack patterns from PATTERNS env var or use defaults."""
-    return patterns if override_default_patterns else default_patterns + patterns
-
-
 def files_to_dirs(files: list[str]) -> list[str]:
     """Convert file paths to unique parent directories."""
     seen = set()
@@ -203,8 +179,8 @@ def expand_patterns(patterns: list[str]) -> list[str]:
 def main(writer: TextIO = sys.stdout, root: Path = Path()) -> dict:
     selected_stacks = expand_patterns(parse_string_list(os.environ.get("SELECTED_STACKS", "")))
     ignored_stacks = expand_patterns(parse_string_list(os.environ.get("IGNORED_STACKS", "")))
-    user_supplied_core_stacks = expand_patterns(parse_string_list(os.environ.get("CORE_STACKS", "")))
-    override_core_stacks = os.environ.get("OVERRIDE_CORE_STACKS", "false") == "true"
+    core_stacks = expand_patterns(parse_string_list(os.environ.get("CORE_STACKS", "")))
+    additional_core_stacks = expand_patterns(parse_string_list(os.environ.get("ADDITIONAL_CORE_STACKS", "")))
     changed_files = parse_string_list(os.environ.get("CHANGED_FILES", ""))
 
     if selected_stacks:
@@ -236,9 +212,9 @@ def main(writer: TextIO = sys.stdout, root: Path = Path()) -> dict:
         eprint(f"Skipped stacks with unknown environment: {sorted(unknown)}")
 
     # Classify into core and apps
-    core_stacks = get_core_stacks(user_supplied_core_stacks, override_core_stacks)
-    dev_core_stacks, dev_apps_stacks = classify_stacks(dev_dirs, core_stacks)
-    prod_core_stacks, prod_apps_stacks = classify_stacks(prod_dirs, core_stacks)
+    result_core_stacks = core_stacks + additional_core_stacks
+    dev_core_stacks, dev_apps_stacks = classify_stacks(dev_dirs, result_core_stacks)
+    prod_core_stacks, prod_apps_stacks = classify_stacks(prod_dirs, result_core_stacks)
 
     # Combine results for convenience use
     all_dev_stacks = sorted(dev_core_stacks + dev_apps_stacks)

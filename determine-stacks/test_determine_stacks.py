@@ -15,7 +15,6 @@ from determine_stacks import (
     determine_stack_environment,
     expand_braces,
     files_to_dirs,
-    get_core_stacks,
     is_terraform_stack,
     main,
     parse_string_list,
@@ -28,7 +27,7 @@ def run_main(
     selected_stacks: str = "",
     ignored_stacks: str = "",
     core_stacks: str = "",
-    override_core_stacks: bool = False,
+    override_core_stacks: str = "",
 ):
     """Helper to run the main function with test parameters."""
     # Convert list to newline-delimited string
@@ -228,35 +227,6 @@ def test_separate_by_environment():
     assert dev == ["stacks/dev/app"]
     assert prod == ["stacks/prod/dns"]
     assert skipped == ["stacks/shared/common"]
-
-
-# =============================================================================
-# get_core_stacks() tests
-# =============================================================================
-
-
-def test_get_core_stacks_defaults():
-    """Default core stack patterns are returned."""
-    patterns = get_core_stacks()
-    assert "**/networking" in patterns
-    assert "**/dns" in patterns
-    assert "**/iam" in patterns
-
-
-def test_get_core_stacks_with_user_patterns():
-    """User patterns are appended to defaults."""
-    patterns = get_core_stacks(patterns=["**/custom-infra"])
-    assert "**/networking" in patterns
-    assert "**/custom-infra" in patterns
-
-
-def test_get_core_stacks_override():
-    """Override replaces defaults with user patterns."""
-    patterns = get_core_stacks(
-        patterns=["**/custom-only"], override_default_patterns=True
-    )
-    assert patterns == ["**/custom-only"]
-    assert "**/networking" not in patterns
 
 
 # =============================================================================
