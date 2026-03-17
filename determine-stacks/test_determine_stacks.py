@@ -26,8 +26,23 @@ def run_main(
     changed_files: list[str] | str = "",
     selected_stacks: str = "",
     ignored_stacks: str = "",
-    core_stacks: str = "",
-    override_core_stacks: str = "",
+    core_stacks: str = """
+      **/remote-state
+      **/networking-data
+      **/networking
+      **/dns
+      **/certificates
+      **/load-balancing-*-data
+      **/load-balancing-*
+      **/iam
+      **/app-common
+      **/datadog-common
+      **/databases
+      **/rds-bastion
+      **/cicd-common
+      **/*-data
+    """,
+    additional_core_stacks: str = "",
 ):
     """Helper to run the main function with test parameters."""
     # Convert list to newline-delimited string
@@ -38,7 +53,7 @@ def run_main(
     os.environ["SELECTED_STACKS"] = selected_stacks
     os.environ["IGNORED_STACKS"] = ignored_stacks
     os.environ["CORE_STACKS"] = core_stacks
-    os.environ["OVERRIDE_CORE_STACKS"] = "true" if override_core_stacks else "false"
+    os.environ["ADDITIONAL_CORE_STACKS"] = additional_core_stacks
 
     writer = io.StringIO()
     main(writer, Path("testdata"))
@@ -363,17 +378,36 @@ def test_ignored_stacks_nested():
     assert result["prod-apps-stacks"] == []
 
 
-def test_custom_core_stacks():
-    """Custom core stack patterns work alongside defaults."""
+def test_core_stacks():
+    """TODO:"""
     files = [
         "stacks/dev/app-too-tikki/main.tf",
         "stacks/dev/networking/main.tf",
     ]
     # Add app-too-tikki as a core stack
-    result = run_main(changed_files=files, core_stacks="**/app-too-tikki")
+    result = run_main(changed_files=files)
 
     assert result["dev-core-stacks"] == [
+        "stacks/dev/networking",
+    ]
+    assert result["dev-apps-stacks"] == [
         "stacks/dev/app-too-tikki",
+    ]
+
+
+def test_additional_core_stacks():
+    """Append custom core stacks to default core stacks"""
+    files = [
+        "stacks/dev/my-custom-core-stack/main.tf",
+        "stacks/dev/networking/main.tf",
+    ]
+    # Add app-too-tikki as a core stack
+    result = run_main(
+        changed_files=files, additional_core_stacks="**/my-custom-core-stack"
+    )
+
+    assert result["dev-core-stacks"] == [
+        "stacks/dev/my-custom-core-stack",
         "stacks/dev/networking",
     ]
     assert result["dev-apps-stacks"] == []
@@ -386,9 +420,7 @@ def test_override_core_stacks():
         "stacks/dev/networking/main.tf",
     ]
     # Only app-* should be considered core now
-    result = run_main(
-        changed_files=files, core_stacks="**/app-*", override_core_stacks=True
-    )
+    result = run_main(changed_files=files, core_stacks="**/app-*")
 
     assert result["dev-core-stacks"] == ["stacks/dev/app-too-tikki"]
     assert result["dev-apps-stacks"] == ["stacks/dev/networking"]
