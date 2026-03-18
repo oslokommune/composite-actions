@@ -22,38 +22,43 @@ from determine_stacks import (
 )
 
 
+DEFAULT_CORE_STACKS = [
+    "**/remote-state",
+    "**/networking-data",
+    "**/networking",
+    "**/dns",
+    "**/certificates",
+    "**/load-balancing-*-data",
+    "**/load-balancing-*",
+    "**/iam",
+    "**/app-common",
+    "**/datadog-common",
+    "**/databases",
+    "**/rds-bastion",
+    "**/cicd-common",
+    "**/*-data",
+]
+
+
+def _to_str(value: list[str] | str) -> str:
+    if isinstance(value, list):
+        return "\n".join(value)
+    return value
+
+
 def run_main(
     changed_files: list[str] | str = "",
-    selected_stacks: str = "",
-    ignored_stacks: str = "",
-    core_stacks: str = """
-      **/remote-state
-      **/networking-data
-      **/networking
-      **/dns
-      **/certificates
-      **/load-balancing-*-data
-      **/load-balancing-*
-      **/iam
-      **/app-common
-      **/datadog-common
-      **/databases
-      **/rds-bastion
-      **/cicd-common
-      **/*-data
-    """,
-    additional_core_stacks: str = "",
+    selected_stacks: list[str] | str = "",
+    ignored_stacks: list[str] | str = "",
+    core_stacks: list[str] | str = DEFAULT_CORE_STACKS,
+    additional_core_stacks: list[str] | str = "",
 ):
     """Helper to run the main function with test parameters."""
-    # Convert list to newline-delimited string
-    if isinstance(changed_files, list):
-        changed_files = ",".join(changed_files)
-
-    os.environ["CHANGED_FILES"] = changed_files
-    os.environ["SELECTED_STACKS"] = selected_stacks
-    os.environ["IGNORED_STACKS"] = ignored_stacks
-    os.environ["CORE_STACKS"] = core_stacks
-    os.environ["ADDITIONAL_CORE_STACKS"] = additional_core_stacks
+    os.environ["CHANGED_FILES"] = _to_str(changed_files)
+    os.environ["SELECTED_STACKS"] = _to_str(selected_stacks)
+    os.environ["IGNORED_STACKS"] = _to_str(ignored_stacks)
+    os.environ["CORE_STACKS"] = _to_str(core_stacks)
+    os.environ["ADDITIONAL_CORE_STACKS"] = _to_str(additional_core_stacks)
 
     writer = io.StringIO()
     main(writer, Path("testdata"))
@@ -295,7 +300,7 @@ def test_core_stacks_ordered_by_pattern():
     # networking before iam before my-custom-core-stack (via additional)
     result = run_main(
         changed_files=files,
-        core_stacks="**/networking\n**/dns\n**/iam",
+        core_stacks=["**/networking", "**/dns", "**/iam"],
         additional_core_stacks="**/my-custom-core-stack",
     )
     # Core stacks follow pattern order, not alphabetical
@@ -439,10 +444,7 @@ def test_core_stacks():
         "stacks/dev/networking/main.tf",
     ]
 
-    result = run_main(changed_files=files, core_stacks="""
-      **/networking
-      **/dns
-    """)
+    result = run_main(changed_files=files, core_stacks="**/networking,**/dns")
 
     assert result["dev-core-stacks"] == [
         "stacks/dev/networking",
@@ -461,11 +463,8 @@ def test_additional_core_stacks():
     # Add an additional custom core stack as a core stack
     result = run_main(
         changed_files=files,
-        core_stacks="""
-            **/networking
-            **/dns
-        """,
-        additional_core_stacks="**/my-custom-core-stack"
+        core_stacks=["**/networking", "**/dns"],
+        additional_core_stacks="**/my-custom-core-stack",
     )
 
     assert result["dev-core-stacks"] == [
@@ -482,7 +481,7 @@ def test_override_core_stacks():
         "stacks/dev/networking/main.tf",
     ]
     # Only app-* should be considered core now
-    result = run_main(changed_files=files, core_stacks="**/app-*")
+    result = run_main(changed_files=files, core_stacks=["**/app-*"])
 
     assert result["dev-core-stacks"] == ["stacks/dev/app-too-tikki"]
     assert result["dev-apps-stacks"] == ["stacks/dev/networking"]
