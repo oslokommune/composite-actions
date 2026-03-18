@@ -138,20 +138,28 @@ def separate_by_environment(dirs: list[str]) -> tuple[list[str], list[str], list
 def classify_stacks(
     paths: list[str], patterns: list[str]
 ) -> tuple[list[str], list[str]]:
-    """Classify stacks into a group of paths that match patterns and those that don't."""
-    hit = []
+    """Classify stacks into a group of paths that match patterns and those that don't.
+
+    Matched stacks are ordered by the pattern that matched them (first pattern first),
+    preserving the input order for stacks matched by the same pattern.
+    """
+    # Map each matched path to the index of the pattern that matched it
+    matched: dict[str, int] = {}
     miss = []
 
     for p in paths:
         pp = PurePosixPath(p)
-        matched = False
+        pattern_idx = None
         for i, pat in enumerate(patterns):
             if pp.full_match(pat):
-                hit.append(p)
-                matched = True
+                pattern_idx = i
                 break
-        if not matched:
+        if pattern_idx is not None:
+            matched[p] = pattern_idx
+        else:
             miss.append(p)
+
+    hit = sorted(matched, key=lambda p: matched[p])
 
     return hit, miss
 
