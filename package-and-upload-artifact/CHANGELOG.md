@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/oslokommune/composite-actions/compare/package-and-upload-artifact-v1.1.0...package-and-upload-artifact-v1.1.1) (2026-03-19)
+
+
+### Bug fixes
+
+* **package-and-upload-artifact:** only upload to defined artifact repositories ([135c012](https://github.com/oslokommune/composite-actions/commit/135c012ac6571e24c253087c22178a4dcdb1bc43))
+
 ## [1.1.0](https://github.com/oslokommune/composite-actions/compare/package-and-upload-artifact-v1.0.0...package-and-upload-artifact-v1.1.0) (2025-12-01)
 
 

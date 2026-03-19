@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.1](https://github.com/oslokommune/composite-actions/compare/terraform-deploy-v1.6.0...terraform-deploy-v1.6.1) (2026-03-19)
+
+
+### Bug fixes
+
+* **terraform-deploy:** improve custom metric format ([34237b3](https://github.com/oslokommune/composite-actions/commit/34237b3ed693f93eff88de998e44ad653ec10a39))
+
 ## [1.6.0](https://github.com/oslokommune/composite-actions/compare/terraform-deploy-v1.5.0...terraform-deploy-v1.6.0) (2026-02-13)
 
 
