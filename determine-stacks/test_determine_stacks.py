@@ -22,38 +22,43 @@ from determine_stacks import (
 )
 
 
+DEFAULT_CORE_STACKS = [
+    "**/remote-state",
+    "**/networking-data",
+    "**/networking",
+    "**/dns",
+    "**/certificates",
+    "**/load-balancing-*-data",
+    "**/load-balancing-*",
+    "**/iam",
+    "**/app-common",
+    "**/datadog-common",
+    "**/databases",
+    "**/rds-bastion",
+    "**/cicd-common",
+    "**/*-data",
+]
+
+
+def _to_str(value: list[str] | str) -> str:
+    if isinstance(value, list):
+        return "\n".join(value)
+    return value
+
+
 def run_main(
     changed_files: list[str] | str = "",
-    selected_stacks: str = "",
-    ignored_stacks: str = "",
-    core_stacks: str = """
-      **/remote-state
-      **/networking-data
-      **/networking
-      **/dns
-      **/certificates
-      **/load-balancing-*-data
-      **/load-balancing-*
-      **/iam
-      **/app-common
-      **/datadog-common
-      **/databases
-      **/rds-bastion
-      **/cicd-common
-      **/*-data
-    """,
-    additional_core_stacks: str = "",
+    selected_stacks: list[str] | str = "",
+    ignored_stacks: list[str] | str = "",
+    core_stacks: list[str] | str = DEFAULT_CORE_STACKS,
+    additional_core_stacks: list[str] | str = "",
 ):
     """Helper to run the main function with test parameters."""
-    # Convert list to newline-delimited string
-    if isinstance(changed_files, list):
-        changed_files = ",".join(changed_files)
-
-    os.environ["CHANGED_FILES"] = changed_files
-    os.environ["SELECTED_STACKS"] = selected_stacks
-    os.environ["IGNORED_STACKS"] = ignored_stacks
-    os.environ["CORE_STACKS"] = core_stacks
-    os.environ["ADDITIONAL_CORE_STACKS"] = additional_core_stacks
+    os.environ["CHANGED_FILES"] = _to_str(changed_files)
+    os.environ["SELECTED_STACKS"] = _to_str(selected_stacks)
+    os.environ["IGNORED_STACKS"] = _to_str(ignored_stacks)
+    os.environ["CORE_STACKS"] = _to_str(core_stacks)
+    os.environ["ADDITIONAL_CORE_STACKS"] = _to_str(additional_core_stacks)
 
     writer = io.StringIO()
     main(writer, Path("testdata"))
@@ -258,6 +263,60 @@ def test_classify_stacks():
     assert miss == ["stacks/dev/app"]
 
 
+def test_classify_stacks_orders_by_pattern():
+    """Matched stacks are ordered by pattern index, not alphabetically."""
+    paths = [
+        "stacks/dev/app-common",
+        "stacks/dev/dns",
+        "stacks/dev/foo-data",
+        "stacks/dev/iam",
+        "stacks/dev/networking",
+        "stacks/dev/networking-data",
+    ]
+    patterns = ["**/networking-data", "**/networking", "**/dns", "**/iam", "**/app-common", "**/*-data"]
+    hit, miss = classify_stacks(paths, patterns)
+    assert hit == [
+        "stacks/dev/networking-data",  # matches **/networking-data, not **/*-data
+        "stacks/dev/networking",
+        "stacks/dev/dns",
+        "stacks/dev/iam",
+        "stacks/dev/app-common",
+        "stacks/dev/foo-data",  # only matches **/*-data (last pattern)
+    ]
+    assert miss == []
+
+
+def test_core_stacks_ordered_by_pattern():
+    """Core stacks are ordered by pattern match order, not alphabetically."""
+    files = [
+        "stacks/dev/app-too-tikki/main.tf",
+        "stacks/dev/app-custom/main.tf",
+        "stacks/dev/iam/main.tf",
+        "stacks/dev/my-custom-core-stack/main.tf",
+        "stacks/dev/networking/main.tf",
+        "stacks/prod/app-hello/main.tf",
+        "stacks/prod/dns/main.tf",
+    ]
+    # networking before iam before my-custom-core-stack (via additional)
+    result = run_main(
+        changed_files=files,
+        core_stacks=["**/networking", "**/dns", "**/iam"],
+        additional_core_stacks="**/my-custom-core-stack",
+    )
+    # Core stacks follow pattern order, not alphabetical
+    assert result["dev-core-stacks"] == [
+        "stacks/dev/networking",
+        "stacks/dev/iam",
+        "stacks/dev/my-custom-core-stack",
+    ]
+    assert result["dev-apps-stacks"] == [
+        "stacks/dev/app-custom",
+        "stacks/dev/app-too-tikki",
+    ]
+    assert result["prod-core-stacks"] == ["stacks/prod/dns"]
+    assert result["prod-apps-stacks"] == ["stacks/prod/app-hello"]
+
+
 # =============================================================================
 # Integration tests
 # =============================================================================
@@ -275,7 +334,7 @@ def test_mixed_stacks():
     ]
     result = run_main(changed_files=files)
 
-    assert result["dev-core-stacks"] == ["stacks/dev/iam", "stacks/dev/networking"]
+    assert result["dev-core-stacks"] == ["stacks/dev/networking", "stacks/dev/iam"]
     assert result["dev-apps-stacks"] == [
         "stacks/dev/app-custom",
         "stacks/dev/app-too-tikki",
@@ -385,10 +444,7 @@ def test_core_stacks():
         "stacks/dev/networking/main.tf",
     ]
 
-    result = run_main(changed_files=files, core_stacks="""
-      **/networking
-      **/dns
-    """)
+    result = run_main(changed_files=files, core_stacks="**/networking,**/dns")
 
     assert result["dev-core-stacks"] == [
         "stacks/dev/networking",
@@ -407,16 +463,13 @@ def test_additional_core_stacks():
     # Add an additional custom core stack as a core stack
     result = run_main(
         changed_files=files,
-        core_stacks="""
-            **/networking
-            **/dns
-        """,
-        additional_core_stacks="**/my-custom-core-stack"
+        core_stacks=["**/networking", "**/dns"],
+        additional_core_stacks="**/my-custom-core-stack",
     )
 
     assert result["dev-core-stacks"] == [
-        "stacks/dev/my-custom-core-stack",
         "stacks/dev/networking",
+        "stacks/dev/my-custom-core-stack",
     ]
     assert result["dev-apps-stacks"] == []
 
@@ -428,7 +481,7 @@ def test_override_core_stacks():
         "stacks/dev/networking/main.tf",
     ]
     # Only app-* should be considered core now
-    result = run_main(changed_files=files, core_stacks="**/app-*")
+    result = run_main(changed_files=files, core_stacks=["**/app-*"])
 
     assert result["dev-core-stacks"] == ["stacks/dev/app-too-tikki"]
     assert result["dev-apps-stacks"] == ["stacks/dev/networking"]
