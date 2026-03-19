@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.1](https://github.com/oslokommune/composite-actions/compare/determine-stacks-v1.2.0...determine-stacks-v1.2.1) (2026-03-19)
+
+
+### Bug fixes
+
+* **determine-stacks:** broken ordering of core stacks ([#229](https://github.com/oslokommune/composite-actions/issues/229)) ([2b4c327](https://github.com/oslokommune/composite-actions/commit/2b4c3279c1e21d9c25e5f98a59a70d72b52bf8d9))
+* **determine-stacks:** invalid default value for core-stacks ([#230](https://github.com/oslokommune/composite-actions/issues/230)) ([0c1d31f](https://github.com/oslokommune/composite-actions/commit/0c1d31f6cc5125f5a6d41c3d96b4d63341b2f577))
+
 ## [1.2.0](https://github.com/oslokommune/composite-actions/compare/determine-stacks-v1.1.4...determine-stacks-v1.2.0) (2026-03-17)
 
 
