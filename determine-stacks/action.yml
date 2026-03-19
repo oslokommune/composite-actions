@@ -11,22 +11,12 @@ inputs:
     default: ""
     required: false
   core-stacks:
-    description: "Comma/newline-delimited list of stack patterns for core stacks. Supports glob wildcards (*, **) and brace expansion ({a,b})."
-    default: >-
-      **/remote-state
-      **/networking-data
-      **/networking
-      **/dns
-      **/certificates
-      **/load-balancing-*-data
-      **/load-balancing-*
-      **/iam
-      **/app-common
-      **/datadog-common
-      **/databases
-      **/rds-bastion
-      **/cicd-common
-      **/*-data
+    description: "Comma/newline-delimited list of stack patterns for core stacks. Supports glob wildcards (*, **) and brace expansion ({a,b}). Set to empty string to disable core stack classification."
+    # GitHub Actions can't distinguish between "not provided" and "empty string"
+    # when an input is passed through from a caller. This placeholder is resolved
+    # to built-in default patterns in the run step below, while still allowing
+    # callers to pass an empty string to disable core stack classification.
+    default: "__default__"
     required: false
   additional-core-stacks:
     description: "Comma/newline-delimited list of stack patterns to append to the list of core stacks. Supports glob wildcards (*, **) and brace expansion ({a,b})."
@@ -81,7 +71,28 @@ runs:
         CORE_STACKS: ${{ inputs.core-stacks }}
         ADDITIONAL_CORE_STACKS: ${{ inputs.additional-core-stacks }}
         CHANGED_FILES: ${{ steps.filter.outcome == 'success' && join(fromJSON(steps.filter.outputs.all_files), ',') || '' }}
+        # |- preserves newlines between patterns and strips the trailing newline.
+        DEFAULT_CORE_STACKS: |-
+          **/remote-state
+          **/networking-data
+          **/networking
+          **/dns
+          **/certificates
+          **/load-balancing-*-data
+          **/load-balancing-*
+          **/iam
+          **/app-common
+          **/datadog-common
+          **/databases
+          **/rds-bastion
+          **/cicd-common
+          **/*-data
       run: |
+        # Resolve __default__ placeholder to built-in patterns.
+        if [ "$CORE_STACKS" = "__default__" ]; then
+          export CORE_STACKS="$DEFAULT_CORE_STACKS"
+        fi
+
         # --project ensures uv reads pyproject.toml from the action directory,
         # so it respects requires-python and uses the correct Python version
         # (the working directory is the caller's repo, not the action directory).
