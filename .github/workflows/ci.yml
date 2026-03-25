@@ -28,8 +28,8 @@ jobs:
         working-directory: ./determine-stacks
         run: uv run pytest -v
 
-  test-enrich-gp-config:
-    name: Test enrich-gp-config composite action
+  test-build-gp-config:
+    name: Test build-gp-config composite action
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -41,7 +41,7 @@ jobs:
         uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
 
       - name: Run tests
-        working-directory: ./enrich-gp-config
+        working-directory: ./build-gp-config
         run: make test
 
   test-evaluate-automerge:
