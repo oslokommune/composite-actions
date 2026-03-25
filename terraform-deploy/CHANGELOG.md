@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.2](https://github.com/oslokommune/composite-actions/compare/terraform-deploy-v1.6.1...terraform-deploy-v1.6.2) (2026-03-25)
+
+
+### Bug fixes
+
+* tag deployment events with correct values ([#232](https://github.com/oslokommune/composite-actions/issues/232)) ([b37212d](https://github.com/oslokommune/composite-actions/commit/b37212d0e8a53edf5d1d258bcab82904f8b9ee24))
+
 ## [1.6.1](https://github.com/oslokommune/composite-actions/compare/terraform-deploy-v1.6.0...terraform-deploy-v1.6.1) (2026-03-19)
 
 
