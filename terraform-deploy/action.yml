@@ -303,7 +303,7 @@ runs:
         # make it easy to filter in dashboards.
         ENVIRONMENT: ${{ inputs.environment }}
         TEAM: ${{ env.DD_TEAM || fromJSON(inputs.config).team || 'n/a' }}
-        SERVICE: ${{ env.DD_SERVICE || fromJSON(inputs.config)[inputs.environment].appName }}
+        SERVICE: ${{ env.DD_SERVICE || fromJSON(inputs.config).appName }}
         DD_API_KEY: ${{ inputs.datadog-api-key }}
       run: |
         started_at="$(gh run view --attempt "$GITHUB_RUN_ATTEMPT" "$GITHUB_RUN_ID" --json startedAt --jq '.startedAt | fromdate')"
