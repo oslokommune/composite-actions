@@ -1,0 +1,17 @@
+{
+  "$schema": "schema.json",
+  "type": "app",
+  "team": "utviklerflyt",
+  "monorepo": true,
+  "infrastructureRepository": "pirates-iac",
+  "dev": {
+    "accountId": "123456789012",
+    "name": "pirates-dev",
+    "defaultRegion": "eu-west-1",
+    "deploymentRoleArn": "arn:aws:iam::123456789012:role/pirates-dev-gha-app-deploy",
+    "artifactRoleArn": "arn:aws:iam::123456789012:role/pirates-dev-gha-artifact-publish",
+    "artifactBucketName": "pirates-dev-123456789012-artifact",
+    "artifactEcrRepositoryName": "pirates-dev-artifact",
+    "infrastructureRoot": "stacks/dev"
+  }
+}
