@@ -1,0 +1,40 @@
+name: "Build Golden Path config"
+description: "Build a Golden Path config with computed values"
+
+inputs:
+  config-file:
+    description: "Path to Golden Path configuration file"
+    required: true
+  app-name:
+    description: "The name of the application"
+    required: true
+  stack-name:
+    description: "The name of the Terraform stack"
+    required: false
+    default: ""
+
+outputs:
+  config:
+    description: "The CI/CD configuration as compact JSON"
+    value: ${{ steps.build.outputs.result }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install uv
+      uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+      with:
+        # No dependencies to cache — script uses only stdlib
+        enable-cache: false
+
+    - name: Build config
+      id: build
+      shell: bash
+      env:
+        APP_NAME: ${{ inputs.app-name }}
+        STACK_NAME: ${{ inputs.stack-name }}
+        CONFIG_FILE: ${{ inputs.config-file }}
+      run: |
+        config="$(uv run "${{ github.action_path }}/build_config.py" --config-file "$CONFIG_FILE" --app-name "$APP_NAME" --stack-name "$STACK_NAME")"
+        echo "  $config"
+        echo "result=$config" >> "$GITHUB_OUTPUT"

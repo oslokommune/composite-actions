@@ -1,0 +1,32 @@
+{
+  "$schema": "schema.json",
+  "type": "app",
+  "team": "utviklerflyt",
+  "monorepo": true,
+  "infrastructureRepository": "pirates-iac",
+  "dev": {
+    "accountId": "123456789012",
+    "name": "pirates-dev",
+    "defaultRegion": "eu-west-1",
+    "deploymentRoleArn": "arn:aws:iam::123456789012:role/pirates-dev-gha-app-deploy",
+    "artifactRoleArn": "arn:aws:iam::123456789012:role/pirates-dev-gha-artifact-publish",
+    "artifactBucketName": "pirates-dev-123456789012-artifact",
+    "artifactEcrRepositoryName": "pirates-dev-artifact",
+    "infrastructureRoot": "stacks/dev",
+    "stackDir": "stacks/dev/app-example",
+    "concurrencyGroup": "pirates-dev-my-app"
+  },
+  "prod": {
+    "accountId": "987654321012",
+    "name": "pirates-prod",
+    "defaultRegion": "eu-west-1",
+    "deploymentRoleArn": "arn:aws:iam::987654321012:role/pirates-prod-gha-app-deploy",
+    "artifactRoleArn": "arn:aws:iam::987654321012:role/pirates-prod-gha-artifact-publish",
+    "artifactBucketName": "pirates-prod-987654321012-artifact",
+    "artifactEcrRepositoryName": "pirates-prod-artifact",
+    "infrastructureRoot": "stacks/prod",
+    "stackDir": "stacks/prod/app-example",
+    "concurrencyGroup": "pirates-prod-my-app"
+  },
+  "appName": "my-app"
+}
