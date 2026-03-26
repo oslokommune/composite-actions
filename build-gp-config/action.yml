@@ -1,5 +1,5 @@
-name: "Enrich Golden Path config"
-description: "Enrich a Goldefn Path config with computed values"
+name: "Build Golden Path config"
+description: "Build a Golden Path config with computed values"
 
 inputs:
   config-file:
@@ -15,8 +15,8 @@ inputs:
 
 outputs:
   config:
-    description: "The enriched CI/CD configuration as compact JSON"
-    value: ${{ steps.enrich.outputs.result }}
+    description: "The CI/CD configuration as compact JSON"
+    value: ${{ steps.build.outputs.result }}
 
 runs:
   using: composite
@@ -27,14 +27,14 @@ runs:
         # No dependencies to cache — script uses only stdlib
         enable-cache: false
 
-    - name: Enrich config
-      id: enrich
+    - name: Build config
+      id: build
       shell: bash
       env:
         APP_NAME: ${{ inputs.app-name }}
         STACK_NAME: ${{ inputs.stack-name }}
         CONFIG_FILE: ${{ inputs.config-file }}
       run: |
-        config="$(uv run "${{ github.action_path }}/enrich_config.py" --config-file "$CONFIG_FILE" --app-name "$APP_NAME" --stack-name "$STACK_NAME")"
+        config="$(uv run "${{ github.action_path }}/build_config.py" --config-file "$CONFIG_FILE" --app-name "$APP_NAME" --stack-name "$STACK_NAME")"
         echo "  $config"
         echo "result=$config" >> "$GITHUB_OUTPUT"

@@ -2,13 +2,13 @@
 # /// script
 # requires-python = ">=3.12"
 # ///
-"""Enrich a GP CI/CD config file with computed values (stackDir, concurrencyGroup, appName)."""
+"""Build a GP CI/CD config file with computed values (stackDir, concurrencyGroup, appName)."""
 
 import argparse
 import json
 
 
-def enrich_config(config: dict, app_name: str, stack_name: str) -> dict:
+def build_config(config: dict, app_name: str, stack_name: str) -> dict:
     if app_name:
         config["appName"] = app_name
 
@@ -37,7 +37,7 @@ def main() -> None:
     with open(args.config_file) as f:
         config = json.load(f)
 
-    result = enrich_config(config, args.app_name, args.stack_name)
+    result = build_config(config, args.app_name, args.stack_name)
     print(json.dumps(result, separators=(",", ":")))
 
 
