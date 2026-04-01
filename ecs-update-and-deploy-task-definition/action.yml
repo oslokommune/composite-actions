@@ -62,7 +62,7 @@ runs:
 
     - name: Login to Elastic Container Registry (ECR) 🔑
       id: ecr-login
-      uses: aws-actions/amazon-ecr-login@062b18b96a7aff071d4dc91bc00c4c1a7945b076 # v2.0.1
+      uses: aws-actions/amazon-ecr-login@183a1442edf41672e66566b7fc560e297a290896 # v2.1.1
 
 
     - name: Download existing ECS task definition ⚙️
@@ -139,7 +139,7 @@ runs:
     - if: inputs.deploy == 'true'
       name: Deploy task definition 🚀
       id: deploy
-      uses: aws-actions/amazon-ecs-deploy-task-definition@4b08990e8909cf36bc2ca95f994312f090c41865 # v2.3.4
+      uses: aws-actions/amazon-ecs-deploy-task-definition@fc8fc60f3a60ffd500fcb13b209c59d221ac8c8c # v2.6.1
       with:
         cluster: "${{ inputs.cluster-name }}"
         service: "${{ inputs.service-name }}"
