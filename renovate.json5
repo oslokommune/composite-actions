@@ -22,7 +22,7 @@
       "matchStrings": [
         "#\\s*renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)( extractVersion=(?<extractVersion>.*?))?\\n.*_VERSION=\"(?<currentValue>.*)\""
       ],
-      "fileMatch": "^\\.github/workflows/.*\\.yml$",
+      "fileMatch": ["^build-gp-config/action\\.yml$"],
       "customType": "regex",
     }
   ]
