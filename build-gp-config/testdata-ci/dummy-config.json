@@ -1,0 +1,17 @@
+{
+  "$schema": "build-gp-config/testdata-ci/dummy-schema.json",
+  "type": "app",
+  "team": "test-team",
+  "monorepo": true,
+  "infrastructureRepository": "test-iac",
+  "dev": {
+    "accountId": "111111111111",
+    "name": "test-dev",
+    "defaultRegion": "eu-west-1",
+    "deploymentRoleArn": "arn:aws:iam::111111111111:role/test-dev-deploy",
+    "artifactRoleArn": "arn:aws:iam::111111111111:role/test-dev-artifact",
+    "artifactBucketName": "test-dev-artifact",
+    "artifactEcrRepositoryName": "test-dev-ecr",
+    "infrastructureRoot": "stacks/dev"
+  }
+}
