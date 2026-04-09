@@ -39,7 +39,7 @@ runs:
         fi
         # renovate: datasource=pypi depName=check-jsonschema
         CHECK_JSONSCHEMA_VERSION="0.37.0"
-        uv pip install --quiet "check-jsonschema==$CHECK_JSONSCHEMA_VERSION"
+        pip install --quiet "check-jsonschema==$CHECK_JSONSCHEMA_VERSION"
         check-jsonschema --schemafile "$schema_url" "$CONFIG_FILE"
 
     - name: Build config
