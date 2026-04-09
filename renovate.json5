@@ -12,18 +12,18 @@
   ],
   "customManagers": [
     {
-      "customType": "regex",
-      "fileMatch": ["^setup-ok/action\\.yml$"],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)( versioning=(?<versioning>.*?))?( extractVersion=(?<extractVersion>.*?))?\\s*default: [\"'](?<currentValue>.*?)[\"']"
-      ]
+      ],
+      "fileMatch": ["^setup-ok/action\\.yml$"],
+      "customType": "regex",
     },
     {
-      "customType": "regex",
-      "fileMatch": "^\\.github/workflows/.*\\.yml$",
       "matchStrings": [
         "#\\s*renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)( extractVersion=(?<extractVersion>.*?))?\\n.*_VERSION=\"(?<currentValue>.*)\""
-      ]
+      ],
+      "fileMatch": "^\\.github/workflows/.*\\.yml$",
+      "customType": "regex",
     }
   ]
 }
