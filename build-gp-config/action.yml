@@ -27,9 +27,24 @@ runs:
         # No dependencies to cache — script uses only stdlib
         enable-cache: false
 
+    - name: Validate config against schema
+      shell: bash --noprofile --norc -euo pipefail {0}
+      env:
+        CONFIG_FILE: ${{ inputs.config-file }}
+      run: |
+        schema_url="$(jq -r '."$schema" // empty' "$CONFIG_FILE")"
+        if [ "$schema_url" == "" ]; then
+        echo "::error::Config file $CONFIG_FILE is not using any schema."
+          exit 1
+        fi
+        # renovate: datasource=pypi depName=check-jsonschema
+        CHECK_JSONSCHEMA_VERSION="0.37.0"
+        pip install --quiet "check-jsonschema==$CHECK_JSONSCHEMA_VERSION"
+        check-jsonschema --schemafile "$schema_url" "$CONFIG_FILE"
+
     - name: Build config
       id: build
-      shell: bash
+      shell: bash --noprofile --norc -euo pipefail {0}
       env:
         APP_NAME: ${{ inputs.app-name }}
         STACK_NAME: ${{ inputs.stack-name }}
