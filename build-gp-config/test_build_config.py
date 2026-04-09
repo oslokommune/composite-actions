@@ -11,7 +11,7 @@ from pathlib import Path
 
 from build_config import build_config
 
-TESTDATA = Path(__file__).parent / "testdata"
+TESTDATA = Path(__file__).parent / "testdata-python"
 
 
 def load(name: str) -> dict:
