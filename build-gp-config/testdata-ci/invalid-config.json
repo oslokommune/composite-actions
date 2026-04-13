@@ -1,0 +1,4 @@
+{
+  "$schema": "build-gp-config/testdata-ci/dummy-schema.json",
+  "type": "app"
+}

@@ -12,12 +12,18 @@
   ],
   "customManagers": [
     {
-      "customType": "regex",
-      "fileMatch": ["^setup-ok/action\\.yml$"],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)( versioning=(?<versioning>.*?))?( extractVersion=(?<extractVersion>.*?))?\\s*default: [\"'](?<currentValue>.*?)[\"']"
-      ]
+      ],
+      "fileMatch": ["^setup-ok/action\\.yml$"],
+      "customType": "regex",
+    },
+    {
+      "matchStrings": [
+        "#\\s*renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)( extractVersion=(?<extractVersion>.*?))?\\n.*_VERSION=\"(?<currentValue>.*)\""
+      ],
+      "fileMatch": ["^build-gp-config/action\\.yml$"],
+      "customType": "regex",
     }
   ]
 }
-

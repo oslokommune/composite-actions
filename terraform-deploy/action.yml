@@ -25,7 +25,7 @@ inputs:
     description: "Private key of GitHub App used to get read access to the repository containing IaC"
     required: false
   github-deploy-key:
-    description: "Repository deploy key that grants read access to shared libraries (e.g., golden-path-iac)"
+    description: "One or more repository deploy keys that grants read access to shared libraries (e.g., golden-path-iac)"
     required: true
   send-deployment-event:
     description: "Whether to send an event to Datadog after successful deployment to generate DORA metrics. By default this is only sent on default branch deployments, and it requires 'tag' and 'datadog-api-key' to be set."
