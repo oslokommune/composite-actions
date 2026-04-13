@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.0](https://github.com/oslokommune/composite-actions/compare/terraform-deploy-v1.6.2...terraform-deploy-v1.7.0) (2026-04-13)
+
+
+### Features
+
+* add build-gp-config composite action ([#235](https://github.com/oslokommune/composite-actions/issues/235)) ([4c2b003](https://github.com/oslokommune/composite-actions/commit/4c2b003cc201ceced3cfb2642ae5d91934802a45))
+
 ## [1.6.2](https://github.com/oslokommune/composite-actions/compare/terraform-deploy-v1.6.1...terraform-deploy-v1.6.2) (2026-03-25)
 
 
