@@ -90,3 +90,190 @@ jobs:
       - name: Run tests
         working-directory: ./evaluate-automerge
         run: make test
+
+  test-package-and-upload-artifact-s3:
+    name: Test package-and-upload-artifact (S3)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      statuses: write
+    services:
+      moto:
+        image: motoserver/moto:5.1.22@sha256:117238c6e7e3b566387c4c74e6fb0b6fdc34a094920c2154cf06f11dc72d9f37
+        ports:
+          - 5000:5000
+    env:
+      AWS_ACCESS_KEY_ID: testing
+      AWS_SECRET_ACCESS_KEY: testing
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ENDPOINT_URL: http://localhost:5000
+      TEST_CONFIG_BOTH: '{"dev":{"accountId":"123456789012","defaultRegion":"us-east-1","artifactRoleArn":"arn:aws:iam::123456789012:role/test","artifactBucketName":"test-dev-bucket","artifactEcrRepositoryName":"test-dev-ecr"},"prod":{"accountId":"210987654321","defaultRegion":"us-east-1","artifactRoleArn":"arn:aws:iam::210987654321:role/test","artifactBucketName":"test-prod-bucket","artifactEcrRepositoryName":"test-prod-ecr"}}'
+      TEST_CONFIG_DEV: '{"dev":{"accountId":"123456789012","defaultRegion":"us-east-1","artifactRoleArn":"arn:aws:iam::123456789012:role/test","artifactBucketName":"test-dev-bucket","artifactEcrRepositoryName":"test-dev-ecr"}}'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Create S3 buckets
+        run: |
+          aws s3 mb s3://test-dev-bucket
+          aws s3 mb s3://test-prod-bucket
+
+      - name: Test file upload (both envs)
+        id: file-upload-both
+        uses: ./package-and-upload-artifact
+        with:
+          config: ${{ env.TEST_CONFIG_BOTH }}
+          tag: "test-app/v1.0.0"
+          source-location: "package-and-upload-artifact/testdata/sample.txt"
+          source-type: "file"
+
+      - name: Verify file upload output tag
+        env:
+          RESULT: ${{ steps.file-upload-both.outputs.result }}
+        run: test "$RESULT" = "test-app/v1.0.0.txt"
+
+      - name: Verify file exists in both S3 buckets
+        run: |
+          aws s3api head-object --bucket test-dev-bucket --key "test-app/v1.0.0.txt"
+          aws s3api head-object --bucket test-prod-bucket --key "test-app/v1.0.0.txt"
+
+      - name: Verify S3 content matches source file
+        run: |
+          aws s3api get-object --bucket test-dev-bucket --key "test-app/v1.0.0.txt" /tmp/downloaded.txt
+          diff package-and-upload-artifact/testdata/sample.txt /tmp/downloaded.txt
+
+      - name: Test immutability (re-upload same tag should fail)
+        id: immutability-test
+        continue-on-error: true
+        uses: ./package-and-upload-artifact
+        with:
+          config: ${{ env.TEST_CONFIG_DEV }}
+          tag: "test-app/v1.0.0"
+          source-location: "package-and-upload-artifact/testdata/sample.txt"
+          source-type: "file"
+
+      - name: Verify immutability test failed
+        env:
+          OUTCOME: ${{ steps.immutability-test.outcome }}
+        run: test "$OUTCOME" = "failure"
+
+      - name: Create test folder
+        run: |
+          mkdir -p test-upload-folder
+          echo "<h1>Hello</h1>" > test-upload-folder/index.html
+          echo "body { color: red; }" > test-upload-folder/style.css
+
+      - name: Test folder upload
+        id: folder-upload
+        uses: ./package-and-upload-artifact
+        with:
+          config: ${{ env.TEST_CONFIG_DEV }}
+          tag: "test-app/v2.0.0"
+          source-location: "test-upload-folder"
+          source-type: "folder"
+
+      - name: Verify folder upload output tag
+        env:
+          RESULT: ${{ steps.folder-upload.outputs.result }}
+        run: test "$RESULT" = "test-app/v2.0.0.zip"
+
+      - name: Verify folder upload is a valid zip in S3
+        run: |
+          aws s3api get-object --bucket test-dev-bucket --key "test-app/v2.0.0.zip" /tmp/downloaded.zip
+          unzip -l /tmp/downloaded.zip | grep "index.html"
+          unzip -l /tmp/downloaded.zip | grep "style.css"
+
+      - name: Test dev-only config (no prod upload)
+        id: dev-only-upload
+        uses: ./package-and-upload-artifact
+        with:
+          config: ${{ env.TEST_CONFIG_DEV }}
+          tag: "test-app/v3.0.0"
+          source-location: "package-and-upload-artifact/testdata/sample.txt"
+          source-type: "file"
+
+      - name: Verify only dev bucket has the object
+        run: |
+          aws s3api head-object --bucket test-dev-bucket --key "test-app/v3.0.0.txt"
+          ! aws s3api head-object --bucket test-prod-bucket --key "test-app/v3.0.0.txt" 2>/dev/null
+
+  test-package-and-upload-artifact-docker:
+    name: Test package-and-upload-artifact (Docker)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      statuses: write
+    services:
+      moto:
+        image: motoserver/moto:5.1.22@sha256:117238c6e7e3b566387c4c74e6fb0b6fdc34a094920c2154cf06f11dc72d9f37
+        ports:
+          - 5000:5000
+    env:
+      AWS_ACCESS_KEY_ID: testing
+      AWS_SECRET_ACCESS_KEY: testing
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ENDPOINT_URL: http://localhost:5000
+      TEST_CONFIG_DEV: '{"dev":{"accountId":"123456789012","defaultRegion":"us-east-1","artifactRoleArn":"arn:aws:iam::123456789012:role/test","artifactBucketName":"test-dev-bucket","artifactEcrRepositoryName":"test-dev-ecr"}}'
+      TEST_CONFIG_BOTH: '{"dev":{"accountId":"123456789012","defaultRegion":"us-east-1","artifactRoleArn":"arn:aws:iam::123456789012:role/test","artifactBucketName":"test-dev-bucket","artifactEcrRepositoryName":"test-dev-ecr"},"prod":{"accountId":"210987654321","defaultRegion":"us-east-1","artifactRoleArn":"arn:aws:iam::210987654321:role/test","artifactBucketName":"test-prod-bucket","artifactEcrRepositoryName":"test-prod-ecr"}}'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Set up mock docker
+        run: |
+          mkdir -p "$HOME/mock-bin"
+          cat > "$HOME/mock-bin/docker" << 'SCRIPT'
+          #!/usr/bin/env bash
+          echo "$@" >> /tmp/docker-mock.log
+          if [ "$1" = "login" ]; then cat > /dev/null; fi
+          SCRIPT
+          chmod +x "$HOME/mock-bin/docker"
+          echo "$HOME/mock-bin" >> "$GITHUB_PATH"
+
+      - name: Test docker image upload (dev only)
+        id: docker-upload-dev
+        uses: ./package-and-upload-artifact
+        with:
+          config: ${{ env.TEST_CONFIG_DEV }}
+          tag: "test-app/v1.0.0"
+          source-location: "sha256:abc123"
+          source-type: "docker-image"
+
+      - name: Verify docker commands (dev only)
+        run: |
+          echo "Docker mock log:"
+          cat /tmp/docker-mock.log
+
+          grep -q "login --username AWS --password-stdin 123456789012.dkr.ecr.us-east-1.amazonaws.com" /tmp/docker-mock.log
+          grep -q "tag sha256:abc123 123456789012.dkr.ecr.us-east-1.amazonaws.com/test-dev-ecr:test-app/v1.0.0" /tmp/docker-mock.log
+          grep -q "push 123456789012.dkr.ecr.us-east-1.amazonaws.com/test-dev-ecr:test-app/v1.0.0" /tmp/docker-mock.log
+
+      - name: Verify docker output tag (no extension for images)
+        env:
+          RESULT: ${{ steps.docker-upload-dev.outputs.result }}
+        run: test "$RESULT" = "test-app/v1.0.0"
+
+      - name: Clear docker mock log
+        run: rm -f /tmp/docker-mock.log
+
+      - name: Test docker image upload (both envs)
+        id: docker-upload-both
+        uses: ./package-and-upload-artifact
+        with:
+          config: ${{ env.TEST_CONFIG_BOTH }}
+          tag: "test-app/v2.0.0"
+          source-location: "sha256:def456"
+          source-type: "docker-image"
+
+      - name: Verify docker commands (both envs)
+        run: |
+          echo "Docker mock log:"
+          cat /tmp/docker-mock.log
+
+          line_count=$(wc -l < /tmp/docker-mock.log)
+          test "$line_count" -eq 6
+
+          grep -q "tag sha256:def456 123456789012.dkr.ecr.us-east-1.amazonaws.com/test-dev-ecr:test-app/v2.0.0" /tmp/docker-mock.log
+          grep -q "push 123456789012.dkr.ecr.us-east-1.amazonaws.com/test-dev-ecr:test-app/v2.0.0" /tmp/docker-mock.log
+          grep -q "tag sha256:def456 210987654321.dkr.ecr.us-east-1.amazonaws.com/test-prod-ecr:test-app/v2.0.0" /tmp/docker-mock.log
+          grep -q "push 210987654321.dkr.ecr.us-east-1.amazonaws.com/test-prod-ecr:test-app/v2.0.0" /tmp/docker-mock.log
