@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.2](https://github.com/oslokommune/composite-actions/compare/determine-stacks-v1.2.1...determine-stacks-v1.2.2) (2026-04-17)
+
+
+### Bug fixes
+
+* **deps:** upgrade third-party actions to support Node.js 24 ([#241](https://github.com/oslokommune/composite-actions/issues/241)) ([12690e7](https://github.com/oslokommune/composite-actions/commit/12690e7c4031b8cc009639129cd1eafba9ec56d4))
+
 ## [1.2.1](https://github.com/oslokommune/composite-actions/compare/determine-stacks-v1.2.0...determine-stacks-v1.2.1) (2026-03-19)
 
 
