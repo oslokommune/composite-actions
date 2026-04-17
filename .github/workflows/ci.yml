@@ -113,10 +113,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
-      - name: Create S3 buckets
+      - name: Create S3 buckets and test file
         run: |
           aws s3 mb s3://test-dev-bucket
           aws s3 mb s3://test-prod-bucket
+          echo "hello world" > sample.txt
 
       - name: Test file upload (both envs)
         id: file-upload-both
@@ -124,7 +125,7 @@ jobs:
         with:
           config: ${{ env.TEST_CONFIG_BOTH }}
           tag: "test-app/v1.0.0"
-          source-location: "package-and-upload-artifact/testdata/sample.txt"
+          source-location: "sample.txt"
           source-type: "file"
 
       - name: Verify file upload output tag
@@ -140,7 +141,7 @@ jobs:
       - name: Verify S3 content matches source file
         run: |
           aws s3api get-object --bucket test-dev-bucket --key "test-app/v1.0.0.txt" /tmp/downloaded.txt
-          diff package-and-upload-artifact/testdata/sample.txt /tmp/downloaded.txt
+          diff sample.txt /tmp/downloaded.txt
 
       - name: Test immutability (re-upload same tag should fail)
         id: immutability-test
@@ -149,7 +150,7 @@ jobs:
         with:
           config: ${{ env.TEST_CONFIG_DEV }}
           tag: "test-app/v1.0.0"
-          source-location: "package-and-upload-artifact/testdata/sample.txt"
+          source-location: "sample.txt"
           source-type: "file"
 
       - name: Verify immutability test failed
@@ -189,7 +190,7 @@ jobs:
         with:
           config: ${{ env.TEST_CONFIG_DEV }}
           tag: "test-app/v3.0.0"
-          source-location: "package-and-upload-artifact/testdata/sample.txt"
+          source-location: "sample.txt"
           source-type: "file"
 
       - name: Verify only dev bucket has the object
@@ -277,3 +278,78 @@ jobs:
           grep -q "push 123456789012.dkr.ecr.us-east-1.amazonaws.com/test-dev-ecr:test-app/v2.0.0" /tmp/docker-mock.log
           grep -q "tag sha256:def456 210987654321.dkr.ecr.us-east-1.amazonaws.com/test-prod-ecr:test-app/v2.0.0" /tmp/docker-mock.log
           grep -q "push 210987654321.dkr.ecr.us-east-1.amazonaws.com/test-prod-ecr:test-app/v2.0.0" /tmp/docker-mock.log
+
+  test-terraform-deploy:
+    name: Test terraform-deploy
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      statuses: write
+    services:
+      moto:
+        image: motoserver/moto:5.1.22@sha256:117238c6e7e3b566387c4c74e6fb0b6fdc34a094920c2154cf06f11dc72d9f37
+        ports:
+          - 5000:5000
+    env:
+      AWS_ACCESS_KEY_ID: testing
+      AWS_SECRET_ACCESS_KEY: testing
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ENDPOINT_URL: http://localhost:5000
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Generate ephemeral SSH deploy key
+        id: ssh-key
+        run: |
+          ssh-keygen -t ed25519 -f "$RUNNER_TEMP/test-key" -N "" -q
+          {
+            echo "private-key<<EOF"
+            cat "$RUNNER_TEMP/test-key"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create test terraform stack
+        run: |
+          mkdir -p test-stack
+          cat > test-stack/main.tf << 'TFEOF'
+          terraform {
+            required_version = "~> 1.9.0"
+          }
+
+          output "greeting" {
+            value     = "hello"
+            sensitive = false
+          }
+
+          output "secret" {
+            value     = "s3cret"
+            sensitive = true
+          }
+          TFEOF
+
+      - name: Run terraform-deploy
+        id: deploy
+        uses: ./terraform-deploy
+        with:
+          config: '{"dev":{"accountId":"123456789012","defaultRegion":"us-east-1","deploymentRoleArn":"arn:aws:iam::123456789012:role/test","name":"test-dev"}}'
+          stack-dir: "test-stack"
+          environment: "dev"
+          tag: "test-app/v1.0.0"
+          github-deploy-key: ${{ steps.ssh-key.outputs.private-key }}
+          send-deployment-event: "false"
+          send-deployment-metric: "false"
+          cancel-if-stale: "false"
+
+      - name: Verify terraform outputs (non-sensitive only)
+        env:
+          OUTPUTS: ${{ steps.deploy.outputs.terraform-outputs }}
+        run: |
+          echo "$OUTPUTS"
+          test "$(echo "$OUTPUTS" | jq -r '.greeting')" = "hello"
+          test "$(echo "$OUTPUTS" | jq 'has("secret")')" = "false"
+
+      - name: Verify SSM parameter was set
+        run: |
+          value=$(aws ssm get-parameter --name "/test-dev/artifacts/test-stack" --query "Parameter.Value" --output text)
+          test "$value" = "test-app/v1.0.0"
