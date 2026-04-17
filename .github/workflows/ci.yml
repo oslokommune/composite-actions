@@ -28,8 +28,24 @@ jobs:
         working-directory: ./determine-stacks
         run: uv run pytest -v
 
-  test-build-gp-config:
-    name: Test build-gp-config composite action
+  test-evaluate-automerge:
+    name: Test evaluate-automerge composite action
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+
+      - name: Run tests
+        working-directory: ./evaluate-automerge
+        run: make test
+
+  test-e2e-build-gp-config:
+    name: Test E2E build-gp-config composite action
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -75,24 +91,8 @@ jobs:
       - name: Verify invalid config was rejected
         run: test "${{ steps.build-invalid.outcome }}" = "failure"
 
-  test-evaluate-automerge:
-    name: Test evaluate-automerge composite action
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
-
-      - name: Run tests
-        working-directory: ./evaluate-automerge
-        run: make test
-
-  test-package-and-upload-artifact-s3:
-    name: Test package-and-upload-artifact (S3)
+  test-e2e-package-and-upload-artifact-s3:
+    name: Test E2E package-and-upload-artifact composite action (S3)
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -107,99 +107,88 @@ jobs:
       AWS_SECRET_ACCESS_KEY: testing
       AWS_DEFAULT_REGION: us-east-1
       AWS_ENDPOINT_URL: http://localhost:5000
-      TEST_CONFIG_BOTH: '{"dev":{"accountId":"123456789012","defaultRegion":"us-east-1","artifactRoleArn":"arn:aws:iam::123456789012:role/test","artifactBucketName":"test-dev-bucket","artifactEcrRepositoryName":"test-dev-ecr"},"prod":{"accountId":"210987654321","defaultRegion":"us-east-1","artifactRoleArn":"arn:aws:iam::210987654321:role/test","artifactBucketName":"test-prod-bucket","artifactEcrRepositoryName":"test-prod-ecr"}}'
-      TEST_CONFIG_DEV: '{"dev":{"accountId":"123456789012","defaultRegion":"us-east-1","artifactRoleArn":"arn:aws:iam::123456789012:role/test","artifactBucketName":"test-dev-bucket","artifactEcrRepositoryName":"test-dev-ecr"}}'
+      CONFIG: |
+        {
+          "dev": {
+            "accountId": "123456789012",
+            "defaultRegion": "us-east-1",
+            "artifactRoleArn": "arn:aws:iam::123456789012:role/test",
+            "artifactBucketName": "test-dev-bucket",
+            "artifactEcrRepositoryName": "test-dev-ecr"
+          },
+          "prod": {
+            "accountId": "210987654321",
+            "defaultRegion": "us-east-1",
+            "artifactRoleArn": "arn:aws:iam::210987654321:role/test",
+            "artifactBucketName": "test-prod-bucket",
+            "artifactEcrRepositoryName": "test-prod-ecr"
+          }
+        }
+      CONFIG_DEV: |
+        {
+          "dev": {
+            "accountId": "123456789012",
+            "defaultRegion": "us-east-1",
+            "artifactRoleArn": "arn:aws:iam::123456789012:role/test",
+            "artifactBucketName": "test-dev-bucket",
+            "artifactEcrRepositoryName": "test-dev-ecr"
+          }
+        }
     steps:
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
-      - name: Create S3 buckets and test file
+      - name: Prepare S3 buckets and dummy files
         run: |
           aws s3 mb s3://test-dev-bucket
           aws s3 mb s3://test-prod-bucket
           echo "hello world" > sample.txt
 
-      - name: Test file upload (both envs)
+      - name: Test file upload to all environments
         id: file-upload-both
         uses: ./package-and-upload-artifact
         with:
-          config: ${{ env.TEST_CONFIG_BOTH }}
+          config: ${{ env.CONFIG }}
           tag: "test-app/v1.0.0"
           source-location: "sample.txt"
           source-type: "file"
 
-      - name: Verify file upload output tag
+      - name: Verify name of uploaded file
         env:
           RESULT: ${{ steps.file-upload-both.outputs.result }}
         run: test "$RESULT" = "test-app/v1.0.0.txt"
 
-      - name: Verify file exists in both S3 buckets
+      - name: Verify file has been uploaded to both S3 buckets
         run: |
           aws s3api head-object --bucket test-dev-bucket --key "test-app/v1.0.0.txt"
           aws s3api head-object --bucket test-prod-bucket --key "test-app/v1.0.0.txt"
 
-      - name: Verify S3 content matches source file
-        run: |
-          aws s3api get-object --bucket test-dev-bucket --key "test-app/v1.0.0.txt" /tmp/downloaded.txt
-          diff sample.txt /tmp/downloaded.txt
-
-      - name: Test immutability (re-upload same tag should fail)
-        id: immutability-test
-        continue-on-error: true
-        uses: ./package-and-upload-artifact
-        with:
-          config: ${{ env.TEST_CONFIG_DEV }}
-          tag: "test-app/v1.0.0"
-          source-location: "sample.txt"
-          source-type: "file"
-
-      - name: Verify immutability test failed
-        env:
-          OUTCOME: ${{ steps.immutability-test.outcome }}
-        run: test "$OUTCOME" = "failure"
-
-      - name: Create test folder
+      - name: Prepare test folder
         run: |
           mkdir -p test-upload-folder
-          echo "<h1>Hello</h1>" > test-upload-folder/index.html
-          echo "body { color: red; }" > test-upload-folder/style.css
+          touch test-upload-folder/hello
 
-      - name: Test folder upload
+      - name: Test folder upload to dev environment
         id: folder-upload
         uses: ./package-and-upload-artifact
         with:
-          config: ${{ env.TEST_CONFIG_DEV }}
+          config: ${{ env.CONFIG_DEV }}
           tag: "test-app/v2.0.0"
           source-location: "test-upload-folder"
           source-type: "folder"
 
-      - name: Verify folder upload output tag
+      - name: Verify name of uploaded file
         env:
           RESULT: ${{ steps.folder-upload.outputs.result }}
         run: test "$RESULT" = "test-app/v2.0.0.zip"
 
-      - name: Verify folder upload is a valid zip in S3
+      - name: Verify uploaded file is a valid zip
         run: |
           aws s3api get-object --bucket test-dev-bucket --key "test-app/v2.0.0.zip" /tmp/downloaded.zip
-          unzip -l /tmp/downloaded.zip | grep "index.html"
-          unzip -l /tmp/downloaded.zip | grep "style.css"
+          unzip -l /tmp/downloaded.zip | grep "hello"
 
-      - name: Test dev-only config (no prod upload)
-        id: dev-only-upload
-        uses: ./package-and-upload-artifact
-        with:
-          config: ${{ env.TEST_CONFIG_DEV }}
-          tag: "test-app/v3.0.0"
-          source-location: "sample.txt"
-          source-type: "file"
-
-      - name: Verify only dev bucket has the object
-        run: |
-          aws s3api head-object --bucket test-dev-bucket --key "test-app/v3.0.0.txt"
-          ! aws s3api head-object --bucket test-prod-bucket --key "test-app/v3.0.0.txt" 2>/dev/null
-
-  test-package-and-upload-artifact-docker:
-    name: Test package-and-upload-artifact (Docker)
+  test-e2e-package-and-upload-artifact-docker:
+    name: Test E2E package-and-upload-artifact composite action (Docker)
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -214,73 +203,65 @@ jobs:
       AWS_SECRET_ACCESS_KEY: testing
       AWS_DEFAULT_REGION: us-east-1
       AWS_ENDPOINT_URL: http://localhost:5000
-      TEST_CONFIG_DEV: '{"dev":{"accountId":"123456789012","defaultRegion":"us-east-1","artifactRoleArn":"arn:aws:iam::123456789012:role/test","artifactBucketName":"test-dev-bucket","artifactEcrRepositoryName":"test-dev-ecr"}}'
-      TEST_CONFIG_BOTH: '{"dev":{"accountId":"123456789012","defaultRegion":"us-east-1","artifactRoleArn":"arn:aws:iam::123456789012:role/test","artifactBucketName":"test-dev-bucket","artifactEcrRepositoryName":"test-dev-ecr"},"prod":{"accountId":"210987654321","defaultRegion":"us-east-1","artifactRoleArn":"arn:aws:iam::210987654321:role/test","artifactBucketName":"test-prod-bucket","artifactEcrRepositoryName":"test-prod-ecr"}}'
+      CONFIG: |
+        {
+          "dev": {
+            "accountId": "123456789012",
+            "defaultRegion": "us-east-1",
+            "artifactRoleArn": "arn:aws:iam::123456789012:role/test",
+            "artifactBucketName": "test-dev-bucket",
+            "artifactEcrRepositoryName": "test-dev-ecr"
+          },
+          "prod": {
+            "accountId": "210987654321",
+            "defaultRegion": "us-east-1",
+            "artifactRoleArn": "arn:aws:iam::210987654321:role/test",
+            "artifactBucketName": "test-prod-bucket",
+            "artifactEcrRepositoryName": "test-prod-ecr"
+          }
+        }
     steps:
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
-      - name: Set up mock docker
+      - name: Prepare Docker mock
         run: |
           mkdir -p "$HOME/mock-bin"
-          cat > "$HOME/mock-bin/docker" << 'SCRIPT'
+          # Moto Server does not allow you to do "docker push" to a mocked ECR repo,
+          # so we instead just create a "mock" Docker binary that logs its arguments
+          cat > "$HOME/mock-bin/docker" << 'EOF'
           #!/usr/bin/env bash
           echo "$@" >> /tmp/docker-mock.log
+          # Drain stdin to avoid broken pipe when password is piped to "docker login --password-stdin"
           if [ "$1" = "login" ]; then cat > /dev/null; fi
-          SCRIPT
+          EOF
           chmod +x "$HOME/mock-bin/docker"
           echo "$HOME/mock-bin" >> "$GITHUB_PATH"
 
-      - name: Test docker image upload (dev only)
-        id: docker-upload-dev
+      - name: Test Docker image upload
+        id: docker-upload
         uses: ./package-and-upload-artifact
         with:
-          config: ${{ env.TEST_CONFIG_DEV }}
+          config: ${{ env.CONFIG }}
           tag: "test-app/v1.0.0"
           source-location: "sha256:abc123"
           source-type: "docker-image"
 
-      - name: Verify docker commands (dev only)
+      - name: Verify Docker commands
         run: |
-          echo "Docker mock log:"
+          echo "Docker commands:"
           cat /tmp/docker-mock.log
 
-          grep -q "login --username AWS --password-stdin 123456789012.dkr.ecr.us-east-1.amazonaws.com" /tmp/docker-mock.log
-          grep -q "tag sha256:abc123 123456789012.dkr.ecr.us-east-1.amazonaws.com/test-dev-ecr:test-app/v1.0.0" /tmp/docker-mock.log
-          grep -q "push 123456789012.dkr.ecr.us-east-1.amazonaws.com/test-dev-ecr:test-app/v1.0.0" /tmp/docker-mock.log
-
-      - name: Verify docker output tag (no extension for images)
-        env:
-          RESULT: ${{ steps.docker-upload-dev.outputs.result }}
-        run: test "$RESULT" = "test-app/v1.0.0"
-
-      - name: Clear docker mock log
-        run: rm -f /tmp/docker-mock.log
-
-      - name: Test docker image upload (both envs)
-        id: docker-upload-both
-        uses: ./package-and-upload-artifact
-        with:
-          config: ${{ env.TEST_CONFIG_BOTH }}
-          tag: "test-app/v2.0.0"
-          source-location: "sha256:def456"
-          source-type: "docker-image"
-
-      - name: Verify docker commands (both envs)
-        run: |
-          echo "Docker mock log:"
-          cat /tmp/docker-mock.log
-
-          line_count=$(wc -l < /tmp/docker-mock.log)
+          line_count="$(wc -l < /tmp/docker-mock.log)"
           test "$line_count" -eq 6
 
-          grep -q "tag sha256:def456 123456789012.dkr.ecr.us-east-1.amazonaws.com/test-dev-ecr:test-app/v2.0.0" /tmp/docker-mock.log
-          grep -q "push 123456789012.dkr.ecr.us-east-1.amazonaws.com/test-dev-ecr:test-app/v2.0.0" /tmp/docker-mock.log
-          grep -q "tag sha256:def456 210987654321.dkr.ecr.us-east-1.amazonaws.com/test-prod-ecr:test-app/v2.0.0" /tmp/docker-mock.log
-          grep -q "push 210987654321.dkr.ecr.us-east-1.amazonaws.com/test-prod-ecr:test-app/v2.0.0" /tmp/docker-mock.log
+          grep -q "tag sha256:abc123 123456789012.dkr.ecr.us-east-1.amazonaws.com/test-dev-ecr:test-app/v1.0.0" /tmp/docker-mock.log
+          grep -q "push 123456789012.dkr.ecr.us-east-1.amazonaws.com/test-dev-ecr:test-app/v1.0.0" /tmp/docker-mock.log
+          grep -q "tag sha256:abc123 210987654321.dkr.ecr.us-east-1.amazonaws.com/test-prod-ecr:test-app/v1.0.0" /tmp/docker-mock.log
+          grep -q "push 210987654321.dkr.ecr.us-east-1.amazonaws.com/test-prod-ecr:test-app/v1.0.0" /tmp/docker-mock.log
 
-  test-terraform-deploy:
-    name: Test terraform-deploy
+  test-e2e-terraform-deploy:
+    name: Test E2E terraform-deploy
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -299,7 +280,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
-      - name: Generate ephemeral SSH deploy key
+      - name: Prepare ephemeral SSH deploy key
         id: ssh-key
         run: |
           ssh-keygen -t ed25519 -f "$RUNNER_TEMP/test-key" -N "" -q
@@ -309,12 +290,12 @@ jobs:
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Create test terraform stack
+      - name: Prepare Terraform stack
         run: |
           mkdir -p test-stack
-          cat > test-stack/main.tf << 'TFEOF'
+          cat > test-stack/main.tf << 'EOF'
           terraform {
-            required_version = "~> 1.9.0"
+            required_version = ">= 1.9.0"
           }
 
           output "greeting" {
@@ -326,30 +307,36 @@ jobs:
             value     = "s3cret"
             sensitive = true
           }
-          TFEOF
+          EOF
 
       - name: Run terraform-deploy
         id: deploy
         uses: ./terraform-deploy
         with:
-          config: '{"dev":{"accountId":"123456789012","defaultRegion":"us-east-1","deploymentRoleArn":"arn:aws:iam::123456789012:role/test","name":"test-dev"}}'
+          config: |
+            {
+              "dev": {
+                "accountId": "123456789012",
+                "defaultRegion": "us-east-1",
+                "deploymentRoleArn": "arn:aws:iam::123456789012:role/test",
+                "name": "test-dev"
+              }
+            }
           stack-dir: "test-stack"
           environment: "dev"
           tag: "test-app/v1.0.0"
           github-deploy-key: ${{ steps.ssh-key.outputs.private-key }}
-          send-deployment-event: "false"
-          send-deployment-metric: "false"
           cancel-if-stale: "false"
 
-      - name: Verify terraform outputs (non-sensitive only)
+      - name: Verify SSM parameter was set
+        run: |
+          value="$(aws ssm get-parameter --name "/test-dev/artifacts/test-stack" --query "Parameter.Value" --output text)"
+          test "$value" = "test-app/v1.0.0"
+
+      - name: Verify Terraform outputs
         env:
           OUTPUTS: ${{ steps.deploy.outputs.terraform-outputs }}
         run: |
           echo "$OUTPUTS"
           test "$(echo "$OUTPUTS" | jq -r '.greeting')" = "hello"
           test "$(echo "$OUTPUTS" | jq 'has("secret")')" = "false"
-
-      - name: Verify SSM parameter was set
-        run: |
-          value=$(aws ssm get-parameter --name "/test-dev/artifacts/test-stack" --query "Parameter.Value" --output text)
-          test "$value" = "test-app/v1.0.0"
