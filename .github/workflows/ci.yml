@@ -11,6 +11,8 @@ defaults:
     # NOTE: A bit stricter than the default bash options used by GitHub Actions
     shell: bash --noprofile --norc -euo pipefail {0}
 
+permissions: {}
+
 jobs:
   test-determine-stacks:
     name: Test determine-stacks composite action
@@ -265,7 +267,6 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: read
-      statuses: write
     services:
       moto:
         image: motoserver/moto:5.1.22@sha256:117238c6e7e3b566387c4c74e6fb0b6fdc34a094920c2154cf06f11dc72d9f37
