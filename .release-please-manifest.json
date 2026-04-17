@@ -8,9 +8,9 @@
   "setup-ok": "1.6.2",
   "renovate-metadata": "1.0.1",
   "generate-tag": "1.0.1",
-  "package-and-upload-artifact": "1.1.1",
-  "terraform-deploy": "1.7.0",
-  "determine-stacks": "1.2.1",
+  "package-and-upload-artifact": "1.1.2",
+  "terraform-deploy": "1.7.1",
+  "determine-stacks": "1.2.2",
   "detect-stale-job": "1.0.1",
-  "evaluate-automerge": "1.0.0"
+  "evaluate-automerge": "1.0.1"
 }
