@@ -4,10 +4,13 @@
   "extends": [
     "github>oslokommune/golden-path-renovate:default.json5"
   ],
-  "semanticCommitType": "deps",
-  "semanticCommitScope": null,
   "prConcurrentLimit": 100,
   "packageRules": [
+    {
+      "matchPackageNames": ["*"],
+      "semanticCommitType": "deps",
+      "semanticCommitScope": null
+    },
     {
       "matchFileNames": ["setup-ok/action.yml"],
       "matchManagers": ["custom.regex"],
