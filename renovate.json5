@@ -3,7 +3,7 @@
   "extends": ["github>oslokommune/golden-path-renovate:default.json5"],
   "semanticCommits": "enabled",
   "semanticCommitType": "deps",
-  "semanticCommitScope": null,
+  "semanticCommitScope": "",
   "prConcurrentLimit": 100,
   "packageRules": [
     {
