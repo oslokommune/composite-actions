@@ -1,7 +1,8 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "github>oslokommune/golden-path-renovate:default.json5"
+    "github>oslokommune/golden-path-renovate:default.json5",
+    "github>oslokommune/golden-path-renovate:golden-path-v2.json5"
   ],
   "prConcurrentLimit": 100,
   "packageRules": [
