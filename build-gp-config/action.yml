@@ -38,7 +38,7 @@ runs:
           exit 1
         fi
         # renovate: datasource=pypi depName=check-jsonschema
-        CHECK_JSONSCHEMA_VERSION="0.37.0"
+        CHECK_JSONSCHEMA_VERSION="0.37.1"
         pip install --quiet "check-jsonschema==$CHECK_JSONSCHEMA_VERSION"
         check-jsonschema --schemafile "$schema_url" "$CONFIG_FILE"
 
