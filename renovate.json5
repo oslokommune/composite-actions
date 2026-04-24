@@ -1,7 +1,9 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>oslokommune/golden-path-renovate:default.json5"],
-  "semanticCommits": "enabled",
+  "semanticCommits": true,
+  "extends": [
+    "github>oslokommune/golden-path-renovate:default.json5"
+  ],
   "semanticCommitType": "deps",
   "semanticCommitScope": null,
   "prConcurrentLimit": 100,
