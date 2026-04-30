@@ -334,18 +334,29 @@ jobs:
                 "defaultRegion": "us-east-1",
                 "deploymentRoleArn": "arn:aws:iam::123456789012:role/test",
                 "name": "test-dev"
-              }
+              },
+              "team": "test-team",
+              "appName": "test-app"
             }
           stack-dir: "test-stack"
           environment: "dev"
-          tag: "test-app/v1.0.0"
+          # Tag matches the format produced by `generate-tag` so the embedded short SHA path
+          # in the deployment-event step can be exercised.
+          tag: "test-app-20260101000000-12345-abcdef12-main"
           github-deploy-key: ${{ steps.ssh-key.outputs.private-key }}
           cancel-if-stale: "false"
+          # Force-enable the deployment event step regardless of github event/branch context
+          send-deployment-event: "true"
+          # Force-disable deployment metric which defaults to true if an API key is set
+          send-deployment-metric: "false"
+          # The curl call will be rejected by Datadog (fake key), but `continue-on-error`
+          # absorbs the failure and the payload is written to the step output beforehand.
+          datadog-api-key: "fake-test-key"
 
       - name: Verify SSM parameter was set
         run: |
           value="$(aws ssm get-parameter --name "/test-dev/artifacts/test-stack" --query "Parameter.Value" --output text)"
-          test "$value" = "test-app/v1.0.0"
+          test "$value" = "test-app-20260101000000-12345-abcdef12-main"
 
       - name: Verify Terraform outputs
         env:
@@ -354,6 +365,20 @@ jobs:
           echo "$OUTPUTS"
           test "$(echo "$OUTPUTS" | jq -r '.greeting')" = "hello"
           test "$(echo "$OUTPUTS" | jq 'has("secret")')" = "false"
+
+      - name: Verify Datadog DORA deployment event payload
+        env:
+          PAYLOAD: ${{ steps.deploy.outputs.__internal-datadog-dora-result }}
+          EXPECTED_VERSION: "test-app-20260101000000-12345-abcdef12-main"
+        run: |
+          echo "$PAYLOAD" | jq
+          test -n "$PAYLOAD"
+          test "$(echo "$PAYLOAD" | jq -r '.data.attributes.env')" = "dev"
+          test "$(echo "$PAYLOAD" | jq -r '.data.attributes.team')" = "test-team"
+          test "$(echo "$PAYLOAD" | jq -r '.data.attributes.service')" = "test-app"
+          test "$(echo "$PAYLOAD" | jq -r '.data.attributes.version')" = "$EXPECTED_VERSION"
+          test "$(echo "$PAYLOAD" | jq -r '.data.attributes.git.commit_sha')" = "$GITHUB_SHA"
+          test "$(echo "$PAYLOAD" | jq -r '.data.attributes.git.repository_url')" = "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
 
   test-e2e-terraform-deploy-regression-test-terraform-v1-15-0:
     # Regression test for hashicorp/terraform#38484: Terraform 1.15.0 emits the
