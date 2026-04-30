@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.2](https://github.com/oslokommune/composite-actions/compare/terraform-deploy-v1.7.1...terraform-deploy-v1.7.2) (2026-04-30)
+
+
+### Bug fixes
+
+* **terraform-deploy:** unbreak deploys on Terraform 1.15.0 ([ba84db8](https://github.com/oslokommune/composite-actions/commit/ba84db87efe8bfb4f4285d5d8b6fcb14469a378b))
+
 ## [1.7.1](https://github.com/oslokommune/composite-actions/compare/terraform-deploy-v1.7.0...terraform-deploy-v1.7.1) (2026-04-17)
 
 
