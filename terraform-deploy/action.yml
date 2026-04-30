@@ -197,11 +197,14 @@ runs:
       if: steps.init.outcome == 'success'
       shell: bash --noprofile --norc -euo pipefail {0}
       working-directory: ${{ steps.get-stack-dir.outputs.stack-dir }}
+      env:
+        EXTRACT_OUTPUTS: ${{ github.action_path }}/extract_outputs.py
       run: |
         terraform apply -auto-approve -lock-timeout=5m
-        result="$(terraform output -json \
-          | jq -c 'with_entries(select(.value.sensitive == false) | .value = .value.value)'
-        )"
+        # Pipe through extract_outputs.py instead of jq directly: Terraform 1.15.0
+        # may emit deprecation warnings on stdout (hashicorp/terraform#38484),
+        # which break a strict JSON parser like jq.
+        result="$(terraform output -json | python3 "$EXTRACT_OUTPUTS")"
         echo "result=$result" >> "$GITHUB_OUTPUT"
 
     - name: Send deployment metric to Datadog
