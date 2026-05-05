@@ -28,8 +28,8 @@ inputs:
     description: "One or more repository deploy keys that grants read access to shared libraries (e.g., golden-path-iac)"
     required: true
   send-deployment-event:
-    description: "Whether to send an event to Datadog after successful deployment to generate DORA metrics. By default this is only sent on default branch deployments, and it requires 'tag' and 'datadog-api-key' to be set."
-    default: "${{ github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}"
+    description: "Whether to send an event to Datadog after successful deployment to generate DORA metrics. By default this is sent on default branch deployments (both `push` and `workflow_dispatch`), and it requires 'tag' and 'datadog-api-key' to be set. Events are skipped for `xx-` artifacts (non-default-branch builds)."
+    default: "${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}"
     required: false
   send-deployment-metric:
     description: "Whether to send a custom metric to Datadog after deployment. It requires 'datadog-api-key' to be set."
@@ -49,6 +49,9 @@ outputs:
   terraform-outputs:
     description: JSON-encoded Terraform outputs
     value: ${{ steps.apply.outputs.result }}
+  __internal-datadog-dora-result:
+    description: "For internal use. Datadog DORA event payload"
+    value: ${{ steps.datadog-dora.outputs.result }}
 
 runs:
   using: composite
@@ -58,15 +61,20 @@ runs:
       shell: bash --noprofile --norc -euo pipefail {0}
       run: echo "timestamp=$(date +%s)" >> "$GITHUB_OUTPUT"
 
-    - name: "Notify about manual trigger"
-      # Deploying a custom tag is outside the normal flow. Outputting that a custom tag is intended to be deployed will
-      # help potential future debugging efforts.
+    - name: "Validate manual artifact deploy"
+      # Deploying a custom tag is outside the normal flow: surface a notice for debugging,
+      # and refuse to deploy non-default-branch (`xx-`) artifacts to critical environments.
       if: ${{ github.event.inputs.artifact-tag != ''}}
       shell: bash --noprofile --norc -euo pipefail {0}
       env:
         ARTIFACT_TAG: ${{ github.event.inputs.artifact-tag }}
         ENVIRONMENT: ${{ inputs.environment }}
+        BLOCK_DEPLOYMENT: ${{ inputs.environment == 'prod' && startsWith(inputs.tag, 'xx-') }}
       run: |
+        if [ "$BLOCK_DEPLOYMENT" = "true" ]; then
+          echo "::error title=Deploy to $ENVIRONMENT::An artifact built outside of trunk ($ARTIFACT_TAG) cannot be deployed to a critical environment"
+          exit 1
+        fi
         echo "::notice title=Deploy to $ENVIRONMENT::Deployment was manually triggered with the artifact tag: $ARTIFACT_TAG"
 
     - name: Cancel if stale
@@ -242,7 +250,7 @@ runs:
         # $GITHUB_WORKFLOW_REF looks like: <org>/<repo>/.github/workflows/<filename>@<ref>
         workflow_filename="$(basename "${GITHUB_WORKFLOW_REF%%@*}")"
 
-        curl -sS -X POST "https://api.datadoghq.eu/api/v1/series" \
+        curl -sS --fail-with-body -X POST "https://api.datadoghq.eu/api/v1/series" \
           -H "Content-Type: application/json" \
           -H "DD-API-KEY: $DD_API_KEY" \
           -d @- <<EOF
@@ -292,13 +300,27 @@ runs:
         EOF
 
     - name: Send deployment event to Datadog
-      if: ${{ inputs.send-deployment-event == 'true' && inputs.tag != '' && inputs.datadog-api-key != '' }}
+      # Skip `xx-` artifacts (non-default-branch builds): they represent code not yet on trunk
+      # and would muddy DORA metrics.
+      if: >-
+        ${{
+          inputs.send-deployment-event == 'true'
+          && inputs.tag != ''
+          && !startsWith(inputs.tag, 'xx-')
+          && inputs.datadog-api-key != ''
+        }}
       shell: bash --noprofile --norc -euo pipefail {0}
       # Probably don't want to halt deployments due to issues with deployment events
       continue-on-error: true
+      id: datadog-dora
       env:
         CONFIG: ${{ inputs.config }}
         VERSION: ${{ inputs.tag }}
+        # When someone tries to manually deploy an existing artifact, we must resolve the
+        # artifact's original commit SHA so Datadog can classify the deployment correctly
+        # (e.g., as a rollback when an older version is redeployed).
+        # See: https://docs.datadoghq.com/dora_metrics/change_failure_detection/#how-rollback-classification-works
+        DEPLOYING_EXISTING_ARTIFACT: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.artifact-tag != '' }}
         STACK_DIR: ${{ inputs.stack-dir }}
         GITHUB_TOKEN: ${{ github.token }}
         # We don't support overriding this (e.g., through DD_ENV) because DORA
@@ -316,18 +338,31 @@ runs:
           stack_name="$(basename "$STACK_DIR")"
           service="$stack_name"
         fi
-        curl -X POST "https://api.datadoghq.eu/api/v2/dora/deployment" \
-          -H "Accept: application/json" \
-          -H "Content-Type: application/json" \
-          -H "DD-API-KEY: ${DD_API_KEY}" \
-          -d @- << EOF
+
+        # When manually deploying an existing artifact, we need to get the full SHA
+        # of the commit that built that artifact in order for Datadog to
+        # correctly categorize the deployment event. We do so by parsing the short
+        # SHA embedded in the artifact tag (set by `generate-tag` composite action):
+        # <...>-<14-digit timestamp>-<build_id>-<short_sha>-<...>) and resolving it
+        # to a full SHA via the GitHub API.
+        commit_sha="$GITHUB_SHA"
+        if [ "$DEPLOYING_EXISTING_ARTIFACT" = "true" ]; then
+          short_sha="$(echo "$VERSION" | sed -n 's/.*-[0-9]\{14\}-[0-9][0-9]*-\([0-9a-f]\{8\}\)-.*/\1/p')"
+          if [ "$short_sha" != "" ]; then
+            commit_sha="$(gh api "repos/$GITHUB_REPOSITORY/commits/$short_sha" --jq '.sha')"
+          else
+            echo "Failed to parse short SHA from artifact tag '$VERSION' - using $GITHUB_SHA instead" >&2
+          fi
+        fi
+
+        payload="$(cat <<EOF | jq --compact-output
         {
           "data": {
             "attributes": {
               "started_at": $started_at,
               "finished_at": $finished_at,
               "git": {
-                "commit_sha": "$GITHUB_SHA",
+                "commit_sha": "$commit_sha",
                 "repository_url": "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
               },
               "service": "$service",
@@ -338,6 +373,19 @@ runs:
           }
         }
         EOF
+        )"
+
+        echo "Datadog DORA deployment event payload:"
+        echo "$payload" | jq
+
+        # Store as a GitHub Actions output to use in tests
+        echo "result=$payload" >> "$GITHUB_OUTPUT"
+
+        curl -sS --fail-with-body -X POST "https://api.datadoghq.eu/api/v2/dora/deployment" \
+          -H "Accept: application/json" \
+          -H "Content-Type: application/json" \
+          -H "DD-API-KEY: ${DD_API_KEY}" \
+          -d "$payload"
 
     - name: Fail job if terraform apply failed or didn't run
       if: steps.apply.outcome != 'success'

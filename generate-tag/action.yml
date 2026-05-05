@@ -13,6 +13,9 @@ outputs:
 runs:
   using: composite
   steps:
+    # NOTE: The tag format is part of a public contract. Do not change it
+    # unless you know how it will affect consumers (terraform-deploy composite action,
+    # lifecycle policies in S3/ECR, etc).
     - id: tag
       shell: bash --noprofile --norc -euo pipefail {0}
       env:
