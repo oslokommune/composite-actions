@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.3](https://github.com/oslokommune/composite-actions/compare/package-and-upload-artifact-v1.1.2...package-and-upload-artifact-v1.1.3) (2026-05-05)
+
+
+### Bug fixes
+
+* **package-and-upload-artifact:** support folder uploads from subdirectories ([#257](https://github.com/oslokommune/composite-actions/issues/257)) ([37e249a](https://github.com/oslokommune/composite-actions/commit/37e249ab9c41096972567f84591ef8298f7fac8b))
+
 ## [1.1.2](https://github.com/oslokommune/composite-actions/compare/package-and-upload-artifact-v1.1.1...package-and-upload-artifact-v1.1.2) (2026-04-17)
 
 
