@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.2](https://github.com/oslokommune/composite-actions/compare/generate-tag-v1.0.1...generate-tag-v1.0.2) (2026-05-05)
+
+
+### Bug fixes
+
+* improve dora metrics for manually triggered deployments ([#254](https://github.com/oslokommune/composite-actions/issues/254)) ([eeead8b](https://github.com/oslokommune/composite-actions/commit/eeead8b044bd265ae7ec401d701d608a2e834ce0))
+
 ## [1.0.1](https://github.com/oslokommune/composite-actions/compare/generate-tag-v1.0.0...generate-tag-v1.0.1) (2025-12-18)
 
 

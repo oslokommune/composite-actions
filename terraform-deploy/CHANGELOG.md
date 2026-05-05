@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.3](https://github.com/oslokommune/composite-actions/compare/terraform-deploy-v1.7.2...terraform-deploy-v1.7.3) (2026-05-05)
+
+
+### Bug fixes
+
+* improve dora metrics for manually triggered deployments ([#254](https://github.com/oslokommune/composite-actions/issues/254)) ([eeead8b](https://github.com/oslokommune/composite-actions/commit/eeead8b044bd265ae7ec401d701d608a2e834ce0))
+
 ## [1.7.2](https://github.com/oslokommune/composite-actions/compare/terraform-deploy-v1.7.1...terraform-deploy-v1.7.2) (2026-04-30)
 
 
