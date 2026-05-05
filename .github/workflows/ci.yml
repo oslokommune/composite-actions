@@ -202,6 +202,28 @@ jobs:
           aws s3api get-object --bucket test-dev-bucket --key "test-app/v2.0.0.zip" /tmp/downloaded.zip
           unzip -l /tmp/downloaded.zip | grep "hello"
 
+      - name: Prepare nested test folder
+        # Regression test: source-location with multiple path segments used to
+        # break because the archive was written relative to the source folder's
+        # parent, but then referenced by a bare filename in the repo root.
+        run: |
+          mkdir -p apps/webapp/dist
+          touch apps/webapp/dist/nested-file
+
+      - name: Test folder upload from nested source-location
+        id: nested-folder-upload
+        uses: ./package-and-upload-artifact
+        with:
+          config: ${{ env.CONFIG_DEV }}
+          tag: "test-app/v3.0.0"
+          source-location: "apps/dummy/dist"
+          source-type: "folder"
+
+      - name: Verify nested folder upload produced a valid zip
+        run: |
+          aws s3api get-object --bucket test-dev-bucket --key "test-app/v3.0.0.zip" /tmp/nested-downloaded.zip
+          unzip -l /tmp/nested-downloaded.zip | grep "nested-file"
+
   test-e2e-package-and-upload-artifact-docker:
     name: Test E2E package-and-upload-artifact composite action (Docker)
     runs-on: ubuntu-24.04
