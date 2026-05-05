@@ -68,8 +68,9 @@ runs:
         export AWS_CONFIG_FILE="/tmp/awscreds"
 
         if [ "$SOURCE_TYPE" = "folder" ]; then
-          (cd "$SOURCE_LOCATION" && zip -r ../archive.zip . ;)
-          SOURCE_LOCATION="archive.zip"
+          archive_path="$(mktemp -d)/archive.zip"
+          (cd "$SOURCE_LOCATION" && zip -r "$archive_path" . ;)
+          SOURCE_LOCATION="$archive_path"
           SOURCE_TYPE="file"
         fi
 
