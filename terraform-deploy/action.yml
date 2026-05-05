@@ -52,6 +52,9 @@ outputs:
   __internal-datadog-dora-result:
     description: "For internal use. Datadog DORA event payload"
     value: ${{ steps.datadog-dora.outputs.result }}
+  __internal-block-unsafe-deployment-result:
+    description: "For internal use. 'true' if the deploy was rejected by the unsafe-deployment safety check."
+    value: ${{ steps.block-unsafe-deployment.outputs.result }}
 
 runs:
   using: composite
@@ -61,20 +64,28 @@ runs:
       shell: bash --noprofile --norc -euo pipefail {0}
       run: echo "timestamp=$(date +%s)" >> "$GITHUB_OUTPUT"
 
-    - name: "Validate manual artifact deploy"
-      # Deploying a custom tag is outside the normal flow: surface a notice for debugging,
-      # and refuse to deploy non-default-branch (`xx-`) artifacts to critical environments.
-      if: ${{ github.event.inputs.artifact-tag != ''}}
+    - name: "Block unsafe deployment"
+      # Refuse to deploy artifacts that originate from outside of trunk (`xx-`)
+      # to critical environments
+      id: block-unsafe-deployment
+      if: ${{ inputs.environment == 'prod' && startsWith(inputs.tag, 'xx-') }}
+      shell: bash --noprofile --norc -euo pipefail {0}
+      env:
+        TAG: ${{ inputs.tag }}
+        ENVIRONMENT: ${{ inputs.environment }}
+      run: |
+        echo "result=true" >> "$GITHUB_OUTPUT"
+        echo "::error title=Deploy to $ENVIRONMENT::An artifact built outside of trunk ($TAG) cannot be deployed to a critical environment"
+        exit 1
+
+    - name: "Notice manual artifact deploy"
+      # Deploying a custom tag via workflow_dispatch is outside the normal flow: surface a notice for debugging.
+      if: ${{ github.event.inputs.artifact-tag != '' }}
       shell: bash --noprofile --norc -euo pipefail {0}
       env:
         ARTIFACT_TAG: ${{ github.event.inputs.artifact-tag }}
         ENVIRONMENT: ${{ inputs.environment }}
-        BLOCK_DEPLOYMENT: ${{ inputs.environment == 'prod' && startsWith(inputs.tag, 'xx-') }}
       run: |
-        if [ "$BLOCK_DEPLOYMENT" = "true" ]; then
-          echo "::error title=Deploy to $ENVIRONMENT::An artifact built outside of trunk ($ARTIFACT_TAG) cannot be deployed to a critical environment"
-          exit 1
-        fi
         echo "::notice title=Deploy to $ENVIRONMENT::Deployment was manually triggered with the artifact tag: $ARTIFACT_TAG"
 
     - name: Cancel if stale
@@ -216,7 +227,9 @@ runs:
         echo "result=$result" >> "$GITHUB_OUTPUT"
 
     - name: Send deployment metric to Datadog
-      if: ${{ always() && inputs.send-deployment-metric == 'true' && inputs.datadog-api-key != '' }}
+      # Skip when a manual deploy was rejected by policy (e.g., `xx-` artifact to prod):
+      # that's an expected refusal, not a deploy outcome we want in the metric.
+      if: ${{ always() && steps.block-unsafe-deployment.outputs.result != 'true' && inputs.send-deployment-metric == 'true' && inputs.datadog-api-key != '' }}
       shell: bash --noprofile --norc -euo pipefail {0}
       continue-on-error: true
       env:
