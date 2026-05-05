@@ -216,7 +216,7 @@ jobs:
         with:
           config: ${{ env.CONFIG_DEV }}
           tag: "test-app/v3.0.0"
-          source-location: "apps/dummy/dist"
+          source-location: "apps/webapp/dist"
           source-type: "folder"
 
       - name: Verify nested folder upload produced a valid zip
