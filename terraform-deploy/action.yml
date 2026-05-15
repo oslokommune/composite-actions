@@ -228,6 +228,7 @@ runs:
         STACK_ENV_FILE: ${{ steps.stack-config.outputs.env-file }}
       run: |
         if [ "$STACK_ENV_FILE" != "" ]; then
+          echo "Sourcing environment variables from file '$STACK_ENV_FILE'"
           set -a; source "$STACK_ENV_FILE"; set +a
         fi
         terraform apply -auto-approve -lock-timeout=5m
