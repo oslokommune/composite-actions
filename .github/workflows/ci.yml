@@ -46,6 +46,22 @@ jobs:
         working-directory: ./evaluate-automerge
         run: make test
 
+  test-resolve-stack-config:
+    name: Test resolve-stack-config composite action
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+
+      - name: Run tests
+        working-directory: ./resolve-stack-config
+        run: make test
+
   test-terraform-deploy:
     name: Test terraform-deploy composite action
     runs-on: ubuntu-24.04
@@ -401,6 +417,119 @@ jobs:
           test "$(echo "$PAYLOAD" | jq -r '.data.attributes.version')" = "$EXPECTED_VERSION"
           test "$(echo "$PAYLOAD" | jq -r '.data.attributes.git.commit_sha')" = "$GITHUB_SHA"
           test "$(echo "$PAYLOAD" | jq -r '.data.attributes.git.repository_url')" = "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
+
+  test-e2e-terraform-deploy-stack-config:
+    name: Test E2E terraform-deploy (stack-config integration)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    services:
+      moto:
+        image: motoserver/moto:5.1.22@sha256:117238c6e7e3b566387c4c74e6fb0b6fdc34a094920c2154cf06f11dc72d9f37
+        ports:
+          - 5000:5000
+    env:
+      AWS_ACCESS_KEY_ID: testing
+      AWS_SECRET_ACCESS_KEY: testing
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ENDPOINT_URL: http://localhost:5000
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Prepare ephemeral SSH deploy key
+        id: ssh-key
+        run: |
+          ssh-keygen -t ed25519 -f "$RUNNER_TEMP/test-key" -N "" -q
+          {
+            echo "private-key<<EOF"
+            cat "$RUNNER_TEMP/test-key"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Prepare two identical Terraform stacks
+        run: |
+          cat > /tmp/main.tf << 'EOF'
+          terraform {
+            required_version = ">= 1.9.0"
+          }
+
+          variable "echoed" {
+            type    = string
+            default = "default-value"
+          }
+
+          output "echoed" {
+            value = var.echoed
+          }
+          EOF
+          mkdir -p stack-match stack-no-match
+          cp /tmp/main.tf stack-match/main.tf
+          cp /tmp/main.tf stack-no-match/main.tf
+
+      - name: Deploy stack with matching stack-config pattern
+        id: deploy-match
+        uses: ./terraform-deploy
+        with:
+          config: |
+            {
+              "dev": {
+                "accountId": "123456789012",
+                "defaultRegion": "us-east-1",
+                "deploymentRoleArn": "arn:aws:iam::123456789012:role/test",
+                "name": "test-dev"
+              }
+            }
+          stack-dir: "stack-match"
+          environment: "dev"
+          github-deploy-key: ${{ steps.ssh-key.outputs.private-key }}
+          cancel-if-stale: "false"
+          stack-config: |
+            [
+              {
+                "pattern": "stack-match/**",
+                "envVars": { "TF_VAR_echoed": "injected" }
+              }
+            ]
+
+      - name: Verify injected TF_VAR reached Terraform output
+        env:
+          OUTPUTS: ${{ steps.deploy-match.outputs.terraform-outputs }}
+        run: |
+          echo "$OUTPUTS"
+          test "$(echo "$OUTPUTS" | jq -r '.echoed')" = "injected"
+
+      - name: Deploy stack with non-matching stack-config pattern
+        id: deploy-no-match
+        uses: ./terraform-deploy
+        with:
+          config: |
+            {
+              "dev": {
+                "accountId": "123456789012",
+                "defaultRegion": "us-east-1",
+                "deploymentRoleArn": "arn:aws:iam::123456789012:role/test",
+                "name": "test-dev"
+              }
+            }
+          stack-dir: "stack-no-match"
+          environment: "dev"
+          github-deploy-key: ${{ steps.ssh-key.outputs.private-key }}
+          cancel-if-stale: "false"
+          stack-config: |
+            [
+              {
+                "pattern": "different-stack/**",
+                "envVars": { "TF_VAR_echoed": "should-not-be-set" }
+              }
+            ]
+
+      - name: Verify Terraform output is the variable default when pattern does not match
+        env:
+          OUTPUTS: ${{ steps.deploy-no-match.outputs.terraform-outputs }}
+        run: |
+          echo "$OUTPUTS"
+          test "$(echo "$OUTPUTS" | jq -r '.echoed')" = "default-value"
 
   test-e2e-terraform-deploy-regression-test-terraform-v1-15-0:
     # Regression test for hashicorp/terraform#38484: Terraform 1.15.0 emits the
