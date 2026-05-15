@@ -447,7 +447,7 @@ jobs:
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Prepare two identical Terraform stacks
+      - name: Prepare two identical Terraform stacks under nested paths
         run: |
           cat > /tmp/main.tf << 'EOF'
           terraform {
@@ -463,9 +463,12 @@ jobs:
             value = var.echoed
           }
           EOF
-          mkdir -p stack-match stack-no-match
-          cp /tmp/main.tf stack-match/main.tf
-          cp /tmp/main.tf stack-no-match/main.tf
+          # Nested paths so the pattern `stacks/dev/**` matches the stack-dir.
+          # `**` requires at least one segment after it, so a flat layout like
+          # `stack-match` would not match `stack-match/**`.
+          mkdir -p stacks/dev/app-match stacks/dev/app-no-match
+          cp /tmp/main.tf stacks/dev/app-match/main.tf
+          cp /tmp/main.tf stacks/dev/app-no-match/main.tf
 
       - name: Deploy stack with matching stack-config pattern
         id: deploy-match
@@ -480,14 +483,14 @@ jobs:
                 "name": "test-dev"
               }
             }
-          stack-dir: "stack-match"
+          stack-dir: "stacks/dev/app-match"
           environment: "dev"
           github-deploy-key: ${{ steps.ssh-key.outputs.private-key }}
           cancel-if-stale: "false"
           stack-config: |
             [
               {
-                "pattern": "stack-match/**",
+                "pattern": "stacks/dev/**",
                 "envVars": { "TF_VAR_echoed": "injected" }
               }
             ]
@@ -512,14 +515,14 @@ jobs:
                 "name": "test-dev"
               }
             }
-          stack-dir: "stack-no-match"
+          stack-dir: "stacks/dev/app-no-match"
           environment: "dev"
           github-deploy-key: ${{ steps.ssh-key.outputs.private-key }}
           cancel-if-stale: "false"
           stack-config: |
             [
               {
-                "pattern": "different-stack/**",
+                "pattern": "stacks/prod/**",
                 "envVars": { "TF_VAR_echoed": "should-not-be-set" }
               }
             ]
