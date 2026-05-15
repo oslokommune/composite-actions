@@ -1,0 +1,37 @@
+name: "Resolve stack-config"
+description: "Resolve stack-config blocks against a stack-dir and emit a sourceable env file"
+
+inputs:
+  stack-config:
+    description: "JSON array of stack configurations ( { pattern, envVars } objects). First matching pattern wins."
+    required: false
+    default: ""
+  stack-dir:
+    description: "Path of the current Terraform stack (e.g., stacks/dev/app)"
+    required: true
+
+outputs:
+  env-file:
+    description: "Absolute path to a sourceable env file. Always created; empty if no patterns matched."
+    value: ${{ steps.resolve.outputs.env-file }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install uv
+      if: ${{ inputs.stack-config != '' }}
+      uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
+      with:
+        working-directory: ${{ github.action_path }}
+
+    - name: Resolve stack-config
+      id: resolve
+      if: ${{ inputs.stack-config != '' }}
+      working-directory: ${{ github.action_path }}
+      shell: bash --noprofile --norc -euo pipefail {0}
+      env:
+        STACK_CONFIG: ${{ inputs.stack-config }}
+        STACK_DIR: ${{ inputs.stack-dir }}
+      run: |
+        env_file="$(uv run resolve_stack_config.py --stack-config "$STACK_CONFIG" --stack-dir "$STACK_DIR")"
+        echo "env-file=$env_file" >> "$GITHUB_OUTPUT"

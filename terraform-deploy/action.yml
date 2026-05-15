@@ -42,6 +42,10 @@ inputs:
   datadog-api-key:
     description: "Datadog API key for sending deployment events"
     required: false
+  stack-config:
+    description: "JSON array of stack configurations ( { pattern, envVars } objects). Matched against stack-dir; the first matching block's envVars are exported as env vars for `terraform apply`. See the resolve-stack-config action for the full schema."
+    required: false
+    default: ""
 
 outputs:
   # NOTE: A composite action can't have dynamic outputs, so
@@ -151,6 +155,20 @@ runs:
       with:
         terraform_version: ${{ steps.v.outputs.TERRAFORM_VERSION }}
 
+    - name: Resolve stack-config
+      id: stack-config
+      # TODO: replace ./resolve-stack-config with a SHA-pinned reference to
+      # oslokommune/composite-actions/resolve-stack-config@<sha> before tagging
+      # a release. The local path only works inside this repo's own CI;
+      # consumers calling this action from another repo do not have
+      # resolve-stack-config in their checkout, so the local reference will
+      # not resolve there.
+      if: ${{ inputs.stack-config != '' }}
+      uses: ./resolve-stack-config
+      with:
+        stack-config: ${{ inputs.stack-config }}
+        stack-dir: ${{ inputs.stack-dir }}
+
     - name: Initialize the working directory containing Terraform configuration files
       id: init
       shell: bash --noprofile --norc -euo pipefail {0}
@@ -207,7 +225,12 @@ runs:
       working-directory: ${{ steps.get-stack-dir.outputs.stack-dir }}
       env:
         EXTRACT_OUTPUTS: ${{ github.action_path }}/extract_outputs.py
+        STACK_ENV_FILE: ${{ steps.stack-config.outputs.env-file }}
       run: |
+        if [ "$STACK_ENV_FILE" != "" ]; then
+          echo "Sourcing environment variables from file '$STACK_ENV_FILE'"
+          set -a; source "$STACK_ENV_FILE"; set +a
+        fi
         terraform apply -auto-approve -lock-timeout=5m
         # Pipe through extract_outputs.py instead of jq directly: Terraform 1.15.0
         # may emit deprecation warnings on stdout (hashicorp/terraform#38484),

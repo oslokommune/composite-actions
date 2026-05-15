@@ -12,5 +12,6 @@
   "terraform-deploy": "1.7.3",
   "determine-stacks": "1.2.2",
   "detect-stale-job": "1.0.1",
-  "evaluate-automerge": "1.0.1"
+  "evaluate-automerge": "1.0.1",
+  "resolve-stack-config": "0.0.0"
 }
