@@ -62,6 +62,10 @@
     "evaluate-automerge": {
       "component": "evaluate-automerge",
       "release-type": "simple"
+    },
+    "resolve-stack-config": {
+      "component": "resolve-stack-config",
+      "release-type": "simple"
     }
   }
 }
