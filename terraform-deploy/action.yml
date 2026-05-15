@@ -163,7 +163,7 @@ runs:
       # consumers calling this action from another repo do not have
       # resolve-stack-config in their checkout, so the local reference will
       # not resolve there.
-      if: ${{ inputs.stack-config != '' }
+      if: ${{ inputs.stack-config != '' }}
       uses: ./resolve-stack-config
       with:
         stack-config: ${{ inputs.stack-config }}
