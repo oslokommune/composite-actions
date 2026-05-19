@@ -19,7 +19,11 @@ inputs:
     required: false
     default: ${{ github.event.repository.name }}
   github-app-id:
-    description: "ID of GitHub App used to get read access to the repository containing IaC"
+    description: "App ID of GitHub App used to get read access to the repository containing IaC"
+    deprecationMessage: "Use github-client-id instead"
+    required: false
+  github-client-id:
+    description: "Client ID of GitHub App used to get read access to the repository containing IaC"
     required: false
   github-app-private-key:
     description: "Private key of GitHub App used to get read access to the repository containing IaC"
@@ -111,6 +115,7 @@ runs:
       id: get-token
       with:
         app-id: ${{ inputs.github-app-id }}
+        client-id: ${{ inputs.github-client-id }}
         private-key: ${{ inputs.github-app-private-key }}
         owner: ${{ github.repository_owner }}
         repositories: ${{ inputs.target-repository }}
