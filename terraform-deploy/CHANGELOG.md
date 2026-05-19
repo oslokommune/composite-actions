@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.0](https://github.com/oslokommune/composite-actions/compare/terraform-deploy-v1.7.3...terraform-deploy-v1.8.0) (2026-05-19)
+
+
+### Features
+
+* Support client-id param in terraform-deploy ([#261](https://github.com/oslokommune/composite-actions/issues/261)) ([241fa4c](https://github.com/oslokommune/composite-actions/commit/241fa4cb682ea312e445e3a67c9514e4fac08bef))
+
 ## [1.7.3](https://github.com/oslokommune/composite-actions/compare/terraform-deploy-v1.7.2...terraform-deploy-v1.7.3) (2026-05-05)
 
 
