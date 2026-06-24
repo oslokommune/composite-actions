@@ -23,18 +23,31 @@ runs:
         IDENTIFIER: ${{ inputs.identifier }}
       run: |
         # Prepare tag
+        # Example: app-hello
         prefix="$IDENTIFIER"
         if [ "$IS_DEFAULT_BRANCH" != "true" ]; then
           # We mark artifacts not from default branch with a specific prefix. This allows us to
-          # more easily configure automatic clean-up rules
+          # more easily configure automatic clean-up rules.
+          # Example: xx-app-hello
           prefix="xx-$prefix"
         fi
+
+        # Example: 20260624153012
         timestamp="$(date -u "+%Y%m%d%H%M%S")"
+
+        # Example: 10567382910
         build_id="$GITHUB_RUN_ID"
+
+        # Example: featuremy-fix
         sanitized_branch_name="${GITHUB_REF#refs/heads/}"
         sanitized_branch_name="${sanitized_branch_name//[^a-zA-Z0-9_-]/}"
+
+        # Example: 1a2b3c4d
         short_sha="$(echo "$GITHUB_SHA" | cut -c -8)"
+
+        # Example: app-hello-20260624153012-10567382910-1a2b3c4d-main
         tag="$prefix-$timestamp-$build_id-$short_sha-$sanitized_branch_name"
+
         # Docker image tags can be at most 128 characters.
         tag=$(echo "$tag" | cut -c -128)
         echo "result=$tag" >> "$GITHUB_OUTPUT"
