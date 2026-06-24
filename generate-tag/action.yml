@@ -38,7 +38,9 @@ runs:
         # Example: 10567382910
         build_id="$GITHUB_RUN_ID"
 
-        # Example: featuremy-fix
+        # Examples:
+        # - featadd-some-feature (/ is removed from branch name "feat/add-some-feature")
+        # - main
         sanitized_branch_name="${GITHUB_REF#refs/heads/}"
         sanitized_branch_name="${sanitized_branch_name//[^a-zA-Z0-9_-]/}"
 
