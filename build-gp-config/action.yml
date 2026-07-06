@@ -34,7 +34,7 @@ runs:
         GH_TOKEN: ${{ github.token }}
       run: |
         schemafile="$(jq -r '."$schema" // empty' "$CONFIG_FILE")"
-        if [ "$schemafile" == "" ]; then
+        if [ "$schemafile" = "" ]; then
           echo "::error::Config file $CONFIG_FILE is not using any schema."
           exit 1
         fi
@@ -43,19 +43,21 @@ runs:
         # raw.githubusercontent.com are rate-limited per runner IP (HTTP 429),
         # and that host ignores auth tokens.
         # See https://github.com/orgs/community/discussions/160828
-        if [[ "$schemafile" == https://raw.githubusercontent.com/* ]]; then
-          # https://raw.githubusercontent.com/OWNER/REPO/[refs/heads/|refs/tags/]REF/PATH -> repos/OWNER/REPO/contents/PATH?ref=REF
-          api_path="$(echo "$schemafile" | sed \
-            -e 's|^\(https://raw\.githubusercontent\.com/[^/]\{1,\}/[^/]\{1,\}\)/refs/heads/|\1/|' \
-            -e 's|^\(https://raw\.githubusercontent\.com/[^/]\{1,\}/[^/]\{1,\}\)/refs/tags/|\1/|' \
-            -e 's|^https://raw\.githubusercontent\.com/\([^/]\{1,\}\)/\([^/]\{1,\}\)/\([^/]\{1,\}\)/\(.\{1,\}\)$|repos/\1/\2/contents/\4?ref=\3|')"
-          if [ "$api_path" == "$schemafile" ]; then
-            echo "::error::Could not parse schema URL: $schemafile"
-            exit 1
-          fi
-          gh api -H "Accept: application/vnd.github.raw" "$api_path" > "$RUNNER_TEMP/schema.json"
-          schemafile="$RUNNER_TEMP/schema.json"
-        fi
+        case "$schemafile" in
+          https://raw.githubusercontent.com/*)
+            # https://raw.githubusercontent.com/OWNER/REPO/[refs/heads/|refs/tags/]REF/PATH -> repos/OWNER/REPO/contents/PATH?ref=REF
+            api_path="$(echo "$schemafile" | sed \
+              -e 's|^\(https://raw\.githubusercontent\.com/[^/]\{1,\}/[^/]\{1,\}\)/refs/heads/|\1/|' \
+              -e 's|^\(https://raw\.githubusercontent\.com/[^/]\{1,\}/[^/]\{1,\}\)/refs/tags/|\1/|' \
+              -e 's|^https://raw\.githubusercontent\.com/\([^/]\{1,\}\)/\([^/]\{1,\}\)/\([^/]\{1,\}\)/\(.\{1,\}\)$|repos/\1/\2/contents/\4?ref=\3|')"
+            if [ "$api_path" = "$schemafile" ]; then
+              echo "::error::Could not parse schema URL: $schemafile"
+              exit 1
+            fi
+            gh api -H "Accept: application/vnd.github.raw" "$api_path" > "$RUNNER_TEMP/schema.json"
+            schemafile="$RUNNER_TEMP/schema.json"
+            ;;
+        esac
 
         # renovate: datasource=pypi depName=check-jsonschema
         CHECK_JSONSCHEMA_VERSION="0.37.0"
