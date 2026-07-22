@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.3](https://github.com/oslokommune/composite-actions/compare/setup-ok-v1.6.2...setup-ok-v1.6.3) (2026-07-22)
+
+
+### Bug fixes
+
+* **setup-ok:** bump actions/cache to v5 for Node 24 ([d83db9b](https://github.com/oslokommune/composite-actions/commit/d83db9be1a275dc5fed137274ac71ba851f999bc))
+
 ## [1.6.2](https://github.com/oslokommune/composite-actions/compare/setup-ok-v1.6.1...setup-ok-v1.6.2) (2025-12-29)
 
 
