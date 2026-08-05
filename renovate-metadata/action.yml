@@ -37,10 +37,11 @@ runs:
 
     - name: Install js-yaml
       shell: bash
-      # Pinned and installed with --ignore-scripts: this action runs in every consumer
-      # repo on every Renovate PR, so a compromised release must not get an install hook.
+      env:
+        # Block dependency install hooks
+        NPM_CONFIG_IGNORE_SCRIPTS: "true"
       # renovate: datasource=npm depName=js-yaml
-      run: npm install --ignore-scripts --no-audit --no-fund js-yaml@5.2.3
+      run: npm install --no-audit --no-fund js-yaml@5.2.3
 
 
     - name: Check commits, verify signatures, and parse Renovate metadata
