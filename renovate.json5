@@ -32,6 +32,13 @@
       ],
       "fileMatch": ["^build-gp-config/action\\.yml$"],
       "customType": "regex",
+    },
+    {
+      "matchStrings": [
+        "#\\s*renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\n\\s*run: npm install .*@(?<currentValue>\\S+)"
+      ],
+      "fileMatch": ["^renovate-metadata/action\\.yml$"],
+      "customType": "regex",
     }
   ]
 }
