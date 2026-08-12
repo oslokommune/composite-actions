@@ -15,7 +15,7 @@ jobs:
     steps:
 
       - name: Run optimize-apt-get composite action
-        uses: oslokommune/composite-actions/optimize-apt-get@main
+        uses: oslokommune/composite-actions/optimize-apt-get@bdba791d662bb8d48b2f1105430a01cde846277b # main
 
 
       - name: Install age

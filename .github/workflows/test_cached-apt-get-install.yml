@@ -15,6 +15,6 @@ jobs:
     steps:
 
       - name: Run cached-apt-get-install composite action
-        uses: oslokommune/composite-actions/cached-apt-get-install@main
+        uses: oslokommune/composite-actions/cached-apt-get-install@bdba791d662bb8d48b2f1105430a01cde846277b # main
         with:
           packages: age
