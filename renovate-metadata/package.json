@@ -1,0 +1,8 @@
+{
+  "name": "renovate-metadata",
+  "private": true,
+  "description": "Not published. Exists to pin the action's dependency tree.",
+  "dependencies": {
+    "js-yaml": "5.2.3"
+  }
+}
