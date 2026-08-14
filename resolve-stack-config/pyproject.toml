@@ -1,0 +1,10 @@
+[project]
+name = "resolve-stack-config"
+version = "0.1.0"
+description = "Resolve stack-config blocks against a stack-dir and emit a sourceable env file"
+requires-python = ">=3.13"
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

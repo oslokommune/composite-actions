@@ -24,6 +24,7 @@ on:
       - "determine-stacks/*"
       - "detect-stale-job/*"
       - "evaluate-automerge/*"
+      - "resolve-stack-config/*"
 
 
 jobs:
