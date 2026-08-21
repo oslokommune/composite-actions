@@ -1,0 +1,17 @@
+[project]
+name = "resolve-terraform-version"
+version = "0.1.0"
+description = "Resolve an exact Terraform CLI version from a stack's required_version constraint"
+# The action runs this with the runner's system python3, so keep the floor at what
+# ubuntu-24.04 ships. Only used for the test environment.
+requires-python = ">=3.11"
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.2",
+]
