@@ -30,6 +30,112 @@ jobs:
         working-directory: ./determine-stacks
         run: uv run pytest -v
 
+  test-resolve-terraform-version:
+    # The matcher reimplements Terraform's constraint semantics, so it is checked against
+    # a real Terraform binary rather than only against our reading of the docs. One job
+    # per version, because setup-terraform installs onto PATH and can only provide one at
+    # a time. The versions cover the shapes the matcher has to get right: a current
+    # release, one where npm semver and Terraform disagree on `~> 1.10`, and an old 1.x.
+    name: Test resolve-terraform-version composite action (Terraform ${{ matrix.terraform }})
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        terraform: ["1.15.8", "1.10.5", "1.2.9"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          # The differential test parses `terraform version -json`, which the wrapper
+          # would contaminate with its own output.
+          terraform_wrapper: false
+          terraform_version: ${{ matrix.terraform }}
+
+      - name: Run tests
+        working-directory: ./resolve-terraform-version
+        run: make test-differential
+
+  test-e2e-resolve-terraform-version:
+    name: Test E2E resolve-terraform-version
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Prepare Terraform stack
+        run: |
+          mkdir -p test-stack
+          cat > test-stack/__gp_versions.tf << 'EOF'
+          terraform {
+            required_version = ">= 1.10.0"
+          }
+          EOF
+
+      - name: Resolve with the default cooldown
+        id: resolve
+        uses: ./resolve-terraform-version
+        with:
+          stack-dir: test-stack
+
+      - name: Verify an exact version at least 7 days old was chosen
+        env:
+          VERSION: ${{ steps.resolve.outputs.terraform-version }}
+          CONSTRAINT: ${{ steps.resolve.outputs.constraint }}
+        run: |
+          echo "Resolved: $VERSION"
+          test "$CONSTRAINT" = ">= 1.10.0"
+          # An exact version, not the constraint that was passed in.
+          grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' <<<"$VERSION"
+
+          released="$(curl -sSf "https://api.releases.hashicorp.com/v1/releases/terraform/$VERSION" \
+            | jq -r '.timestamp_created')"
+          age_days=$(( ( $(date -u +%s) - $(date -u -d "$released" +%s) ) / 86400 ))
+          echo "$VERSION was released $released ($age_days days ago)"
+          test "$age_days" -ge 7
+
+      - name: Verify the resolved version actually installs and satisfies the constraint
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_wrapper: false
+          terraform_version: ${{ steps.resolve.outputs.terraform-version }}
+
+      - name: Verify Terraform accepts the stack
+        working-directory: test-stack
+        env:
+          VERSION: ${{ steps.resolve.outputs.terraform-version }}
+        run: |
+          test "$(terraform version -json | jq -r '.terraform_version')" = "$VERSION"
+          terraform init -backend=false -input=false
+
+      - name: Resolve a stack with no required_version
+        id: no-constraint
+        uses: ./resolve-terraform-version
+        with:
+          stack-dir: .github
+
+      - name: Verify it warns and passes through rather than failing
+        # Deliberately not an error: an empty terraform_version is what callers got
+        # before this action existed, and setup-terraform installs the newest release.
+        # Making it fail would break every stack without a required_version.
+        env:
+          OUTCOME: ${{ steps.no-constraint.outcome }}
+          VERSION: ${{ steps.no-constraint.outputs.terraform-version }}
+          CONSTRAINT: ${{ steps.no-constraint.outputs.constraint }}
+        run: |
+          test "$OUTCOME" = "success"
+          test "$VERSION" = ""
+          test "$CONSTRAINT" = ""
+
   test-evaluate-automerge:
     name: Test evaluate-automerge composite action
     runs-on: ubuntu-24.04

@@ -1,0 +1,34 @@
+name: "Resolve Terraform version"
+description: "Resolve an exact Terraform CLI version from a stack's required_version constraint, honouring a cooldown"
+
+inputs:
+  stack-dir:
+    description: "The path to the Terraform stack to read `required_version` from (e.g., `stacks/dev/app-km`)"
+    default: "."
+    required: false
+  cooldown-days:
+    description: "Minimum age, in days, of the Terraform release to select. Set to 0 to always take the newest matching version. Defaults to match the `minimumReleaseAge` used for providers and modules."
+    default: "7"
+    required: false
+
+outputs:
+  terraform-version:
+    description: "Exact Terraform version to install. Falls back to the raw constraint if resolution fails, so it can be passed to `hashicorp/setup-terraform` either way."
+    value: ${{ steps.resolve.outputs.terraform-version }}
+  constraint:
+    description: "The effective `required_version` constraint that was found"
+    value: ${{ steps.resolve.outputs.constraint }}
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve Terraform version
+      id: resolve
+      shell: bash --noprofile --norc -euo pipefail {0}
+      env:
+        # Standard library only, so the runner's system python3 is enough and we avoid
+        # paying for a uv install on every deployment.
+        RESOLVER: ${{ github.action_path }}/resolve_terraform_version.py
+        STACK_DIR: ${{ inputs.stack-dir }}
+        COOLDOWN_DAYS: ${{ inputs.cooldown-days }}
+      run: python3 "$RESOLVER"
