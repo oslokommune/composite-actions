@@ -28,9 +28,12 @@ earlier:
     constraint=>= 1.10.0
 
 That costs one HTTP request. An exact pin such as `= 1.12.2` costs none, since there is
-nothing to choose between and a human already chose it. Only a constraint whose newest
-match predates the recent-releases window, such as `< 1.12.0`, falls back to the full
-index and per-version date lookups.
+nothing to choose between and a human already chose it.
+
+Only the recent-releases window is consulted. A constraint none of the recent releases
+satisfy, such as `< 1.12.0`, can by definition only match old versions, so the cooldown
+has nothing to protect against — resolution fails open and the constraint itself is
+handed to `setup-terraform`, which installs the newest match.
 
 `terraform-version` is what gets handed to `hashicorp/setup-terraform`. It is normally an
 exact version as above, but resolution fails open: if the release API is unreachable, or
@@ -47,19 +50,10 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable, Iterable, NamedTuple
 
-# Newest releases with their dates inline. One request answers the common case.
+# Newest releases with their dates inline. One request answers everything: a constraint
+# that none of these satisfy can only match old versions, where the cooldown is moot.
 RECENT_URL = "https://api.releases.hashicorp.com/v1/releases/terraform?limit={limit}"
 RECENT_WINDOW = 20
-
-# Every version ever published, but with no release dates, so dates then cost one request
-# each via RELEASE_URL. Only reached when the recent window cannot answer — a constraint
-# whose newest match predates the window, such as `< 1.12.0`.
-INDEX_URL = "https://releases.hashicorp.com/terraform/index.json"
-RELEASE_URL = "https://api.releases.hashicorp.com/v1/releases/terraform/{version}"
-
-# Caps the per-candidate date lookups on the full-index path, so a pathological constraint
-# cannot make hundreds of requests.
-MAX_DATE_PROBES = 25
 
 HTTP_TIMEOUT_SECONDS = 15
 
@@ -372,9 +366,8 @@ def fetch_json(url: str) -> dict:
 def fetch_recent_releases() -> list["Release"]:
     """The newest releases, with their dates, in one request.
 
-    This is the cheap path: unlike the full index, this endpoint carries
-    `timestamp_created` inline, so one request answers both "which versions exist" and
-    "when were they released".
+    This endpoint carries `timestamp_created` inline, so one request answers both
+    "which versions exist" and "when were they released".
     """
     releases = []
     for entry in fetch_json(RECENT_URL.format(limit=RECENT_WINDOW)):
@@ -384,16 +377,6 @@ def fetch_recent_releases() -> list["Release"]:
             continue
         releases.append(Release(version, datetime.fromisoformat(entry["timestamp_created"])))
     return releases
-
-
-def fetch_all_versions() -> list[str]:
-    """Every published Terraform CLI version, in one request. No dates, hence RELEASE_URL."""
-    return list(fetch_json(INDEX_URL)["versions"].keys())
-
-
-def fetch_release_date(version: str) -> datetime:
-    created = fetch_json(RELEASE_URL.format(version=version))["timestamp_created"]
-    return datetime.fromisoformat(created)
 
 
 def _matching(versions: Iterable[Version], terms: list[Term]) -> list[Version]:
@@ -407,18 +390,6 @@ def _matching(versions: Iterable[Version], terms: list[Term]) -> list[Version]:
         v for v in versions if satisfies(v, terms) and (include_prerelease or not v.pre)
     ]
     return sorted(matches, reverse=True)
-
-
-def candidate_versions(constraint: str, available: Iterable[str]) -> list[Version]:
-    """Versions satisfying the constraint, newest first, from raw version strings."""
-    parsed = []
-    for raw in available:
-        try:
-            parsed.append(Version.parse(raw))
-        except ValueError:
-            # The index carries a few historical oddities; they can never be a match.
-            continue
-    return _matching(parsed, parse_constraint(constraint))
 
 
 def exact_pin(terms: list[Term]) -> Version | None:
@@ -438,13 +409,15 @@ def resolve_version(
     cooldown_days: int,
     now: datetime | None = None,
     get_recent: Callable[[], list["Release"]] = fetch_recent_releases,
-    get_versions: Callable[[], list[str]] = fetch_all_versions,
-    get_release_date: Callable[[str], datetime] = fetch_release_date,
 ) -> str:
     """Newest version satisfying `constraint` that is at least `cooldown_days` old.
 
-    Costs one request in the common case, none when the constraint is an exact pin, and
-    falls back to the full index only when the recent window cannot answer.
+    Costs one request, or none when the constraint is an exact pin. Only the recent
+    window is consulted: every version outside it is older than every version inside it,
+    so if the window holds any match at all, its newest match is the newest match
+    overall. A constraint the window cannot satisfy at all, such as `< 1.12.0`, can only
+    match old versions — the cooldown has nothing to protect against there, so it raises
+    and the caller fails open to the raw constraint.
 
     Falls back to the newest match, with a warning, when nothing is old enough — an
     unreleased-yet cooldown should not block a deployment.
@@ -456,65 +429,35 @@ def resolve_version(
         log(f"Constraint names {pinned} outright, so no lookup or cooldown is needed")
         return str(pinned)
 
-    cutoff = now - timedelta(days=cooldown_days) if cooldown_days > 0 else None
+    dates = {r.version: r.released for r in get_recent()}
+    window = _matching(dates, terms)
+    if not window:
+        raise ResolveError(
+            f"none of the {RECENT_WINDOW} most recent releases satisfies it, so every "
+            "match is an old version and the cooldown adds nothing"
+        )
 
-    # Every version outside the recent window is older than every version inside it, so
-    # if the window holds any match at all, its newest match is the newest match overall.
-    recent = {r.version: r.released for r in get_recent()}
-    known_dates = {str(v): released for v, released in recent.items()}
+    log(f"Newest version satisfying the constraint is {window[0]} (from the recent releases)")
 
-    if window := _matching(recent, terms):
-        log(f"Newest version satisfying the constraint is {window[0]} (from the recent releases)")
-        if selected := _first_outside_cooldown(window, cutoff, now, known_dates.get):
-            return selected
-
-    # Either the window held no match, or everything in it was still inside the cooldown.
-    candidates = candidate_versions(constraint, get_versions())
-    if not candidates:
-        raise ResolveError(f"No released Terraform version satisfies {constraint!r}")
-
-    log(f"{len(candidates)} version(s) satisfy the constraint, newest is {candidates[0]}")
-
-    def dated(version: str) -> datetime:
-        return known_dates.get(version) or get_release_date(version)
-
-    if selected := _first_outside_cooldown(candidates[:MAX_DATE_PROBES], cutoff, now, dated):
-        return selected
-
-    warn(
-        "Terraform version cooldown",
-        f"No version satisfying {constraint!r} is older than {cooldown_days} days. "
-        f"Using the newest match ({candidates[0]}) instead.",
-    )
-    return str(candidates[0])
-
-
-def _first_outside_cooldown(
-    candidates: list[Version],
-    cutoff: datetime | None,
-    now: datetime,
-    released_at: Callable[[str], datetime | None],
-) -> str | None:
-    """Walk newest-first and return the first candidate older than `cutoff`.
-
-    `released_at` may return None for a version whose date is not to hand, which skips it
-    rather than spending a request; the full-index pass supplies dates for everything.
-    """
-    if cutoff is None:
+    if cooldown_days <= 0:
         log("Cooldown disabled, using the newest matching version")
-        return str(candidates[0])
+        return str(window[0])
 
-    for version in candidates:
-        released = released_at(str(version))
-        if released is None:
-            continue
+    cutoff = now - timedelta(days=cooldown_days)
+    for version in window:
+        released = dates[version]
         age_days = (now - released).days
         if released <= cutoff:
             log(f"Selected {version}, released {released:%Y-%m-%d} ({age_days} days ago)")
             return str(version)
         log(f"Skipping {version}, released {released:%Y-%m-%d} ({age_days} days ago), inside cooldown")
 
-    return None
+    warn(
+        "Terraform version cooldown",
+        f"No version satisfying {constraint!r} is older than {cooldown_days} days. "
+        f"Using the newest match ({window[0]}) instead.",
+    )
+    return str(window[0])
 
 
 def write_output(name: str, value: str) -> None:

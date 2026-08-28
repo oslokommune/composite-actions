@@ -6,7 +6,8 @@ from resolve_terraform_version import (
     Release,
     ResolveError,
     Version,
-    candidate_versions,
+    _matching,
+    fetch_recent_releases,
     find_constraint,
     parse_constraint,
     resolve_version,
@@ -147,23 +148,32 @@ class TestPrereleaseOrdering:
         assert not matches("~> 1.15", "1.16.0-beta1")
 
 
-class TestCandidateVersions:
+class TestMatching:
     AVAILABLE = ["1.9.8", "1.10.0", "1.10.5", "1.15.8", "1.15.9", "1.16.0-beta1", "2.0.0"]
 
+    def matching(self, constraint: str) -> list[str]:
+        versions = [Version.parse(v) for v in self.AVAILABLE]
+        return [str(v) for v in _matching(versions, parse_constraint(constraint))]
+
     def test_newest_first(self):
-        result = candidate_versions(">= 1.10.0", self.AVAILABLE)
-        assert [str(v) for v in result] == ["2.0.0", "1.15.9", "1.15.8", "1.10.5", "1.10.0"]
+        assert self.matching(">= 1.10.0") == ["2.0.0", "1.15.9", "1.15.8", "1.10.5", "1.10.0"]
 
     def test_prereleases_excluded_by_default(self):
-        assert "1.16.0-beta1" not in [str(v) for v in candidate_versions(">= 1.10.0", self.AVAILABLE)]
+        assert "1.16.0-beta1" not in self.matching(">= 1.10.0")
 
     def test_prereleases_included_when_the_constraint_names_one(self):
-        result = candidate_versions("= 1.16.0-beta1", self.AVAILABLE)
-        assert [str(v) for v in result] == ["1.16.0-beta1"]
+        assert self.matching("= 1.16.0-beta1") == ["1.16.0-beta1"]
 
-    def test_unparseable_entries_in_the_index_are_ignored(self):
-        result = candidate_versions(">= 1.10.0", self.AVAILABLE + ["not-a-version"])
-        assert "not-a-version" not in [str(v) for v in result]
+
+class TestFetchRecentReleases:
+    def test_unparseable_entries_are_ignored(self, monkeypatch):
+        # The release feed has carried a few historical oddities; they can never match.
+        entries = [
+            {"version": "1.15.9", "timestamp_created": "2026-08-19T00:00:00+00:00"},
+            {"version": "not-a-version", "timestamp_created": "2026-08-19T00:00:00+00:00"},
+        ]
+        monkeypatch.setattr(resolve_terraform_version, "fetch_json", lambda url: entries)
+        assert [str(r.version) for r in fetch_recent_releases()] == ["1.15.9"]
 
 
 class TestStripComments:
@@ -257,64 +267,39 @@ class TestFindConstraint:
 
 
 class TestResolveVersion:
-    """Resolution, with every lookup injected.
+    """Resolution, with the one lookup injected.
 
-    `AVAILABLE` stands in for the full index (every version, no dates). `RECENT` stands in
-    for the recent-releases window, which carries dates inline — the newest few versions
-    only, exactly as the real endpoint behaves.
+    `RECENT` stands in for the recent-releases window, which carries dates inline — the
+    newest few versions only, exactly as the real endpoint behaves.
     """
 
-    AVAILABLE = ["1.9.8", "1.10.0", "1.11.4", "1.15.6", "1.15.7", "1.15.8", "1.15.9"]
-
     DATES = {
-        "1.9.8": NOW - timedelta(days=800),
-        "1.10.0": NOW - timedelta(days=400),
-        "1.11.4": NOW - timedelta(days=300),
         "1.15.6": NOW - timedelta(days=90),
         "1.15.7": NOW - timedelta(days=70),
         "1.15.8": NOW - timedelta(days=43),
         "1.15.9": NOW - timedelta(days=1),
     }
 
-    RECENT = ["1.15.8", "1.15.9"]
+    RECENT = ["1.15.6", "1.15.7", "1.15.8", "1.15.9"]
 
-    def resolve(self, constraint, cooldown_days=7, available=None, dates=None, recent=None):
+    def resolve(self, constraint, cooldown_days=7, dates=None, recent=None):
         dates = dates if dates is not None else self.DATES
-        available = available if available is not None else self.AVAILABLE
         recent = recent if recent is not None else self.RECENT
 
-        self.probed = []
         self.calls = []
 
         def get_recent():
             self.calls.append("recent")
             return [Release(Version.parse(v), dates[v]) for v in recent]
 
-        def get_versions():
-            self.calls.append("index")
-            return list(available)
-
-        def get_release_date(version):
-            self.calls.append(f"date:{version}")
-            self.probed.append(version)
-            return dates[version]
-
-        return resolve_version(
-            constraint,
-            cooldown_days,
-            now=NOW,
-            get_recent=get_recent,
-            get_versions=get_versions,
-            get_release_date=get_release_date,
-        )
+        return resolve_version(constraint, cooldown_days, now=NOW, get_recent=get_recent)
 
     def test_skips_a_version_inside_the_cooldown(self):
         # This is the issue: today `>= 1.10.0` installs 1.15.9, released yesterday.
         assert self.resolve(">= 1.10.0") == "1.15.8"
 
-    def test_common_case_costs_one_request(self):
-        # The recent window carries dates inline, so neither the full index nor any
-        # per-version date lookup is needed.
+    def test_costs_at_most_one_request(self):
+        # The recent window carries dates inline, so one request answers everything.
         self.resolve(">= 1.10.0")
         assert self.calls == ["recent"]
 
@@ -329,36 +314,29 @@ class TestResolveVersion:
 
     def test_cooldown_of_zero_takes_the_newest(self):
         assert self.resolve(">= 1.10.0", cooldown_days=0) == "1.15.9"
-        assert self.probed == []
 
-    def test_falls_back_to_the_index_when_the_window_holds_no_match(self):
-        # `< 1.15.0` predates the window entirely, so the full index is unavoidable.
-        assert self.resolve("< 1.15.0") == "1.11.4"
-        assert self.calls[:2] == ["recent", "index"]
-
-    def test_falls_back_to_the_index_when_the_whole_window_is_too_fresh(self):
-        assert self.resolve(">= 1.10.0", cooldown_days=60) == "1.15.7"
-        assert "index" in self.calls
-
-    def test_dates_already_known_are_not_fetched_again(self):
-        # 1.15.8 and 1.15.9 came from the window; only older candidates cost a request.
-        self.resolve(">= 1.10.0", cooldown_days=60)
-        assert "1.15.9" not in self.probed
-        assert "1.15.8" not in self.probed
-        assert self.probed == ["1.15.7"]
+    def test_no_match_in_the_window_raises(self):
+        # `< 1.15.0` predates the window entirely. Every version it matches is old, so
+        # the cooldown adds nothing; the caller fails open to the raw constraint, which
+        # setup-terraform resolves to the newest match itself.
+        with pytest.raises(ResolveError, match="most recent releases"):
+            self.resolve("< 1.15.0")
 
     def test_falls_back_to_newest_when_nothing_is_old_enough(self):
-        dates = {v: NOW - timedelta(days=1) for v in self.AVAILABLE}
+        dates = {v: NOW - timedelta(days=1) for v in self.RECENT}
         assert self.resolve(">= 1.10.0", dates=dates) == "1.15.9"
 
-    def test_longer_cooldown_reaches_further_back(self):
+    def test_longer_cooldown_reaches_further_back_in_the_window(self):
         # 1.15.7 is 70 days old, 1.15.6 is 90, so an 80-day cooldown lands on 1.15.6.
         assert self.resolve(">= 1.10.0", cooldown_days=80) == "1.15.6"
-        assert self.resolve(">= 1.10.0", cooldown_days=120) == "1.11.4"
+
+    def test_cooldown_longer_than_the_whole_window_falls_back_to_newest(self):
+        # Matches older than the window may exist, but only the window is consulted.
+        assert self.resolve(">= 1.10.0", cooldown_days=365) == "1.15.9"
 
     def test_pessimistic_and_range_resolve_alike_below_terraform_2(self):
         assert self.resolve("~> 1.10") == self.resolve(">= 1.10.0") == "1.15.8"
 
     def test_no_matching_version_raises(self):
-        with pytest.raises(ResolveError, match="No released Terraform version"):
+        with pytest.raises(ResolveError, match="most recent releases"):
             self.resolve(">= 99.0.0")

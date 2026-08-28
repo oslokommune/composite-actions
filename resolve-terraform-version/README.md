@@ -120,13 +120,14 @@ constraint actually requires:
 |---|---|---|
 | `= 1.12.2` — an exact pin | **0** — nothing to choose, and a human chose it | 0.05 s |
 | `>= 1.10.0` — the golden path default | **1** — the recent-releases window carries dates inline | 0.13 s |
-| `< 1.12.0` — newest match predates the window | 2+ — falls back to the full index and per-version dates | 0.34 s |
+| `< 1.12.0` — nothing recent matches | **1** — fails open to the constraint, see below | 0.13 s |
 
-Note that `releases.hashicorp.com` is not a new dependency: `setup-terraform` already
-fetches the same 1.4 MB `index.json` from it on every run, via `@hashicorp/js-releases`,
-and then downloads the binary from it. If that host is down the deploy fails either way.
-The only genuinely new host is `api.releases.hashicorp.com`, for the dates — and
-resolution fails open on it, so it cannot break a deploy.
+Only the newest 20 releases are ever consulted. A constraint none of them satisfy can by
+definition only match old versions, so the cooldown has nothing to protect against there:
+the action warns and passes the raw constraint through, and `setup-terraform` installs the
+newest match. The one host this action talks to, `api.releases.hashicorp.com`, is new next
+to `setup-terraform`'s own `releases.hashicorp.com` — and resolution fails open on it, so
+it cannot break a deploy.
 
 **Override files replace, they do not merge.** If `override.tf` or any `*_override.tf`
 declares `required_version`, the base files' constraints are discarded entirely — that is
@@ -141,10 +142,11 @@ worth knowing: the old `grep required_version *.tf | sed` printed an empty line 
 range as `*` — every version ever published. The behaviour is unchanged here; the
 difference is that a `::warning` now says so instead of it passing silently.
 
-**Resolution fails open.** If the release API is unreachable, or nothing satisfying the
-constraint is old enough, the action emits a `::warning` and falls back — to the newest
-match, or to the raw constraint. The cooldown reduces risk; it is not a correctness gate,
-and a `required_version` bump has already been through a reviewed PR.
+**Resolution fails open.** If the release API is unreachable, no recent release matches,
+or nothing satisfying the constraint is old enough, the action emits a `::warning` and
+falls back — to the newest match, or to the raw constraint. The cooldown reduces risk; it
+is not a correctness gate, and a `required_version` bump has already been through a
+reviewed PR.
 
 **Plan and apply resolve separately,** so a release can cross the cooldown boundary
 between them. That was already true when both simply took "newest", and a cooldown makes
