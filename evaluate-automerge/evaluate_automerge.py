@@ -108,6 +108,7 @@ def evaluate(
     if not upgrades:
         return False
 
+    # Maps packageFileDir to updateType (major, minor, patch)
     update_types_by_dir: dict[str, set[str]] = {}
     for upgrade in upgrades:
         if upgrade.get("packageName") != allowed_package:
