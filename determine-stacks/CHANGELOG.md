@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.3](https://github.com/oslokommune/composite-actions/compare/determine-stacks-v1.2.2...determine-stacks-v1.2.3) (2026-08-28)
+
+
+### Dependency updates
+
+* update dependency pytest to v9 [security] ([#250](https://github.com/oslokommune/composite-actions/issues/250)) ([bdba791](https://github.com/oslokommune/composite-actions/commit/bdba791d662bb8d48b2f1105430a01cde846277b))
+
 ## [1.2.2](https://github.com/oslokommune/composite-actions/compare/determine-stacks-v1.2.1...determine-stacks-v1.2.2) (2026-04-17)
 
 
