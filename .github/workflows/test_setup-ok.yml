@@ -15,4 +15,4 @@ jobs:
     steps:
 
       - name: Run setup-ok composite action
-        uses: oslokommune/composite-actions/setup-ok@main
+        uses: oslokommune/composite-actions/setup-ok@55ee2c7bef4b80f4535761f03b8f3d07e064836f # main

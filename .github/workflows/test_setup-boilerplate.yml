@@ -15,4 +15,4 @@ jobs:
     steps:
 
       - name: Run setup-boilerplate composite action
-        uses: oslokommune/composite-actions/setup-boilerplate@main
+        uses: oslokommune/composite-actions/setup-boilerplate@55ee2c7bef4b80f4535761f03b8f3d07e064836f # main
