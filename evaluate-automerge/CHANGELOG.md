@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.2](https://github.com/oslokommune/composite-actions/compare/evaluate-automerge-v1.0.1...evaluate-automerge-v1.0.2) (2026-08-28)
+
+
+### Bug fixes
+
+* **evaluate-automerge:** ensure all planned stacks are evaluated ([#279](https://github.com/oslokommune/composite-actions/issues/279)) ([761efcd](https://github.com/oslokommune/composite-actions/commit/761efcd9bbb6116e92c686643183967f56bc8f18))
+
 ## [1.0.1](https://github.com/oslokommune/composite-actions/compare/evaluate-automerge-v1.0.0...evaluate-automerge-v1.0.1) (2026-04-17)
 
 
