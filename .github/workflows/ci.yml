@@ -21,10 +21,10 @@ jobs:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
 
       - name: Run tests
         working-directory: ./determine-stacks
@@ -37,10 +37,10 @@ jobs:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install uv
-        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
 
       - name: Run tests
         working-directory: ./evaluate-automerge
@@ -53,7 +53,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Run tests
         working-directory: ./terraform-deploy
@@ -66,10 +66,10 @@ jobs:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install uv
-        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
 
       - name: Run tests
         working-directory: ./build-gp-config
@@ -114,7 +114,7 @@ jobs:
       statuses: write
     services:
       moto:
-        image: motoserver/moto:5.1.22@sha256:117238c6e7e3b566387c4c74e6fb0b6fdc34a094920c2154cf06f11dc72d9f37
+        image: motoserver/moto:5.2.3@sha256:24ed22209b55508d7f4117ebe747e4584d663a5c622f898c6c79de6fd7b6fea0
         ports:
           - 5000:5000
     env:
@@ -151,7 +151,7 @@ jobs:
         }
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Prepare S3 buckets and dummy files
         run: |
@@ -232,7 +232,7 @@ jobs:
       statuses: write
     services:
       moto:
-        image: motoserver/moto:5.1.22@sha256:117238c6e7e3b566387c4c74e6fb0b6fdc34a094920c2154cf06f11dc72d9f37
+        image: motoserver/moto:5.2.3@sha256:24ed22209b55508d7f4117ebe747e4584d663a5c622f898c6c79de6fd7b6fea0
         ports:
           - 5000:5000
     env:
@@ -259,7 +259,7 @@ jobs:
         }
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Prepare Docker mock
         run: |
@@ -304,7 +304,7 @@ jobs:
       contents: read
     services:
       moto:
-        image: motoserver/moto:5.1.22@sha256:117238c6e7e3b566387c4c74e6fb0b6fdc34a094920c2154cf06f11dc72d9f37
+        image: motoserver/moto:5.2.3@sha256:24ed22209b55508d7f4117ebe747e4584d663a5c622f898c6c79de6fd7b6fea0
         ports:
           - 5000:5000
     env:
@@ -314,7 +314,7 @@ jobs:
       AWS_ENDPOINT_URL: http://localhost:5000
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Prepare ephemeral SSH deploy key
         id: ssh-key
@@ -414,7 +414,7 @@ jobs:
       contents: read
     services:
       moto:
-        image: motoserver/moto:5.1.22@sha256:117238c6e7e3b566387c4c74e6fb0b6fdc34a094920c2154cf06f11dc72d9f37
+        image: motoserver/moto:5.2.3@sha256:24ed22209b55508d7f4117ebe747e4584d663a5c622f898c6c79de6fd7b6fea0
         ports:
           - 5000:5000
     env:
@@ -424,7 +424,7 @@ jobs:
       AWS_ENDPOINT_URL: http://localhost:5000
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Prepare ephemeral SSH deploy key
         id: ssh-key
