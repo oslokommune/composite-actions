@@ -31,11 +31,21 @@ jobs:
         run: uv run pytest -v
 
   test-resolve-terraform-version:
-    # The matcher reimplements Terraform's constraint semantics, so it is checked against
-    # a real Terraform binary rather than only against our reading of the docs. One job
-    # per version, because setup-terraform installs onto PATH and can only provide one at
-    # a time. The versions cover the shapes the matcher has to get right: a current
-    # release, one where npm semver and Terraform disagree on `~> 1.10`, and an old 1.x.
+    # Runs test_against_real_terraform.py.
+    #
+    # For each Terraform version in strategy.matrix.terraform (below), a job installs that
+    # version of Terraform and checks, for every `required_version` constraint listed in the test file,
+    # that our custom resolver (`resolve_terraform_version.py`) and the real `terraform`
+    # binary agree on whether the version matches the constraint.
+    #
+    # It does that by writing the constraint into a throwaway stack and running
+    # `terraform init` there. `init` succeeding means the Terraform binary accepts the
+    # constraint. That answer must equal what the resolver's `satisfies()` says.
+    #
+    # For instance, the job running Terraform 1.2.9 checks that both reject ">= 1.10.0"
+    # and both accept "~> 1.2.3".
+    #
+    # One job per Terraform version, because setup-terraform can only install one Terraform CLI at a time.
     name: Test resolve-terraform-version composite action (Terraform ${{ matrix.terraform }})
     runs-on: ubuntu-24.04
     permissions:
@@ -43,6 +53,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Each version exercises a different edge case; see the test file.
         terraform: ["1.15.8", "1.10.5", "1.2.9"]
     steps:
       - name: Checkout
@@ -54,14 +65,14 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
-          # The differential test parses `terraform version -json`, which the wrapper
+          # The test parses `terraform version -json`, which the wrapper
           # would contaminate with its own output.
           terraform_wrapper: false
           terraform_version: ${{ matrix.terraform }}
 
       - name: Run tests
         working-directory: ./resolve-terraform-version
-        run: make test-differential
+        run: make test-against-real-terraform
 
   test-e2e-resolve-terraform-version:
     name: Test E2E resolve-terraform-version

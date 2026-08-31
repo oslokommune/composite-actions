@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
 """
-Resolve an exact Terraform CLI version from a stack's `required_version` constraint.
+Resolve an exact Terraform CLI version from a stack's `required_version` constraint,
+skipping releases newer than COOLDOWN_DAYS.
 
-Input is the environment: STACK_DIR (the directory to scan for `*.tf`, default `.`) and
-COOLDOWN_DAYS (default 7). Output is written to the file named by GITHUB_OUTPUT, or to
-stdout when that is unset. Progress goes to stdout either way.
+Input (environment variables):
+  STACK_DIR      directory to scan for `*.tf` (default `.`)
+  COOLDOWN_DAYS  minimum release age in days (default 7)
 
-See README.md for why the constraint is not simply handed to `setup-terraform`.
+Output (two values):
+  terraform-version  the resolved exact version, e.g. `1.15.8`
+  constraint         the `required_version` that was found, e.g. `>= 1.10.0`
+
+Both are written to the file named by GITHUB_OUTPUT, or to stdout when that is unset.
+Progress goes to stdout either way.
 
 Example
 -------
@@ -26,19 +32,6 @@ earlier:
     Selected 1.15.8, released 2026-07-08 (43 days ago)
     terraform-version=1.15.8
     constraint=>= 1.10.0
-
-That costs one HTTP request. An exact pin such as `= 1.12.2` costs none, since there is
-nothing to choose between and a human already chose it.
-
-Only the recent-releases window is consulted. A constraint none of the recent releases
-satisfy, such as `< 1.12.0`, can by definition only match old versions, so the cooldown
-has nothing to protect against — resolution fails open and the constraint itself is
-handed to `setup-terraform`, which installs the newest match.
-
-`terraform-version` is what gets handed to `hashicorp/setup-terraform`. It is normally an
-exact version as above, but resolution fails open: if the release API is unreachable, or
-nothing satisfying the constraint is old enough, the output is a `::warning` plus the
-newest match or the raw constraint, which `setup-terraform` accepts either way.
 """
 
 import json

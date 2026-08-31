@@ -1,11 +1,12 @@
 """Differential test: our constraint matcher vs. real Terraform binaries.
 
-The matcher reimplements hashicorp/go-version semantics, so the only trustworthy oracle
-is Terraform itself. Each constraint is written into a throwaway stack and `terraform init`
-is asked whether it accepts it; the answer must match `satisfies()`.
+The matcher (`satisfies()`) reimplements Terraform's `required_version` semantics,
+so the only trustworthy oracle is Terraform itself. Each constraint is written into
+a throwaway stack and `terraform init` is asked whether it accepts it; the answer
+must match `satisfies()`.
 
 Terraform binaries are not part of the test environment, so this is skipped unless
-`TERRAFORM_BINARIES` names them (colon-separated absolute paths). `make test-differential`
+`TERRAFORM_BINARIES` names them (colon-separated absolute paths). `make test-against-real-terraform`
 points it at whichever terraform is on PATH; CI runs one job per version via
 `hashicorp/setup-terraform`, so the matrix covers all of them between them.
 """
@@ -19,8 +20,14 @@ from resolve_terraform_version import Version, parse_constraint, satisfies
 
 BINARIES = [p for p in os.environ.get("TERRAFORM_BINARIES", "").split(":") if p]
 
-# Chosen so that every constraint below discriminates for at least one of the Terraform
-# versions in ci.yml's matrix.
+# How CI runs this test, with an example, is explained in .github/workflows/ci.yml
+# (job test-resolve-terraform-version).
+#
+# Some constraints use a matrix version as their boundary (e.g. "= 1.10.5", "<= 1.2.9") to test edge cases.
+#
+# The matrix versions each exercise a different edge case: a current release (1.15.8),
+# a version where npm semver and Terraform disagree on "~> 1.10" (1.10.5), and an old
+# 1.x release (1.2.9).
 CONSTRAINTS = [
     ">= 1.10.0",
     ">=1.10.0",
@@ -58,11 +65,13 @@ pytestmark = pytest.mark.skipif(
 
 
 def binary_version(binary: str) -> str:
+    """Return the Terraform binary's own version, e.g. "1.15.8"."""
     output = subprocess.run([binary, "version", "-json"], capture_output=True, text=True, check=True)
     return json.loads(output.stdout)["terraform_version"]
 
 
 def terraform_accepts(binary: str, constraint: str, stack_dir) -> bool:
+    """Return whether the Terraform binary accepts a stack with this `required_version` constraint."""
     (stack_dir / "main.tf").write_text('terraform {\n  required_version = "%s"\n}\n' % constraint)
     result = subprocess.run(
         [binary, "init", "-backend=false", "-input=false", "-no-color"],
