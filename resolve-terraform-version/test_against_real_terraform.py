@@ -7,8 +7,8 @@ must match `satisfies()`.
 
 Terraform binaries are not part of the test environment, so this is skipped unless
 `TERRAFORM_BINARIES` names them (colon-separated absolute paths). `make test-against-real-terraform`
-points it at whichever terraform is on PATH; CI runs one job per version via
-`hashicorp/setup-terraform`, so the matrix covers all of them between them.
+points it at whichever terraform is on PATH. CI runs one job per Terraform version
+via `hashicorp/setup-terraform`.
 """
 
 import json
@@ -20,10 +20,11 @@ from resolve_terraform_version import Version, parse_constraint, satisfies
 
 BINARIES = [p for p in os.environ.get("TERRAFORM_BINARIES", "").split(":") if p]
 
-# How CI runs this test, with an example, is explained in .github/workflows/ci.yml
-# (job test-resolve-terraform-version).
+# See .github/workflows/ci.yml (job test-resolve-terraform-version) for how CI runs
+# this test, with an example.
 #
-# Some constraints use a matrix version as their boundary (e.g. "= 1.10.5", "<= 1.2.9") to test edge cases.
+# Some constraints sit exactly on a matrix version (e.g. "= 1.10.5", "<= 1.2.9") to
+# exercise the boundary.
 #
 # The matrix versions each exercise a different edge case: a current release (1.15.8),
 # a version where npm semver and Terraform disagree on "~> 1.10" (1.10.5), and an old

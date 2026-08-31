@@ -330,10 +330,8 @@ def find_constraint(stack_dir: Path) -> tuple[str, list[str]]:
     override file in lexicographic order wins, since Terraform applies them in that order.
     Base declarations, in the absence of an override, are ANDed together.
 
-    Returns an empty constraint when nothing declares one, which the caller passes
-    through to `setup-terraform` unchanged. That installs the newest release, which is
-    what already happens today. Making it an error instead would be a breaking change for
-    any stack without a `required_version`, so it is tracked separately.
+    Returns an empty constraint when nothing declares one; the caller decides what to
+    do with that.
     """
     tf_files = sorted(stack_dir.glob("*.tf"), key=lambda p: p.name)
 
@@ -357,11 +355,7 @@ def fetch_json(url: str) -> dict:
 
 
 def fetch_recent_releases() -> list["Release"]:
-    """The newest releases, with their dates, in one request.
-
-    This endpoint carries `timestamp_created` inline, so one request answers both
-    "which versions exist" and "when were they released".
-    """
+    """The newest releases with their dates, in one request."""
     releases = []
     for entry in fetch_json(RECENT_URL.format(limit=RECENT_WINDOW)):
         try:
@@ -469,9 +463,9 @@ def main() -> None:
     constraint, sources = find_constraint(stack_dir)
 
     if not constraint:
-        # Today's behaviour, kept deliberately: an empty `terraform_version` means npm
-        # semver installs the newest release. Warn rather than fail, because failing would
-        # break every stack that has no `required_version`.
+        # An empty `terraform_version` makes setup-terraform install the newest release.
+        # Warn rather than fail; failing would break every stack that has no
+        # `required_version`.
         warn(
             "Terraform version",
             f"No required_version found in any .tf file in {stack_dir}, so no cooldown "
@@ -487,8 +481,7 @@ def main() -> None:
     try:
         version = resolve_version(constraint, cooldown_days)
     except (ResolveError, urllib.error.URLError, OSError, ValueError, KeyError) as error:
-        # Fail open: hand the raw constraint to setup-terraform, which is what callers
-        # did before this action existed.
+        # Fail open: setup-terraform can resolve the raw constraint itself.
         warn(
             "Terraform version resolution",
             f"Could not resolve an exact version for {constraint!r} ({error}). "

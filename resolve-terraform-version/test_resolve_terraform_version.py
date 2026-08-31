@@ -22,9 +22,8 @@ NOW = datetime(2026, 8, 21, 12, 0, 0, tzinfo=timezone.utc)
 def no_network(monkeypatch):
     """Fail loudly if a test reaches the real release API.
 
-    Every lookup is injectable, so a test that hits the network has forgotten to inject
-    one — which previously went unnoticed, with assertions quietly depending on whatever
-    HashiCorp had released that week.
+    Every lookup is injectable. A test that hits the network has forgotten to inject
+    one, and its assertions would depend on whatever HashiCorp released that week.
     """
 
     def blocked(url, *args, **kwargs):
@@ -211,8 +210,6 @@ class TestFindConstraint:
         assert sources == ["a.tf", "b.tf"]
 
     def test_override_replaces_base_constraints(self, tmp_path):
-        # Regression test for the old `grep required_version *.tf | sed` approach, which
-        # took whichever match came first alphabetically and so ignored the override.
         write_stack(
             tmp_path,
             {
@@ -255,10 +252,7 @@ class TestFindConstraint:
         assert find_constraint(tmp_path) == (">= 1.10.0", ["main.tf"])
 
     def test_missing_constraint_yields_an_empty_constraint(self, tmp_path):
-        # Deliberately not an error: an empty `terraform_version` is what the previous
-        # implementation produced, and npm semver resolves it to the newest release.
-        # Turning that into a failure would break every stack without a
-        # `required_version`, so it is tracked as its own change.
+        # Deliberately not an error; see the comment in main().
         write_stack(tmp_path, {"main.tf": 'terraform {\n}\n'})
         assert find_constraint(tmp_path) == ("", [])
 
@@ -295,7 +289,7 @@ class TestResolveVersion:
         return resolve_version(constraint, cooldown_days, now=NOW, get_recent=get_recent)
 
     def test_skips_a_version_inside_the_cooldown(self):
-        # This is the issue: today `>= 1.10.0` installs 1.15.9, released yesterday.
+        # 1.15.9 is the newest match but was released yesterday, inside the 7-day cooldown.
         assert self.resolve(">= 1.10.0") == "1.15.8"
 
     def test_costs_at_most_one_request(self):
