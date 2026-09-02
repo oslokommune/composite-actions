@@ -35,12 +35,13 @@ jobs:
     #
     # For each Terraform version in strategy.matrix.terraform (below), a job installs that
     # version of Terraform and checks, for every `required_version` constraint listed in the test file,
-    # that our custom resolver (`resolve_terraform_version.py`) and the real `terraform`
+    # that our custom terraform resolver (`resolve_terraform_version.py`) and the real `terraform`
     # binary agree on whether the version matches the constraint.
     #
     # It does that by writing the constraint into a throwaway stack and running
     # `terraform init` there. `init` succeeding means the Terraform binary accepts the
-    # constraint. That answer must equal what the resolver's `satisfies()` says.
+    # constraint. That answer must equal what the resolver's `satisfies()` says. If both `terraform init` and
+    # `satisfies()` answer with the same boolean, we say that they "agree".
     #
     # For instance, the job running Terraform 1.2.9 checks that both reject ">= 1.10.0"
     # and both accept "~> 1.2.3".
