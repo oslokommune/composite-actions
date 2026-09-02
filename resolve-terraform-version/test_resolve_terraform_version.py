@@ -281,6 +281,16 @@ class TestFindConstraint:
         )
         assert find_constraint(tmp_path) == (">= 1.10.0", ["main.tf"])
 
+    def test_attribute_ending_in_required_version_is_not_a_constraint(self, tmp_path):
+        write_stack(
+            tmp_path,
+            {
+                "main.tf": 'locals {\n  min_required_version = "1.0.0"\n  min-required_version = "1.0.0"\n}\n'
+                + terraform_block(">= 1.10.0")
+            },
+        )
+        assert find_constraint(tmp_path) == (">= 1.10.0", ["main.tf"])
+
     def test_missing_constraint_yields_an_empty_constraint(self, tmp_path):
         # Deliberately not an error; see the comment in main().
         write_stack(tmp_path, {"main.tf": 'terraform {\n}\n'})

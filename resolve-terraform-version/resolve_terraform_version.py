@@ -66,7 +66,8 @@ VERSION_RE = re.compile(
     re.VERBOSE,
 )
 
-REQUIRED_VERSION_RE = re.compile(r"""required_version\s*=\s*"([^"]*)\"""")
+# The lookbehind rejects attributes such as `min_required_version`. HCL identifiers allow dashes.
+REQUIRED_VERSION_RE = re.compile(r"""(?<![\w.-])required_version\s*=\s*"([^"]*)\"""")
 
 
 class ResolveError(Exception):
