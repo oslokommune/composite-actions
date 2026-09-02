@@ -1,3 +1,4 @@
+import http.client
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -9,6 +10,7 @@ from resolve_terraform_version import (
     _matching,
     fetch_recent_releases,
     find_constraint,
+    main,
     parse_constraint,
     resolve_version,
     satisfies,
@@ -349,3 +351,37 @@ class TestResolveVersion:
     def test_no_matching_version_raises(self):
         with pytest.raises(ResolveError, match="most recent releases"):
             self.resolve(">= 99.0.0")
+
+
+class TestMainFailsOpen:
+    """main() never fails the step. It warns and hands the raw constraint to
+    setup-terraform, which resolves it well enough on its own.
+    """
+
+    def run_main(self, tmp_path, monkeypatch, capsys, cooldown_days="7"):
+        write_stack(tmp_path, {"main.tf": terraform_block(">= 1.10.0")})
+        monkeypatch.setenv("STACK_DIR", str(tmp_path))
+        monkeypatch.setenv("COOLDOWN_DAYS", cooldown_days)
+        # With GITHUB_OUTPUT unset, both outputs land on stdout, so capsys sees them.
+        monkeypatch.delenv("GITHUB_OUTPUT", raising=False)
+
+        main()
+        return capsys.readouterr().out
+
+    def assert_failed_open(self, output):
+        assert "::warning title=Terraform version resolution::" in output
+        assert "terraform-version=>= 1.10.0" in output
+        assert "constraint=>= 1.10.0" in output
+
+    def test_a_dropped_connection_fails_open(self, tmp_path, monkeypatch, capsys):
+        # IncompleteRead is an HTTPException, not an OSError.
+        def incomplete_read(url):
+            raise http.client.IncompleteRead(b"{\"partial\":")
+
+        monkeypatch.setattr(resolve_terraform_version, "fetch_json", incomplete_read)
+        self.assert_failed_open(self.run_main(tmp_path, monkeypatch, capsys))
+
+    def test_a_non_integer_cooldown_fails_open(self, tmp_path, monkeypatch, capsys):
+        self.assert_failed_open(
+            self.run_main(tmp_path, monkeypatch, capsys, cooldown_days="7.0")
+        )

@@ -34,6 +34,7 @@ earlier:
     constraint=>= 1.10.0
 """
 
+import http.client
 import json
 import os
 import re
@@ -470,7 +471,6 @@ def write_output(name: str, value: str) -> None:
 
 def main() -> None:
     stack_dir = Path(os.environ.get("STACK_DIR") or ".")
-    cooldown_days = int(os.environ.get("COOLDOWN_DAYS") or "7")
 
     constraint, sources = find_constraint(stack_dir)
 
@@ -490,9 +490,19 @@ def main() -> None:
 
     log(f"Found required_version {constraint!r} in {', '.join(sources)}")
 
+    # Parsing COOLDOWN_DAYS inside the try lets a bad value like "7.0" fail open too.
     try:
+        cooldown_days = int(os.environ.get("COOLDOWN_DAYS") or "7")
         version = resolve_version(constraint, cooldown_days)
-    except (ResolveError, urllib.error.URLError, OSError, ValueError, KeyError) as error:
+    except (
+        ResolveError,
+        urllib.error.URLError,
+        # A connection dropping mid-response raises IncompleteRead, not an OSError.
+        http.client.HTTPException,
+        OSError,
+        ValueError,
+        KeyError,
+    ) as error:
         # Fail open: setup-terraform can resolve the raw constraint itself.
         warn(
             "Terraform version resolution",
