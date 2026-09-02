@@ -101,16 +101,17 @@ strings. Where they disagree:
 |---------------------|-----------------|--------------------------------|
 | `~> 1.10`           | >= 1.10, < 2.0  | >= 1.10.0, < 1.11.0            |
 | `>= 6.0.0, < 7.0.0` | both bounds     | `< 7.0.0`, lower bound dropped |
+| `= 1.10`            | exactly 1.10.0  | >= 1.10.0, < 1.11.0            |
 
 So this action implements
 [hashicorp/go-version](https://github.com/hashicorp/go-version) semantics itself. There is
 no way around reimplementing it, so `test_against_real_terraform.py` checks every
 constraint against actual Terraform binaries instead of against our reading of the docs.
-Where the two rows above come from: the `>= 6.0.0, < 7.0.0` one is filed upstream as
+Where those rows come from: the `>= 6.0.0, < 7.0.0` one is filed upstream as
 [hashicorp/setup-terraform#275](https://github.com/hashicorp/setup-terraform/issues/275),
-"Support multi-part ranges for `terraform_version`", open since 2022. The `~> 1.10` one is
-not filed anywhere, and comes from reading `semver.maxSatisfying` in the action's bundled
-`dist/index.js`.
+"Support multi-part ranges for `terraform_version`", open since 2022. The `~> 1.10` and
+`= 1.10` ones are not filed anywhere, and come from reading `semver.maxSatisfying` in the
+action's bundled `dist/index.js`.
 
 **It runs in the deploy path, so the request count matters.** A cooldown needs release
 dates, which means asking HashiCorp at deploy time. The cost is kept to the minimum the

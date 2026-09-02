@@ -143,6 +143,17 @@ class Version:
     def __str__(self) -> str:
         return self.raw
 
+    def padded(self) -> str:
+        """Spell out all three segments, so `1.10` becomes `1.10.0`.
+
+        Terraform reads a two-segment version the same way, because go-version pads it
+        before comparing. npm semver does not, and setup-terraform runs on npm semver,
+        where a bare `1.10` is the range `1.10.x`. Writing the padded form keeps both
+        readings identical.
+        """
+        text = ".".join(str(segment) for segment in self.segments)
+        return f"{text}-{self.pre}" if self.pre else text
+
 
 def _compare_prerelease_part(left: str, right: str) -> int:
     """Compare one dot-separated prerelease identifier, per go-version's comparePart."""
@@ -413,8 +424,9 @@ def resolve_version(
     terms = parse_constraint(constraint)
 
     if pinned := exact_pin(terms):
-        log(f"Constraint names {pinned} outright, so no lookup or cooldown is needed")
-        return str(pinned)
+        exact = pinned.padded()
+        log(f"Constraint names {exact} outright, so no lookup or cooldown is needed")
+        return exact
 
     dates = {r.version: r.released for r in get_recent()}
     window = _matching(dates, terms)

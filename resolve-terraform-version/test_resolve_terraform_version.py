@@ -306,6 +306,21 @@ class TestResolveVersion:
         assert self.resolve("1.12.2") == "1.12.2"
         assert self.calls == []
 
+    def test_short_pin_is_padded_to_three_segments(self):
+        # Terraform reads `= 1.10` as exactly 1.10.0, but setup-terraform's npm semver
+        # reads a bare `1.10` as the range 1.10.x and installs the newest patch. So the
+        # pin goes out padded, and both agree on which version that is.
+        assert self.resolve("= 1.10") == "1.10.0"
+        assert self.resolve("1.10") == "1.10.0"
+        assert self.resolve("= 1") == "1.0.0"
+
+    def test_full_length_pin_passes_through_unchanged(self):
+        assert self.resolve("= 1.10.2") == "1.10.2"
+
+    def test_prerelease_pin_keeps_its_prerelease(self):
+        assert self.resolve("= 1.11.0-beta1") == "1.11.0-beta1"
+        assert self.resolve("= 1.11-beta1") == "1.11.0-beta1"
+
     def test_cooldown_of_zero_takes_the_newest(self):
         assert self.resolve(">= 1.10.0", cooldown_days=0) == "1.15.9"
 
