@@ -143,11 +143,15 @@ worth knowing: the old `grep required_version *.tf | sed` printed an empty line 
 range as `*` — every version ever published. The behaviour is unchanged here; the
 difference is that a `::warning` now says so instead of it passing silently.
 
-**Resolution fails open.** If the release API is unreachable, no recent release matches,
-or nothing satisfying the constraint is old enough, the action emits a `::warning` and
-falls back — to the newest match, or to the raw constraint. The cooldown reduces risk; it
-is not a correctness gate, and a `required_version` bump has already been through a
-reviewed PR.
+**Resolution fails open.** If the release API is unreachable or no recent release matches,
+the action emits a `::warning` and passes the raw constraint through. If matches exist but
+none is old enough, it warns and takes the oldest match in the window. The cooldown reduces
+risk; it is not a correctness gate, and a `required_version` bump has already been through
+a reviewed PR.
+
+**The cooldown cannot reach further back than the 20-release window.** Most entries in it
+are prereleases, so it typically holds about five stable releases spanning about three
+months. A longer `cooldown-days` lands on the oldest match in the window.
 
 **Plan and apply resolve separately,** so a release can cross the cooldown boundary
 between them. That was already true when both simply took "newest", and a cooldown makes

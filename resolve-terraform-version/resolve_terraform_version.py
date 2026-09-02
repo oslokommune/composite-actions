@@ -431,8 +431,9 @@ def resolve_version(
     match old versions — the cooldown has nothing to protect against there, so it raises
     and the caller fails open to the raw constraint.
 
-    Falls back to the newest match, with a warning, when nothing is old enough — an
-    unreleased-yet cooldown should not block a deployment.
+    When nothing is old enough, warns and falls back to the oldest match in the window.
+    The window reaches back a few months, so a longer cooldown lands on that oldest match
+    rather than blocking the deployment.
     """
     now = now or datetime.now(timezone.utc)
     terms = parse_constraint(constraint)
@@ -467,10 +468,10 @@ def resolve_version(
 
     warn(
         "Terraform version cooldown",
-        f"No version satisfying {constraint!r} is older than {cooldown_days} days. "
-        f"Using the newest match ({window[0]}) instead.",
+        f"No version satisfying {constraint!r} in the {RECENT_WINDOW} most recent releases "
+        f"is older than {cooldown_days} days. Using the oldest match ({window[-1]}) instead.",
     )
-    return str(window[0])
+    return str(window[-1])
 
 
 def write_output(name: str, value: str) -> None:

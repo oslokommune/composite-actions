@@ -371,17 +371,21 @@ class TestResolveVersion:
         with pytest.raises(ResolveError, match="most recent releases"):
             self.resolve("< 1.15.0")
 
-    def test_falls_back_to_newest_when_nothing_is_old_enough(self):
+    def test_falls_back_to_oldest_match_when_nothing_is_old_enough(self):
         dates = {v: NOW - timedelta(days=1) for v in self.RECENT}
-        assert self.resolve(">= 1.10.0", dates=dates) == "1.15.9"
+        assert self.resolve(">= 1.10.0", dates=dates) == "1.15.6"
 
     def test_longer_cooldown_reaches_further_back_in_the_window(self):
         # 1.15.7 is 70 days old, 1.15.6 is 90, so an 80-day cooldown lands on 1.15.6.
         assert self.resolve(">= 1.10.0", cooldown_days=80) == "1.15.6"
 
-    def test_cooldown_longer_than_the_whole_window_falls_back_to_newest(self):
-        # Matches older than the window may exist, but only the window is consulted.
-        assert self.resolve(">= 1.10.0", cooldown_days=365) == "1.15.9"
+    def test_cooldown_longer_than_the_whole_window_falls_back_to_oldest_match(self):
+        # Older matches may exist outside the window, but the action only looks inside it.
+        assert self.resolve(">= 1.10.0", cooldown_days=365) == "1.15.6"
+
+    def test_fallback_respects_the_constraint(self):
+        # 1.15.6 is the oldest release, but the constraint excludes it.
+        assert self.resolve(">= 1.15.7", cooldown_days=365) == "1.15.7"
 
     def test_pessimistic_and_range_resolve_alike_below_terraform_2(self):
         assert self.resolve("~> 1.10") == self.resolve(">= 1.10.0") == "1.15.8"
