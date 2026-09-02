@@ -147,10 +147,10 @@ runs:
       # Passing the constraint straight to setup-terraform installed whatever HashiCorp
       # released most recently, and resolved it with npm semver rather than Terraform's
       # own rules. See the action's README.
-      # TODO: This digest is the tip of the branch in #275, not a release. Repoint it to
-      # the resolve-terraform-version-v1.0.0 tag once #275 has merged and been released,
-      # otherwise the ref is left dangling by the squash merge.
-      uses: oslokommune/composite-actions/resolve-terraform-version@6f4a3e5c35077784e803ea3f52bf871793a22e54 # resolve-terraform-version-v1.0.0
+      # TODO: This ref is the branch in #275, not a release. Repoint it to the
+      # resolve-terraform-version-v1.0.0 tag's digest once #275 has merged and been
+      # released, otherwise the branch is deleted by the squash merge.
+      uses: oslokommune/composite-actions/resolve-terraform-version@feat/resolve-terraform-version
       with:
         stack-dir: ${{ steps.get-stack-dir.outputs.stack-dir }}
 
