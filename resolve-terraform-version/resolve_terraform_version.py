@@ -38,6 +38,7 @@ import http.client
 import json
 import os
 import re
+import sys
 import urllib.error
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -366,6 +367,17 @@ def fetch_json(url: str) -> dict:
         return json.load(response)
 
 
+def parse_release_timestamp(text: str, version_info=sys.version_info) -> datetime:
+    """Read a release timestamp from the HashiCorp API, e.g. `2026-08-27T10:31:01.572Z`.
+
+    The action runs on the runner's system python3, which is 3.10 on ubuntu-22.04.
+    """
+    # `datetime.fromisoformat` reads a trailing `Z` only from Python 3.11 on.
+    if version_info < (3, 11) and text.endswith("Z"):
+        text = f"{text[:-1]}+00:00"
+    return datetime.fromisoformat(text)
+
+
 def fetch_recent_releases() -> list["Release"]:
     """The newest releases with their dates, in one request."""
     releases = []
@@ -374,7 +386,7 @@ def fetch_recent_releases() -> list["Release"]:
             version = Version.parse(entry["version"])
         except (ValueError, KeyError):
             continue
-        releases.append(Release(version, datetime.fromisoformat(entry["timestamp_created"])))
+        releases.append(Release(version, parse_release_timestamp(entry["timestamp_created"])))
     return releases
 
 

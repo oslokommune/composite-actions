@@ -12,6 +12,7 @@ from resolve_terraform_version import (
     find_constraint,
     main,
     parse_constraint,
+    parse_release_timestamp,
     resolve_version,
     satisfies,
     strip_comments,
@@ -166,12 +167,39 @@ class TestMatching:
         assert self.matching("= 1.16.0-beta1") == ["1.16.0-beta1"]
 
 
+class TestParseReleaseTimestamp:
+    """The API sends a trailing `Z`, which Python 3.10 and 3.11 read differently."""
+
+    Z_TIMESTAMP = "2026-08-27T10:31:01.572Z"
+    EXPECTED = datetime(2026, 8, 27, 10, 31, 1, 572000, tzinfo=timezone.utc)
+
+    def test_python_310_reads_a_z_suffix(self):
+        assert parse_release_timestamp(self.Z_TIMESTAMP, version_info=(3, 10, 12)) == self.EXPECTED
+
+    def test_python_311_reads_a_z_suffix(self):
+        assert parse_release_timestamp(self.Z_TIMESTAMP, version_info=(3, 11, 0)) == self.EXPECTED
+
+    def test_python_310_reads_an_offset_suffix(self):
+        text = "2026-08-27T10:31:01.572+00:00"
+        assert parse_release_timestamp(text, version_info=(3, 10, 12)) == self.EXPECTED
+
+    def test_python_311_reads_an_offset_suffix(self):
+        text = "2026-08-27T10:31:01.572+00:00"
+        assert parse_release_timestamp(text, version_info=(3, 11, 0)) == self.EXPECTED
+
+
 class TestFetchRecentReleases:
+    def test_the_api_timestamp_form_is_read(self, monkeypatch):
+        entries = [{"version": "1.15.9", "timestamp_created": "2026-08-19T00:00:00.000Z"}]
+        monkeypatch.setattr(resolve_terraform_version, "fetch_json", lambda url: entries)
+        released = fetch_recent_releases()[0].released
+        assert released == datetime(2026, 8, 19, tzinfo=timezone.utc)
+
     def test_unparseable_entries_are_ignored(self, monkeypatch):
         # The release feed has carried a few historical oddities; they can never match.
         entries = [
-            {"version": "1.15.9", "timestamp_created": "2026-08-19T00:00:00+00:00"},
-            {"version": "not-a-version", "timestamp_created": "2026-08-19T00:00:00+00:00"},
+            {"version": "1.15.9", "timestamp_created": "2026-08-19T00:00:00.000Z"},
+            {"version": "not-a-version", "timestamp_created": "2026-08-19T00:00:00.000Z"},
         ]
         monkeypatch.setattr(resolve_terraform_version, "fetch_json", lambda url: entries)
         assert [str(r.version) for r in fetch_recent_releases()] == ["1.15.9"]
