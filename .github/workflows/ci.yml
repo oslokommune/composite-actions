@@ -131,14 +131,17 @@ jobs:
 
       - name: Resolve a stack with no required_version
         id: no-constraint
+        # Let the job continue so the next step can assert on the outcome.
+        # A failure here still fails the job, through that assertion.
+        continue-on-error: true
         uses: ./resolve-terraform-version
         with:
           stack-dir: .github
 
       - name: Verify it warns and passes through rather than failing
-        # Deliberately not an error: an empty terraform_version is what callers got
-        # before this action existed, and setup-terraform installs the newest release.
-        # Making it fail would break every stack without a required_version.
+        # A stack without required_version must not fail the action. The action
+        # outputs an empty version, and setup-terraform then installs the newest
+        # release.
         env:
           OUTCOME: ${{ steps.no-constraint.outcome }}
           VERSION: ${{ steps.no-constraint.outputs.terraform-version }}
