@@ -62,6 +62,10 @@
     "evaluate-automerge": {
       "component": "evaluate-automerge",
       "release-type": "simple"
+    },
+    "resolve-terraform-version": {
+      "component": "resolve-terraform-version",
+      "release-type": "simple"
     }
   }
 }
