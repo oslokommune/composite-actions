@@ -150,7 +150,7 @@ runs:
       # TODO: This digest is the tip of the branch in #275, not a release. Repoint it to
       # the resolve-terraform-version-v1.0.0 tag once #275 has merged and been released,
       # otherwise the ref is left dangling by the squash merge.
-      uses: oslokommune/composite-actions/resolve-terraform-version@d34b0592052569e328d9794dd8c0dafe91c6050a # resolve-terraform-version-v1.0.0
+      uses: oslokommune/composite-actions/resolve-terraform-version@e04e0dd7a996dcffde9ac1be56fa0af3f3f2159d # resolve-terraform-version-v1.0.0
       with:
         stack-dir: ${{ steps.get-stack-dir.outputs.stack-dir }}
 
