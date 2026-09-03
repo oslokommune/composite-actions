@@ -87,7 +87,7 @@ def terraform_accepts(binary: str, constraint: str, stack_dir) -> bool:
     raise AssertionError(f"Unexpected `terraform init` failure for {constraint!r}:\n{result.stderr}")
 
 
-@pytest.mark.parametrize("binary", BINARIES, ids=lambda b: os.path.basename(os.path.dirname(b)))
+@pytest.mark.parametrize("binary", BINARIES, ids=binary_version)
 @pytest.mark.parametrize("constraint", CONSTRAINTS)
 def test_matcher_agrees_with_terraform(binary, constraint, tmp_path):
     version = binary_version(binary)
