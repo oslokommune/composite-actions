@@ -427,3 +427,16 @@ class TestMainFailsOpen:
         self.assert_failed_open(
             self.run_main(tmp_path, monkeypatch, capsys, cooldown_days="7.0")
         )
+
+    def test_a_missing_stack_dir_warns_about_the_directory(self, tmp_path, monkeypatch, capsys):
+        monkeypatch.setenv("STACK_DIR", str(tmp_path / "stacks/dev/dsn"))
+        monkeypatch.setenv("COOLDOWN_DAYS", "7")
+        monkeypatch.delenv("GITHUB_OUTPUT", raising=False)
+
+        main()
+        output = capsys.readouterr().out
+
+        assert "is not a directory" in output
+        assert "No required_version found" not in output
+        assert "terraform-version=\n" in output
+        assert "constraint=\n" in output

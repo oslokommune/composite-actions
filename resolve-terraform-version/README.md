@@ -141,7 +141,9 @@ failing would break every stack that has no `required_version` today. The mechan
 worth knowing: the old `grep required_version *.tf | sed` printed an empty line when no
 `.tf` file declared one, that became `terraform_version: ""`, and npm semver reads an empty
 range as `*` — every version ever published. The behaviour is unchanged here; the
-difference is that a `::warning` now says so instead of it passing silently.
+difference is that a `::warning` now says so instead of it passing silently. A `stack-dir`
+that is not a directory gets its own warning, so a typo in the path is not mistaken for a
+stack without a `required_version`.
 
 **Resolution fails open.** If the release API is unreachable or no recent release matches,
 the action emits a `::warning` and passes the raw constraint through. If matches exist but

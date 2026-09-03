@@ -486,6 +486,19 @@ def write_output(name: str, value: str) -> None:
 def main() -> None:
     stack_dir = Path(os.environ.get("STACK_DIR") or ".")
 
+    if not stack_dir.is_dir():
+        # Without this check a mistyped stack-dir looks like a stack with no
+        # required_version, and the warning below would blame the wrong cause.
+        warn(
+            "Terraform version",
+            f"stack-dir {str(stack_dir)!r} is not a directory, so no required_version can be "
+            "read, no cooldown can be applied and the newest Terraform release will be "
+            "installed. Check the stack-dir input.",
+        )
+        write_output("terraform-version", "")
+        write_output("constraint", "")
+        return
+
     constraint, sources = find_constraint(stack_dir)
 
     if not constraint:
