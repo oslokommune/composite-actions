@@ -13,4 +13,4 @@ test:
 test-against-real-terraform: TERRAFORM_BINARIES ?= $(shell command -v terraform)
 test-against-real-terraform:
 	@test -n "$(TERRAFORM_BINARIES)" || { echo "No terraform on PATH; set TERRAFORM_BINARIES"; exit 1; }
-	TERRAFORM_BINARIES="$(TERRAFORM_BINARIES)" uv run pytest -v
+	TERRAFORM_BINARIES="$(TERRAFORM_BINARIES)" uv run pytest -v test_against_real_terraform.py
