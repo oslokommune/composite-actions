@@ -141,20 +141,23 @@ runs:
       with:
         ssh-private-key: ${{ inputs.github-deploy-key }}
 
-    - name: Extract Terraform version
+    - name: Resolve Terraform version
       id: v
-      shell: bash --noprofile --norc -euo pipefail {0}
-      working-directory: ${{ steps.get-stack-dir.outputs.stack-dir }}
-      run: |
-        echo Extract Terraform version
-        pwd
-        ls -lah
-        echo "TERRAFORM_VERSION=$(grep required_version *.tf | sed -E 's/[^"]+"([^"]+)"+/\1/')" >> "$GITHUB_OUTPUT"
+      # Resolves the stack's `required_version` to an exact version at least 7 days old.
+      # Passing the constraint straight to setup-terraform installed whatever HashiCorp
+      # released most recently, and resolved it with npm semver rather than Terraform's
+      # own rules. See the action's README.
+      # TODO: This digest is the tip of the branch in #275, not a release. Repoint it to
+      # the resolve-terraform-version-v1.0.0 tag once #275 has merged and been released,
+      # otherwise the ref is left dangling by the squash merge.
+      uses: oslokommune/composite-actions/resolve-terraform-version@e04e0dd7a996dcffde9ac1be56fa0af3f3f2159d # resolve-terraform-version-v1.0.0
+      with:
+        stack-dir: ${{ steps.get-stack-dir.outputs.stack-dir }}
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
       with:
-        terraform_version: ${{ steps.v.outputs.TERRAFORM_VERSION }}
+        terraform_version: ${{ steps.v.outputs.terraform-version }}
 
     - name: Initialize the working directory containing Terraform configuration files
       id: init
