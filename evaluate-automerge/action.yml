@@ -3,10 +3,10 @@ description: "Evaluate whether Renovate upgrades to golden-path-boilerplate are 
 
 inputs:
   rules:
-    description: "JSON array of automerge rules. Each rule: {pattern, major?, minor?, patch?}. Policies: 'never', 'no-changes', 'any-changes'. First matching pattern wins. Unspecified types default to 'no-changes'."
+    description: "JSON array of automerge rules. Each rule: {pattern, major?, minor?, patch?}. Policies name the highest change severity they tolerate: 'never' < 'no-changes' < 'additive' < 'no-destroy' < 'any-changes'. First matching pattern wins. Unspecified types default to 'no-changes'."
     required: true
-  stack-changes:
-    description: "JSON object mapping stack paths to booleans (true = has Terraform changes)"
+  stack-severities:
+    description: "JSON object mapping stack paths to change severities ('no-changes', 'additive', 'no-destroy', 'any-changes' or 'unknown'), limited to stacks whose plan succeeded. 'unknown' blocks automerge."
     required: true
 
 outputs:
@@ -31,8 +31,8 @@ runs:
         GH_REPO: ${{ github.repository }}
         COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
         RULES: ${{ inputs.rules }}
-        STACK_CHANGES: ${{ inputs.stack-changes }}
+        STACK_SEVERITIES: ${{ inputs.stack-severities }}
       run: |
         commit_message="$(gh api "repos/$GH_REPO/commits/$COMMIT_SHA" --jq '.commit.message')"
-        automerge="$(uv run evaluate_automerge.py --commit-message "$commit_message" --rules "$RULES" --stack-changes "$STACK_CHANGES")"
+        automerge="$(uv run evaluate_automerge.py --commit-message "$commit_message" --rules "$RULES" --stack-severities "$STACK_SEVERITIES")"
         echo "automerge=$automerge" >> "$GITHUB_OUTPUT"
