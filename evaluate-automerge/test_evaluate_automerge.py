@@ -42,6 +42,12 @@ class TestPackageAllowList(unittest.TestCase):
         stack_severities = {"stacks/dev/app": "no-changes"}
         self.assertFalse(ea.evaluate(commit_message, DEFAULT_RULES, stack_severities))
 
+    def test_rejects_unknown_package_with_default_stack_severities(self):
+        """The default of the severities map is empty, which must also reject."""
+        upgrades = [_upgrade(package_name="oslokommune/some-other-repo")]
+        commit_message = _make_commit_message(upgrades)
+        self.assertFalse(ea.evaluate(commit_message, DEFAULT_RULES, {}))
+
 
 class TestPatternMatching(unittest.TestCase):
     def test_first_match_wins_prod(self):
@@ -82,7 +88,7 @@ class TestPolicies(unittest.TestCase):
         stack_severities = {"stacks/dev/app": "no-changes"}
         self.assertFalse(ea.evaluate(commit_message, rules, stack_severities))
 
-    def test_no_changes_rejects_when_has_changes(self):
+    def test_no_changes_rejects_when_changed(self):
         rules = [{"pattern": "**", "patch": "no-changes"}]
         upgrades = [_upgrade(package_file_dir="stacks/dev/app", update_type="patch")]
         commit_message = _make_commit_message(upgrades)
@@ -200,7 +206,8 @@ class TestEdgeCases(unittest.TestCase):
         self.assertFalse(ea.evaluate(commit_message, DEFAULT_RULES, {"stacks/dev/app": "no-changes"}))
 
     def test_empty_stack_severities_rejects(self):
-        """No plan results means nothing has verified the upgrade."""
+        """The default of the severities map is empty: no plan results means
+        nothing has verified the upgrade, so it must reject."""
         upgrades = [_upgrade()]
         commit_message = _make_commit_message(upgrades)
         self.assertFalse(ea.evaluate(commit_message, DEFAULT_RULES, {}))
