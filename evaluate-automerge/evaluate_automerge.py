@@ -4,10 +4,12 @@ Parses structured upgrade info from the commit message and evaluates every
 planned stack against the automerge rules and Terraform plan results.
 
 The commit message tells us WHAT was upgraded (package and update types).
-The plan results tell us WHERE the upgrade caused changes. A template upgrade
-can change stacks other than the one holding the upgraded package file (for
-example, the `app` template renders a companion `app-data` stack), so every
-stack that has a plan result is evaluated -- not just the upgraded ones.
+The plan results tell us WHERE the upgrade caused changes and HOW severe
+they are (the "changes" field). Each rule's policy names the most severe
+changes value it tolerates. A template upgrade can change stacks other than
+the one holding the upgraded package file (for example, the `app` template
+renders a companion `app-data` stack), so every stack that has a plan result
+is evaluated -- not just the upgraded ones.
 
 Each planned stack must be attributable to an upgrade: either the stack holds
 an upgraded package file itself (checked first, so standalone stacks whose
@@ -16,7 +18,7 @@ companion rendered by a sibling upgrade and inherits that upgrade's update
 type. A planned stack attributable to no upgrade blocks automerge.
 
 Usage:
-  python3 evaluate_automerge.py --commit-message <str> --rules <json> --stack-severities <json>
+  python3 evaluate_automerge.py --commit-message <str> --rules <json> --stack-results <json>
 
 Output: prints "true" or "false" to stdout.
 """
@@ -70,20 +72,21 @@ def match_rule(stack: str, rules: list[Rule]) -> Rule | None:
 def evaluate_policy(
     rule: Rule,
     update_type: str,
-    severity: str,
+    changes: str | None,
     default_policy: str = "no-changes",
     valid_policies: frozenset[str] = frozenset(
         {"never", "no-changes", "additive", "no-destroy", "any-changes"}
     ),
-    valid_severities: frozenset[str] = frozenset(
+    valid_changes: frozenset[str] = frozenset(
         {"no-changes", "additive", "no-destroy", "any-changes"}
     ),
 ) -> bool:
-    """Evaluate a single stack's change severity against the rule's policy for an update type.
+    """Evaluate a single stack's changes value against the rule's policy for an update type.
 
-    Policies and change severities share one severity ladder:
-    never < no-changes < additive < no-destroy < any-changes.
-    Each policy tolerates a growing prefix of the severity ladder.
+    Policies and changes values share the ladder
+    no-changes < additive < no-destroy < any-changes.
+    A policy allows changes values up to and including its own;
+    "never" allows nothing.
     """
     policy = rule.get(update_type, default_policy)
 
@@ -95,10 +98,10 @@ def evaluate_policy(
         )
         policy = default_policy
 
-    # Fail safe: an unrankable severity (e.g. "unknown") is tolerated by no policy
-    if severity not in valid_severities:
+    # Fail safe: an unrankable changes value (e.g. "unknown") is tolerated by no policy
+    if changes not in valid_changes:
         print(
-            f"Blocking automerge: change severity '{severity}' is not rankable",
+            f"Blocking automerge: changes value '{changes}' is not rankable",
             file=sys.stderr,
         )
         return False
@@ -107,16 +110,16 @@ def evaluate_policy(
         return False
 
     if policy == "no-changes":
-        return severity == "no-changes"
+        return changes == "no-changes"
 
     if policy == "additive":
-        return severity in ("no-changes", "additive")
+        return changes in ("no-changes", "additive")
 
     if policy == "no-destroy":
-        return severity in ("no-changes", "additive", "no-destroy")
+        return changes in ("no-changes", "additive", "no-destroy")
 
     if policy == "any-changes":
-        return severity in ("no-changes", "additive", "no-destroy", "any-changes")
+        return changes in ("no-changes", "additive", "no-destroy", "any-changes")
 
     # Fail safe: unreachable while every policy in valid_policies has a branch
     # above; a policy added without one must block rather than allow
@@ -130,7 +133,7 @@ def evaluate_policy(
 def evaluate(
     commit_message: str,
     rules: list[Rule],
-    stack_severities: dict[str, str],
+    stack_results: dict[str, dict],
     allowed_package: str = "oslokommune/golden-path-boilerplate",
     companion_suffix: str = "-data",
 ) -> bool:
@@ -140,7 +143,7 @@ def evaluate(
         return False
 
     # Fail safe: without plan results, nothing has verified the upgrade
-    if not stack_severities:
+    if not stack_results:
         return False
 
     # Maps packageFileDir to updateType (major, minor, patch)
@@ -152,7 +155,11 @@ def evaluate(
             upgrade["updateType"]
         )
 
-    for stack, severity in stack_severities.items():
+    for stack, result in stack_results.items():
+        # The stack's changes value; a missing field is unrankable
+        # and blocks in evaluate_policy
+        changes = result.get("changes")
+
         # A stack holding an upgraded package file uses its own update type.
         # Otherwise a `-data` stack is assumed to be a companion rendered by
         # the sibling upgrade and inherits its update type.
@@ -167,7 +174,7 @@ def evaluate(
             return False
 
         for update_type in update_types:
-            if not evaluate_policy(rule, update_type, severity):
+            if not evaluate_policy(rule, update_type, changes):
                 return False
 
     return True
@@ -180,15 +187,15 @@ if __name__ == "__main__":
     parser.add_argument("--commit-message", required=True, help="Full commit message")
     parser.add_argument("--rules", required=True, help="JSON array of automerge rules")
     parser.add_argument(
-        "--stack-severities",
+        "--stack-results",
         required=True,
-        help="JSON object mapping stack paths to change severities",
+        help="JSON object mapping stack paths to plan results with a 'changes' field",
     )
     args = parser.parse_args()
 
     result = evaluate(
         args.commit_message,
         json.loads(args.rules),
-        json.loads(args.stack_severities),
+        json.loads(args.stack_results),
     )
     print("true" if result else "false")
