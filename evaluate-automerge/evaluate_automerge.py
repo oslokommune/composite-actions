@@ -156,6 +156,10 @@ def evaluate(
         )
 
     for stack, result in stack_results.items():
+        # Fail safe: a failed plan has verified nothing
+        if not result.get("success"):
+            return False
+
         # The stack's changes value; a missing field is unrankable
         # and blocks in evaluate_policy
         changes = result.get("changes")

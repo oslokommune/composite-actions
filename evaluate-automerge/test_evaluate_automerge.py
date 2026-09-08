@@ -30,8 +30,8 @@ def _upgrade(
 
 
 def _result(changes):
-    """A stack's plan result; the evaluation reads only the "changes" field."""
-    return {"changes": changes}
+    """A successfully planned stack's result; the evaluation reads "success" and "changes"."""
+    return {"success": True, "changes": changes}
 
 
 DEFAULT_RULES = [
@@ -219,11 +219,11 @@ class TestEdgeCases(unittest.TestCase):
 
 
     def test_failed_stack_rejects(self):
-        """A failed plan arrives with changes "unknown" and must block."""
+        """A failed plan blocks even under the loosest policy."""
         rules = [{"pattern": "**", "minor": "any-changes"}]
         upgrades = [_upgrade(update_type="minor")]
         commit_message = _make_commit_message(upgrades)
-        stack_results = {"stacks/dev/app": {"success": False, "hasChanges": None, "changes": "unknown"}}
+        stack_results = {"stacks/dev/app": {"success": False, "hasChanges": None, "changes": "any-changes"}}
         self.assertFalse(ea.evaluate(commit_message, rules, stack_results))
 
     def test_missing_changes_field_rejects(self):
