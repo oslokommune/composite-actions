@@ -121,11 +121,12 @@ class TestPolicies(unittest.TestCase):
         stack_results = {"stacks/dev/app": _result("any-changes")}
         self.assertTrue(ea.evaluate(commit_message, rules, stack_results))
 
-    def test_unknown_changes_always_rejects(self):
+    def test_unrankable_changes_rejects(self):
+        """A value outside the ladder blocks under every policy."""
         rules = [{"pattern": "**", "major": "any-changes"}]
         upgrades = [_upgrade(package_file_dir="stacks/dev/app", update_type="major")]
         commit_message = _make_commit_message(upgrades)
-        stack_results = {"stacks/dev/app": _result("unknown")}
+        stack_results = {"stacks/dev/app": _result("mystery")}
         self.assertFalse(ea.evaluate(commit_message, rules, stack_results))
 
     def test_default_policy_is_no_changes(self):

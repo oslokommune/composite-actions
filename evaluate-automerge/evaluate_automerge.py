@@ -98,7 +98,7 @@ def evaluate_policy(
         )
         policy = default_policy
 
-    # Fail safe: an unrankable changes value (e.g. "unknown") is tolerated by no policy
+    # Fail safe: an unrankable changes value is tolerated by no policy
     if changes not in valid_changes:
         print(
             f"Blocking automerge: changes value '{changes}' is not rankable",
@@ -121,8 +121,7 @@ def evaluate_policy(
     if policy == "any-changes":
         return changes in ("no-changes", "additive", "non-destructive", "any-changes")
 
-    # Fail safe: unreachable while every policy in valid_policies has a branch
-    # above; a policy added without one must block rather than allow
+    # Fail safe: unreachable; a policy without a branch must block
     print(
         f"Blocking automerge: policy '{policy}' has no evaluation branch",
         file=sys.stderr,
@@ -137,7 +136,7 @@ def evaluate(
     allowed_package: str = "oslokommune/golden-path-boilerplate",
     companion_suffix: str = "-data",
 ) -> bool:
-    """Returns True if every planned stack is eligible for automerge."""
+    """Returns True only if every planned stack is eligible for automerge."""
     upgrades = parse_upgrades(commit_message)
     if not upgrades:
         return False
@@ -146,7 +145,7 @@ def evaluate(
     if not stack_results:
         return False
 
-    # Maps packageFileDir to updateType (major, minor, patch)
+    # Maps packageFileDir to its update types (major, minor, patch)
     update_types_by_dir: dict[str, set[str]] = {}
     for upgrade in upgrades:
         if upgrade.get("packageName") != allowed_package:
@@ -160,8 +159,6 @@ def evaluate(
         if not result.get("success"):
             return False
 
-        # The stack's changes value; a missing field is unrankable
-        # and blocks in evaluate_policy
         changes = result.get("changes")
 
         # A stack holding an upgraded package file uses its own update type.
@@ -193,7 +190,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--stack-results",
         required=True,
-        help="JSON object mapping stack paths to plan results with a 'changes' field",
+        help="JSON object mapping stack paths to plan results; reads the 'success' and 'changes' fields",
     )
     args = parser.parse_args()
 
