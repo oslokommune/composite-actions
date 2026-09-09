@@ -105,13 +105,13 @@ class TestPolicies(unittest.TestCase):
         upgrades = [_upgrade(package_file_dir="stacks/dev/app", update_type="patch")]
         commit_message = _make_commit_message(upgrades)
         self.assertTrue(ea.evaluate(commit_message, rules, {"stacks/dev/app": _result("additive")}))
-        self.assertFalse(ea.evaluate(commit_message, rules, {"stacks/dev/app": _result("no-destroy")}))
+        self.assertFalse(ea.evaluate(commit_message, rules, {"stacks/dev/app": _result("non-destructive")}))
 
-    def test_no_destroy_rejects_destruction(self):
-        rules = [{"pattern": "**", "patch": "no-destroy"}]
+    def test_non_destructive_rejects_destruction(self):
+        rules = [{"pattern": "**", "patch": "non-destructive"}]
         upgrades = [_upgrade(package_file_dir="stacks/dev/app", update_type="patch")]
         commit_message = _make_commit_message(upgrades)
-        self.assertTrue(ea.evaluate(commit_message, rules, {"stacks/dev/app": _result("no-destroy")}))
+        self.assertTrue(ea.evaluate(commit_message, rules, {"stacks/dev/app": _result("non-destructive")}))
         self.assertFalse(ea.evaluate(commit_message, rules, {"stacks/dev/app": _result("any-changes")}))
 
     def test_any_changes_allows_regardless(self):
@@ -154,7 +154,7 @@ class TestAllPlannedStacksEvaluated(unittest.TestCase):
         rules = [{"pattern": "**", "minor": "no-changes"}]
         upgrades = [_upgrade(package_file_dir="stacks/dev/app", update_type="minor")]
         commit_message = _make_commit_message(upgrades)
-        stack_results = {"stacks/dev/app": _result("no-changes"), "stacks/dev/app-data": _result("no-destroy")}
+        stack_results = {"stacks/dev/app": _result("no-changes"), "stacks/dev/app-data": _result("non-destructive")}
         self.assertFalse(ea.evaluate(commit_message, rules, stack_results))
 
     def test_companion_stack_without_changes_allows(self):
@@ -176,7 +176,7 @@ class TestAllPlannedStacksEvaluated(unittest.TestCase):
         # upgrade's stricter policy does not apply to it.
         stack_results = {
             "stacks/dev/app": _result("no-changes"),
-            "stacks/dev/app-data": _result("no-destroy"),
+            "stacks/dev/app-data": _result("non-destructive"),
             "stacks/dev/other": _result("no-changes"),
         }
         self.assertTrue(ea.evaluate(commit_message, rules, stack_results))
@@ -240,7 +240,7 @@ class TestMultipleUpgrades(unittest.TestCase):
             _upgrade(package_file_dir="stacks/prod/app", update_type="major"),
         ]
         commit_message = _make_commit_message(upgrades)
-        stack_results = {"stacks/dev/app": _result("no-destroy"), "stacks/prod/app": _result("no-changes")}
+        stack_results = {"stacks/dev/app": _result("non-destructive"), "stacks/prod/app": _result("no-changes")}
         self.assertFalse(ea.evaluate(commit_message, DEFAULT_RULES, stack_results))
 
 

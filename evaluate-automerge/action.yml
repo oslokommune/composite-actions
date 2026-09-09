@@ -3,10 +3,10 @@ description: "Evaluate whether Renovate upgrades to golden-path-boilerplate are 
 
 inputs:
   rules:
-    description: "JSON array of automerge rules. Each rule: {pattern, major?, minor?, patch?}. Policies name the most severe 'changes' value they tolerate: 'never' < 'no-changes' < 'additive' < 'no-destroy' < 'any-changes'. First matching pattern wins. Unspecified types default to 'no-changes'."
+    description: "JSON array of automerge rules. Each rule: {pattern, major?, minor?, patch?}. Policies name the most severe 'changes' value they tolerate: 'never' < 'no-changes' < 'additive' < 'non-destructive' < 'any-changes'. First matching pattern wins. Unspecified types default to 'no-changes'."
     required: true
   stack-results:
-    description: "JSON object mapping each planned stack to its result, as produced by the Terraform PR workflow. Reads 'success' and 'changes': the most severe kind of change in the stack's plan ('no-changes', 'additive', 'no-destroy' or 'any-changes'). A failed stack, a missing field or an unrecognized value blocks automerge."
+    description: "JSON object mapping each planned stack to its result, as produced by the Terraform PR workflow. Reads 'success' and 'changes': the most severe kind of change in the stack's plan ('no-changes', 'additive', 'non-destructive' or 'any-changes'). A failed stack, a missing field or an unrecognized value blocks automerge."
     required: true
 
 outputs:

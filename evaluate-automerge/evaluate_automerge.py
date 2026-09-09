@@ -75,16 +75,16 @@ def evaluate_policy(
     changes: str | None,
     default_policy: str = "no-changes",
     valid_policies: frozenset[str] = frozenset(
-        {"never", "no-changes", "additive", "no-destroy", "any-changes"}
+        {"never", "no-changes", "additive", "non-destructive", "any-changes"}
     ),
     valid_changes: frozenset[str] = frozenset(
-        {"no-changes", "additive", "no-destroy", "any-changes"}
+        {"no-changes", "additive", "non-destructive", "any-changes"}
     ),
 ) -> bool:
     """Evaluate a single stack's changes value against the rule's policy for an update type.
 
     Policies and changes values share the ladder
-    no-changes < additive < no-destroy < any-changes.
+    no-changes < additive < non-destructive < any-changes.
     A policy allows changes values up to and including its own;
     "never" allows nothing.
     """
@@ -115,11 +115,11 @@ def evaluate_policy(
     if policy == "additive":
         return changes in ("no-changes", "additive")
 
-    if policy == "no-destroy":
-        return changes in ("no-changes", "additive", "no-destroy")
+    if policy == "non-destructive":
+        return changes in ("no-changes", "additive", "non-destructive")
 
     if policy == "any-changes":
-        return changes in ("no-changes", "additive", "no-destroy", "any-changes")
+        return changes in ("no-changes", "additive", "non-destructive", "any-changes")
 
     # Fail safe: unreachable while every policy in valid_policies has a branch
     # above; a policy added without one must block rather than allow
