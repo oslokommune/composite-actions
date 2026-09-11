@@ -29,6 +29,11 @@ def _upgrade(
     }
 
 
+def _result(change_severity):
+    """A successfully planned stack's result; the evaluation reads "success" and "changeSeverity"."""
+    return {"success": True, "changeSeverity": change_severity}
+
+
 DEFAULT_RULES = [
     {"pattern": "**/prod/**", "major": "never", "minor": "no-changes", "patch": "any-changes"},
     {"pattern": "**", "major": "no-changes", "minor": "any-changes", "patch": "any-changes"},
@@ -39,6 +44,13 @@ class TestPackageAllowList(unittest.TestCase):
     def test_rejects_unknown_package(self):
         upgrades = [_upgrade(package_name="oslokommune/some-other-repo")]
         commit_message = _make_commit_message(upgrades)
+        stack_results = {"stacks/dev/app": _result("no-changes")}
+        self.assertFalse(ea.evaluate(commit_message, DEFAULT_RULES, stack_results))
+
+    def test_rejects_unknown_package_with_default_stack_results(self):
+        """The default of the results map is empty, which must also reject."""
+        upgrades = [_upgrade(package_name="oslokommune/some-other-repo")]
+        commit_message = _make_commit_message(upgrades)
         self.assertFalse(ea.evaluate(commit_message, DEFAULT_RULES, {}))
 
 
@@ -47,30 +59,30 @@ class TestPatternMatching(unittest.TestCase):
         """prod pattern matches first, so major=never applies."""
         upgrades = [_upgrade(package_file_dir="stacks/prod/app", update_type="major")]
         commit_message = _make_commit_message(upgrades)
-        stack_changes = {"stacks/prod/app": False}
-        self.assertFalse(ea.evaluate(commit_message, DEFAULT_RULES, stack_changes))
+        stack_results = {"stacks/prod/app": _result("no-changes")}
+        self.assertFalse(ea.evaluate(commit_message, DEFAULT_RULES, stack_results))
 
     def test_first_match_wins_dev(self):
         """dev doesn't match prod pattern, falls through to ** catch-all."""
         upgrades = [_upgrade(package_file_dir="stacks/dev/app", update_type="major")]
         commit_message = _make_commit_message(upgrades)
-        stack_changes = {"stacks/dev/app": False}
-        self.assertTrue(ea.evaluate(commit_message, DEFAULT_RULES, stack_changes))
+        stack_results = {"stacks/dev/app": _result("no-changes")}
+        self.assertTrue(ea.evaluate(commit_message, DEFAULT_RULES, stack_results))
 
     def test_no_matching_rule_rejects(self):
         rules = [{"pattern": "stacks/prod/**", "patch": "any-changes"}]
         upgrades = [_upgrade(package_file_dir="stacks/dev/app", update_type="patch")]
         commit_message = _make_commit_message(upgrades)
-        stack_changes = {"stacks/dev/app": False}
-        self.assertFalse(ea.evaluate(commit_message, rules, stack_changes))
+        stack_results = {"stacks/dev/app": _result("no-changes")}
+        self.assertFalse(ea.evaluate(commit_message, rules, stack_results))
 
     def test_double_star_matches_zero_leading_segments(self):
         """prod/my-stack matches **/prod/**."""
         rules = [{"pattern": "**/prod/**", "patch": "any-changes"}]
         upgrades = [_upgrade(package_file_dir="prod/my-stack", update_type="patch")]
         commit_message = _make_commit_message(upgrades)
-        stack_changes = {"prod/my-stack": False}
-        self.assertTrue(ea.evaluate(commit_message, rules, stack_changes))
+        stack_results = {"prod/my-stack": _result("no-changes")}
+        self.assertTrue(ea.evaluate(commit_message, rules, stack_results))
 
 
 class TestPolicies(unittest.TestCase):
@@ -78,30 +90,61 @@ class TestPolicies(unittest.TestCase):
         rules = [{"pattern": "**", "minor": "never"}]
         upgrades = [_upgrade(update_type="minor")]
         commit_message = _make_commit_message(upgrades)
-        stack_changes = {"stacks/dev/app": False}
-        self.assertFalse(ea.evaluate(commit_message, rules, stack_changes))
+        stack_results = {"stacks/dev/app": _result("no-changes")}
+        self.assertFalse(ea.evaluate(commit_message, rules, stack_results))
 
-    def test_no_changes_rejects_when_has_changes(self):
+    def test_no_changes_rejects_when_changed(self):
         rules = [{"pattern": "**", "patch": "no-changes"}]
         upgrades = [_upgrade(package_file_dir="stacks/dev/app", update_type="patch")]
         commit_message = _make_commit_message(upgrades)
-        stack_changes = {"stacks/dev/app": True}
-        self.assertFalse(ea.evaluate(commit_message, rules, stack_changes))
+        stack_results = {"stacks/dev/app": _result("additive")}
+        self.assertFalse(ea.evaluate(commit_message, rules, stack_results))
+
+    def test_additive_allows_only_additions(self):
+        rules = [{"pattern": "**", "patch": "additive"}]
+        upgrades = [_upgrade(package_file_dir="stacks/dev/app", update_type="patch")]
+        commit_message = _make_commit_message(upgrades)
+        self.assertTrue(ea.evaluate(commit_message, rules, {"stacks/dev/app": _result("additive")}))
+        self.assertFalse(ea.evaluate(commit_message, rules, {"stacks/dev/app": _result("non-destructive")}))
+
+    def test_non_destructive_rejects_destruction(self):
+        rules = [{"pattern": "**", "patch": "non-destructive"}]
+        upgrades = [_upgrade(package_file_dir="stacks/dev/app", update_type="patch")]
+        commit_message = _make_commit_message(upgrades)
+        self.assertTrue(ea.evaluate(commit_message, rules, {"stacks/dev/app": _result("non-destructive")}))
+        self.assertFalse(ea.evaluate(commit_message, rules, {"stacks/dev/app": _result("any-changes")}))
 
     def test_any_changes_allows_regardless(self):
         rules = [{"pattern": "**", "major": "any-changes"}]
         upgrades = [_upgrade(package_file_dir="stacks/dev/app", update_type="major")]
         commit_message = _make_commit_message(upgrades)
-        stack_changes = {"stacks/dev/app": True}
-        self.assertTrue(ea.evaluate(commit_message, rules, stack_changes))
+        stack_results = {"stacks/dev/app": _result("any-changes")}
+        self.assertTrue(ea.evaluate(commit_message, rules, stack_results))
+
+    def test_unrankable_changes_rejects(self):
+        """A value outside the ladder blocks under every policy."""
+        rules = [{"pattern": "**", "major": "any-changes"}]
+        upgrades = [_upgrade(package_file_dir="stacks/dev/app", update_type="major")]
+        commit_message = _make_commit_message(upgrades)
+        stack_results = {"stacks/dev/app": _result("mystery")}
+        self.assertFalse(ea.evaluate(commit_message, rules, stack_results))
 
     def test_default_policy_is_no_changes(self):
         """If the rule doesn't specify a policy for the update type, default to no-changes."""
         rules = [{"pattern": "**"}]
         upgrades = [_upgrade(package_file_dir="stacks/dev/app", update_type="minor")]
         commit_message = _make_commit_message(upgrades)
-        stack_changes = {"stacks/dev/app": True}
-        self.assertFalse(ea.evaluate(commit_message, rules, stack_changes))
+        stack_results = {"stacks/dev/app": _result("additive")}
+        self.assertFalse(ea.evaluate(commit_message, rules, stack_results))
+
+    def test_unhandled_policy_rejects(self):
+        """A policy in valid_policies without an evaluation branch must block."""
+        rule = {"pattern": "**", "minor": "future-policy"}
+        self.assertFalse(
+            ea.evaluate_policy(
+                rule, "minor", "no-changes", valid_policies=frozenset({"future-policy"})
+            )
+        )
 
 
 class TestAllPlannedStacksEvaluated(unittest.TestCase):
@@ -112,15 +155,15 @@ class TestAllPlannedStacksEvaluated(unittest.TestCase):
         rules = [{"pattern": "**", "minor": "no-changes"}]
         upgrades = [_upgrade(package_file_dir="stacks/dev/app", update_type="minor")]
         commit_message = _make_commit_message(upgrades)
-        stack_changes = {"stacks/dev/app": False, "stacks/dev/app-data": True}
-        self.assertFalse(ea.evaluate(commit_message, rules, stack_changes))
+        stack_results = {"stacks/dev/app": _result("no-changes"), "stacks/dev/app-data": _result("non-destructive")}
+        self.assertFalse(ea.evaluate(commit_message, rules, stack_results))
 
     def test_companion_stack_without_changes_allows(self):
         rules = [{"pattern": "**", "minor": "no-changes"}]
         upgrades = [_upgrade(package_file_dir="stacks/dev/app", update_type="minor")]
         commit_message = _make_commit_message(upgrades)
-        stack_changes = {"stacks/dev/app": False, "stacks/dev/app-data": False}
-        self.assertTrue(ea.evaluate(commit_message, rules, stack_changes))
+        stack_results = {"stacks/dev/app": _result("no-changes"), "stacks/dev/app-data": _result("no-changes")}
+        self.assertTrue(ea.evaluate(commit_message, rules, stack_results))
 
     def test_companion_inherits_sibling_update_type(self):
         """A companion stack is judged by its sibling upgrade's type, not the whole PR's."""
@@ -132,20 +175,20 @@ class TestAllPlannedStacksEvaluated(unittest.TestCase):
         commit_message = _make_commit_message(upgrades)
         # app-data inherits app's minor (any-changes); the unrelated major
         # upgrade's stricter policy does not apply to it.
-        stack_changes = {
-            "stacks/dev/app": False,
-            "stacks/dev/app-data": True,
-            "stacks/dev/other": False,
+        stack_results = {
+            "stacks/dev/app": _result("no-changes"),
+            "stacks/dev/app-data": _result("non-destructive"),
+            "stacks/dev/other": _result("no-changes"),
         }
-        self.assertTrue(ea.evaluate(commit_message, rules, stack_changes))
+        self.assertTrue(ea.evaluate(commit_message, rules, stack_results))
 
     def test_unattributable_stack_rejects(self):
         """A planned stack that belongs to no upgrade blocks automerge."""
         rules = [{"pattern": "**", "minor": "any-changes"}]
         upgrades = [_upgrade(package_file_dir="stacks/dev/app", update_type="minor")]
         commit_message = _make_commit_message(upgrades)
-        stack_changes = {"stacks/dev/app": False, "stacks/dev/unrelated": False}
-        self.assertFalse(ea.evaluate(commit_message, rules, stack_changes))
+        stack_results = {"stacks/dev/app": _result("no-changes"), "stacks/dev/unrelated": _result("no-changes")}
+        self.assertFalse(ea.evaluate(commit_message, rules, stack_results))
 
     def test_data_stack_with_own_upgrade_takes_priority(self):
         """A standalone stack named *-data uses its own update type, not the sibling's."""
@@ -155,18 +198,48 @@ class TestAllPlannedStacksEvaluated(unittest.TestCase):
             _upgrade(package_file_dir="stacks/dev/foo-data", update_type="major"),
         ]
         commit_message = _make_commit_message(upgrades)
-        stack_changes = {"stacks/dev/foo": False, "stacks/dev/foo-data": False}
-        self.assertFalse(ea.evaluate(commit_message, rules, stack_changes))
+        stack_results = {"stacks/dev/foo": _result("no-changes"), "stacks/dev/foo-data": _result("no-changes")}
+        self.assertFalse(ea.evaluate(commit_message, rules, stack_results))
 
 
 class TestEdgeCases(unittest.TestCase):
     def test_empty_upgrades_rejects(self):
         commit_message = "<!--golden-path-renovate-summary:[]-->"
-        self.assertFalse(ea.evaluate(commit_message, DEFAULT_RULES, {}))
+        self.assertFalse(ea.evaluate(commit_message, DEFAULT_RULES, {"stacks/dev/app": _result("no-changes")}))
 
     def test_missing_marker_rejects(self):
         commit_message = "just a normal commit message"
+        self.assertFalse(ea.evaluate(commit_message, DEFAULT_RULES, {"stacks/dev/app": _result("no-changes")}))
+
+    def test_empty_stack_results_rejects(self):
+        """The default of the results map is empty: no plan results means
+        nothing has verified the upgrade, so it must reject."""
+        upgrades = [_upgrade()]
+        commit_message = _make_commit_message(upgrades)
         self.assertFalse(ea.evaluate(commit_message, DEFAULT_RULES, {}))
+
+
+    def test_failed_stack_rejects(self):
+        """A failed plan blocks even under the loosest policy."""
+        rules = [{"pattern": "**", "minor": "any-changes"}]
+        upgrades = [_upgrade(update_type="minor")]
+        commit_message = _make_commit_message(upgrades)
+        stack_results = {"stacks/dev/app": {"success": False, "hasChanges": None, "changeSeverity": "any-changes"}}
+        self.assertFalse(ea.evaluate(commit_message, rules, stack_results))
+
+    def test_unclassified_stack_is_treated_as_any_changes(self):
+        """A successful stack without a classification assumes the worst:
+        allowed only under an any-changes policy."""
+        upgrades = [_upgrade(update_type="minor")]
+        commit_message = _make_commit_message(upgrades)
+        for stack_results in (
+            {"stacks/dev/app": {"success": True}},
+            {"stacks/dev/app": {"success": True, "changeSeverity": None}},
+        ):
+            rules = [{"pattern": "**", "minor": "any-changes"}]
+            self.assertTrue(ea.evaluate(commit_message, rules, stack_results))
+            rules = [{"pattern": "**", "minor": "non-destructive"}]
+            self.assertFalse(ea.evaluate(commit_message, rules, stack_results))
 
 
 class TestMultipleUpgrades(unittest.TestCase):
@@ -176,8 +249,8 @@ class TestMultipleUpgrades(unittest.TestCase):
             _upgrade(package_file_dir="stacks/prod/app", update_type="major"),
         ]
         commit_message = _make_commit_message(upgrades)
-        stack_changes = {"stacks/dev/app": True, "stacks/prod/app": False}
-        self.assertFalse(ea.evaluate(commit_message, DEFAULT_RULES, stack_changes))
+        stack_results = {"stacks/dev/app": _result("non-destructive"), "stacks/prod/app": _result("no-changes")}
+        self.assertFalse(ea.evaluate(commit_message, DEFAULT_RULES, stack_results))
 
 
 if __name__ == "__main__":
