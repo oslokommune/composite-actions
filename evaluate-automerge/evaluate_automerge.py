@@ -5,8 +5,8 @@ planned stack against the automerge rules and Terraform plan results.
 
 The commit message tells us WHAT was upgraded (package and update types).
 The plan results tell us WHERE the upgrade caused changes and HOW severe
-they are (the "changes" field). Each rule's policy names the most severe
-changes value it tolerates. A template upgrade can change stacks other than
+they are (the "changeSeverity" field). Each rule's policy names the most
+severe value it tolerates. A template upgrade can change stacks other than
 the one holding the upgraded package file (for example, the `app` template
 renders a companion `app-data` stack), so every stack that has a plan result
 is evaluated -- not just the upgraded ones.
@@ -72,20 +72,20 @@ def match_rule(stack: str, rules: list[Rule]) -> Rule | None:
 def evaluate_policy(
     rule: Rule,
     update_type: str,
-    changes: str | None,
+    change_severity: str,
     default_policy: str = "no-changes",
     valid_policies: frozenset[str] = frozenset(
         {"never", "no-changes", "additive", "non-destructive", "any-changes"}
     ),
-    valid_changes: frozenset[str] = frozenset(
+    valid_severities: frozenset[str] = frozenset(
         {"no-changes", "additive", "non-destructive", "any-changes"}
     ),
 ) -> bool:
-    """Evaluate a single stack's changes value against the rule's policy for an update type.
+    """Evaluate a single stack's change severity against the rule's policy for an update type.
 
-    Policies and changes values share the ladder
+    Policies and severities share the ladder
     no-changes < additive < non-destructive < any-changes.
-    A policy allows changes values up to and including its own;
+    A policy allows severities up to and including its own;
     "never" allows nothing.
     """
     policy = rule.get(update_type, default_policy)
@@ -98,10 +98,10 @@ def evaluate_policy(
         )
         policy = default_policy
 
-    # Fail safe: an unrankable changes value is tolerated by no policy
-    if changes not in valid_changes:
+    # Fail safe: an unrankable severity is tolerated by no policy
+    if change_severity not in valid_severities:
         print(
-            f"Blocking automerge: changes value '{changes}' is not rankable",
+            f"Blocking automerge: change severity '{change_severity}' is not rankable",
             file=sys.stderr,
         )
         return False
@@ -110,16 +110,16 @@ def evaluate_policy(
         return False
 
     if policy == "no-changes":
-        return changes == "no-changes"
+        return change_severity == "no-changes"
 
     if policy == "additive":
-        return changes in ("no-changes", "additive")
+        return change_severity in ("no-changes", "additive")
 
     if policy == "non-destructive":
-        return changes in ("no-changes", "additive", "non-destructive")
+        return change_severity in ("no-changes", "additive", "non-destructive")
 
     if policy == "any-changes":
-        return changes in ("no-changes", "additive", "non-destructive", "any-changes")
+        return change_severity in ("no-changes", "additive", "non-destructive", "any-changes")
 
     # Fail safe: unreachable; a policy without a branch must block
     print(
@@ -159,7 +159,10 @@ def evaluate(
         if not result.get("success"):
             return False
 
-        changes = result.get("changes")
+        change_severity = result.get("changeSeverity")
+        # The plan succeeded but was not classified: assume the worst
+        if change_severity is None:
+            change_severity = "any-changes"
 
         # A stack holding an upgraded package file uses its own update type.
         # Otherwise a `-data` stack is assumed to be a companion rendered by
@@ -175,7 +178,7 @@ def evaluate(
             return False
 
         for update_type in update_types:
-            if not evaluate_policy(rule, update_type, changes):
+            if not evaluate_policy(rule, update_type, change_severity):
                 return False
 
     return True
@@ -190,7 +193,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--stack-results",
         required=True,
-        help="JSON object mapping stack paths to plan results; reads the 'success' and 'changes' fields",
+        help="JSON object mapping stack paths to plan results; reads the 'success' and 'changeSeverity' fields",
     )
     args = parser.parse_args()
 

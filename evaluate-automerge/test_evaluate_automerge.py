@@ -29,9 +29,9 @@ def _upgrade(
     }
 
 
-def _result(changes):
-    """A successfully planned stack's result; the evaluation reads "success" and "changes"."""
-    return {"success": True, "changes": changes}
+def _result(change_severity):
+    """A successfully planned stack's result; the evaluation reads "success" and "changeSeverity"."""
+    return {"success": True, "changeSeverity": change_severity}
 
 
 DEFAULT_RULES = [
@@ -224,14 +224,22 @@ class TestEdgeCases(unittest.TestCase):
         rules = [{"pattern": "**", "minor": "any-changes"}]
         upgrades = [_upgrade(update_type="minor")]
         commit_message = _make_commit_message(upgrades)
-        stack_results = {"stacks/dev/app": {"success": False, "hasChanges": None, "changes": "any-changes"}}
+        stack_results = {"stacks/dev/app": {"success": False, "hasChanges": None, "changeSeverity": "any-changes"}}
         self.assertFalse(ea.evaluate(commit_message, rules, stack_results))
 
-    def test_missing_changes_field_rejects(self):
-        rules = [{"pattern": "**", "minor": "any-changes"}]
+    def test_unclassified_stack_is_treated_as_any_changes(self):
+        """A successful stack without a classification assumes the worst:
+        allowed only under an any-changes policy."""
         upgrades = [_upgrade(update_type="minor")]
         commit_message = _make_commit_message(upgrades)
-        self.assertFalse(ea.evaluate(commit_message, rules, {"stacks/dev/app": {"success": True}}))
+        for stack_results in (
+            {"stacks/dev/app": {"success": True}},
+            {"stacks/dev/app": {"success": True, "changeSeverity": None}},
+        ):
+            rules = [{"pattern": "**", "minor": "any-changes"}]
+            self.assertTrue(ea.evaluate(commit_message, rules, stack_results))
+            rules = [{"pattern": "**", "minor": "non-destructive"}]
+            self.assertFalse(ea.evaluate(commit_message, rules, stack_results))
 
 
 class TestMultipleUpgrades(unittest.TestCase):
