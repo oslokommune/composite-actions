@@ -129,6 +129,14 @@ class TestPolicies(unittest.TestCase):
         stack_results = {"stacks/dev/app": _result("mystery")}
         self.assertFalse(ea.evaluate(commit_message, rules, stack_results))
 
+    def test_null_severity_blocks_every_policy(self):
+        """None reaches evaluate_policy only if the any-changes defaulting in
+        evaluate() is bypassed; the unrankable guard must then block."""
+        for policy in ("never", "no-changes", "additive", "non-destructive", "any-changes"):
+            with self.subTest(policy=policy):
+                rule = {"pattern": "**", "minor": policy}
+                self.assertFalse(ea.evaluate_policy(rule, "minor", None))
+
     def test_default_policy_is_no_changes(self):
         """If the rule doesn't specify a policy for the update type, default to no-changes."""
         rules = [{"pattern": "**"}]
