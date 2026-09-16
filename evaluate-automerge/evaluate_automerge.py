@@ -4,10 +4,12 @@ Parses structured upgrade info from the commit message and evaluates every
 planned stack against the automerge rules and Terraform plan results.
 
 The commit message tells us WHAT was upgraded (package and update types).
-The plan results tell us WHERE the upgrade caused changes. A template upgrade
-can change stacks other than the one holding the upgraded package file (for
-example, the `app` template renders a companion `app-data` stack), so every
-stack that has a plan result is evaluated -- not just the upgraded ones.
+The plan results tell us WHERE the upgrade caused changes and HOW severe
+they are (the "changeSeverity" field). Each rule's policy names the most
+severe value it tolerates. A template upgrade can change stacks other than
+the one holding the upgraded package file (for example, the `app` template
+renders a companion `app-data` stack), so every stack that has a plan result
+is evaluated -- not just the upgraded ones.
 
 Each planned stack must be attributable to an upgrade: either the stack holds
 an upgraded package file itself (checked first, so standalone stacks whose
@@ -16,7 +18,7 @@ companion rendered by a sibling upgrade and inherits that upgrade's update
 type. A planned stack attributable to no upgrade blocks automerge.
 
 Usage:
-  python3 evaluate_automerge.py --commit-message <str> --rules <json> --stack-changes <json>
+  python3 evaluate_automerge.py --commit-message <str> --rules <json> --stack-results <json>
 
 Output: prints "true" or "false" to stdout.
 """
@@ -27,7 +29,6 @@ import re
 import sys
 from pathlib import PurePosixPath
 from typing import NotRequired, TypedDict
-
 
 class Upgrade(TypedDict):
     packageName: str
@@ -71,11 +72,22 @@ def match_rule(stack: str, rules: list[Rule]) -> Rule | None:
 def evaluate_policy(
     rule: Rule,
     update_type: str,
-    has_changes: bool,
+    change_severity: str,
     default_policy: str = "no-changes",
-    valid_policies: frozenset[str] = frozenset({"never", "no-changes", "any-changes"}),
+    valid_policies: frozenset[str] = frozenset(
+        {"never", "no-changes", "additive", "non-destructive", "any-changes"}
+    ),
+    valid_severities: frozenset[str] = frozenset(
+        {"no-changes", "additive", "non-destructive", "any-changes"}
+    ),
 ) -> bool:
-    """Evaluate a single stack's plan result against the rule's policy for an update type."""
+    """Evaluate a single stack's change severity against the rule's policy for an update type.
+
+    Policies and severities share the ladder
+    no-changes < additive < non-destructive < any-changes.
+    A policy allows severities up to and including its own;
+    "never" allows nothing.
+    """
     policy = rule.get(update_type, default_policy)
 
     if policy not in valid_policies:
@@ -86,29 +98,54 @@ def evaluate_policy(
         )
         policy = default_policy
 
+    # Fail safe: an unrankable severity is tolerated by no policy
+    if change_severity not in valid_severities:
+        print(
+            f"Blocking automerge: change severity '{change_severity}' is not rankable",
+            file=sys.stderr,
+        )
+        return False
+
     if policy == "never":
         return False
 
-    if policy == "any-changes":
-        return True
+    if policy == "no-changes":
+        return change_severity == "no-changes"
 
-    # policy == "no-changes": allow only if the stack has no Terraform changes
-    return not has_changes
+    if policy == "additive":
+        return change_severity in ("no-changes", "additive")
+
+    if policy == "non-destructive":
+        return change_severity in ("no-changes", "additive", "non-destructive")
+
+    if policy == "any-changes":
+        return change_severity in ("no-changes", "additive", "non-destructive", "any-changes")
+
+    # Fail safe: unreachable; a policy without a branch must block
+    print(
+        f"Blocking automerge: policy '{policy}' has no evaluation branch",
+        file=sys.stderr,
+    )
+    return False
 
 
 def evaluate(
     commit_message: str,
     rules: list[Rule],
-    stack_changes: dict[str, bool],
+    stack_results: dict[str, dict],
     allowed_package: str = "oslokommune/golden-path-boilerplate",
     companion_suffix: str = "-data",
 ) -> bool:
-    """Returns True if every planned stack is eligible for automerge."""
+    """Returns True only if every planned stack is eligible for automerge."""
     upgrades = parse_upgrades(commit_message)
     if not upgrades:
         return False
 
-    # Maps packageFileDir to updateType (major, minor, patch)
+    # Fail safe: without plan results, nothing has verified the upgrade
+    if not stack_results:
+        return False
+
+    # Maps packageFileDir to its update types (major, minor, patch)
     update_types_by_dir: dict[str, set[str]] = {}
     for upgrade in upgrades:
         if upgrade.get("packageName") != allowed_package:
@@ -117,7 +154,16 @@ def evaluate(
             upgrade["updateType"]
         )
 
-    for stack, has_changes in stack_changes.items():
+    for stack, result in stack_results.items():
+        # Fail safe: a failed plan has verified nothing
+        if not result.get("success"):
+            return False
+
+        change_severity = result.get("changeSeverity")
+        # The plan succeeded but was not classified: assume the worst
+        if change_severity is None:
+            change_severity = "any-changes"
+
         # A stack holding an upgraded package file uses its own update type.
         # Otherwise a `-data` stack is assumed to be a companion rendered by
         # the sibling upgrade and inherits its update type.
@@ -132,7 +178,7 @@ def evaluate(
             return False
 
         for update_type in update_types:
-            if not evaluate_policy(rule, update_type, has_changes):
+            if not evaluate_policy(rule, update_type, change_severity):
                 return False
 
     return True
@@ -145,15 +191,15 @@ if __name__ == "__main__":
     parser.add_argument("--commit-message", required=True, help="Full commit message")
     parser.add_argument("--rules", required=True, help="JSON array of automerge rules")
     parser.add_argument(
-        "--stack-changes",
+        "--stack-results",
         required=True,
-        help="JSON object mapping stack paths to booleans",
+        help="JSON object mapping stack paths to plan results; reads the 'success' and 'changeSeverity' fields",
     )
     args = parser.parse_args()
 
     result = evaluate(
         args.commit_message,
         json.loads(args.rules),
-        json.loads(args.stack_changes),
+        json.loads(args.stack_results),
     )
     print("true" if result else "false")
