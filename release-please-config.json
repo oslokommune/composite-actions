@@ -35,10 +35,6 @@
       "component": "setup-ok",
       "release-type": "simple"
     },
-    "renovate-metadata": {
-      "component": "renovate-metadata",
-      "release-type": "simple"
-    },
     "generate-tag": {
       "component": "generate-tag",
       "release-type": "simple"

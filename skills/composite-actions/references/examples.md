@@ -261,46 +261,6 @@ jobs:
           release: ${{ github.ref_name }}
 ```
 
-## Renovate Auto-Merge
-
-```yaml
-name: Renovate Auto-Merge
-
-on:
-  pull_request:
-    types: [opened, synchronize]
-
-jobs:
-  check:
-    runs-on: ubuntu-latest
-    outputs:
-      is-renovate: ${{ steps.meta.outputs.is-renovate }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: oslokommune/composite-actions/renovate-metadata@v1
-        id: meta
-
-  test:
-    needs: check
-    if: needs.check.outputs.is-renovate == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: npm ci && npm test
-
-  auto-merge:
-    needs: [check, test]
-    if: needs.check.outputs.is-renovate == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - run: gh pr merge --auto --squash ${{ github.event.pull_request.number }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-```
-
 ## Artifact Tagging and Upload
 
 ```yaml
