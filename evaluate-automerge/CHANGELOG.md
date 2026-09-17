@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/oslokommune/composite-actions/compare/evaluate-automerge-v1.0.2...evaluate-automerge-v1.1.0) (2026-09-16)
+
+
+### Features
+
+* rank Terraform plan changes by severity for granular automerge policies ([#282](https://github.com/oslokommune/composite-actions/issues/282)) ([886bc52](https://github.com/oslokommune/composite-actions/commit/886bc5215121bd07952a688f45f7fcc5ea2c8ff3))
+
 ## [1.0.2](https://github.com/oslokommune/composite-actions/compare/evaluate-automerge-v1.0.1...evaluate-automerge-v1.0.2) (2026-08-28)
 
 
