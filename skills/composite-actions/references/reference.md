@@ -213,27 +213,6 @@ Package and upload artifacts to dev/prod AWS accounts.
 
 ---
 
-## renovate-metadata
-
-Check if PR contains Renovate commits and extract metadata.
-
-### Inputs
-
-| Input | Required | Default | Description |
-|-------|----------|---------|-------------|
-| `skip-verification` | No | `false` | Skip commit signature verification |
-| `renovate-actor` | No | `renovate[bot]` | Expected Renovate actor |
-| `fetch-depth` | No | `0` | Git fetch depth |
-
-### Outputs
-
-| Output | Description |
-|--------|-------------|
-| `is-renovate` | `true` if PR is from Renovate |
-| `dependencies` | JSON string of updated dependencies |
-
----
-
 ## repository-dispatch
 
 Create a repository dispatch event.

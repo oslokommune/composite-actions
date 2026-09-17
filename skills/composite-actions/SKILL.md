@@ -25,7 +25,6 @@ Reusable composite GitHub Actions for CI/CD pipelines at Oslo Kommune.
 | `generate-tag`                          | Generate unique artifact tags            |
 | `optimize-apt-get`                      | Speed up apt-get on runners              |
 | `package-and-upload-artifact`           | Upload artifacts to dev/prod AWS         |
-| `renovate-metadata`                     | Extract Renovate PR metadata             |
 | `repository-dispatch`                   | Trigger repository dispatch events       |
 | `setup-boilerplate`                     | Install Boilerplate CLI                  |
 | `setup-ok`                              | Install ok CLI and dependencies          |
