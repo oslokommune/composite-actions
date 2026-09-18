@@ -402,6 +402,37 @@ jobs:
           test "$(echo "$PAYLOAD" | jq -r '.data.attributes.git.commit_sha')" = "$GITHUB_SHA"
           test "$(echo "$PAYLOAD" | jq -r '.data.attributes.git.repository_url')" = "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
 
+      - name: Run terraform-deploy with non-trunk tag targeting prod
+        # Safety check: an `xx-` artifact (built off a non-default branch) must never
+        # reach prod, regardless of trigger. The action should fail before any AWS work.
+        id: deploy-blocked
+        continue-on-error: true
+        uses: ./terraform-deploy
+        with:
+          config: |
+            {
+              "prod": {
+                "accountId": "210987654321",
+                "defaultRegion": "us-east-1",
+                "deploymentRoleArn": "arn:aws:iam::210987654321:role/test",
+                "name": "test-prod"
+              }
+            }
+          stack-dir: "test-stack"
+          environment: "prod"
+          tag: "xx-test-app-20260101000000-12345-abcdef12-feature"
+          github-deploy-key: ${{ steps.ssh-key.outputs.private-key }}
+          cancel-if-stale: "false"
+          send-deployment-metric: "false"
+
+      - name: Verify non-trunk prod deploy was rejected
+        env:
+          OUTCOME: ${{ steps.deploy-blocked.outcome }}
+          BLOCKED: ${{ steps.deploy-blocked.outputs.__internal-block-unsafe-deployment-result }}
+        run: |
+          test "$BLOCKED" = "true"
+          test "$OUTCOME" = "failure"
+
   test-e2e-terraform-deploy-regression-test-terraform-v1-15-0:
     # Regression test for hashicorp/terraform#38484: Terraform 1.15.0 emits the
     # S3 backend's `dynamodb_table` deprecation warning to stdout, contaminating
