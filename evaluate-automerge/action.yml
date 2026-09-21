@@ -8,6 +8,10 @@ inputs:
   stack-results:
     description: "JSON object mapping each planned stack to its result, as produced by the Terraform PR workflow. Reads 'success' and 'changeSeverity': the most severe kind of change in the stack's plan ('no-changes', 'additive', 'non-destructive' or 'any-changes'). A failed stack or an unrecognized value blocks automerge; a successful stack with a missing or null changeSeverity is treated as 'any-changes'."
     required: true
+  summary-commit-sha:
+    description: "Commit whose message carries the Renovate upgrade summary. Defaults to the PR head, which is the wrong commit once the branch has been brought up to date: GitHub's \"Update branch\" button leaves a merge commit at the head whose message has no summary, so the evaluation returns false. A caller that knows which commit is Renovate's should pass it."
+    required: false
+    default: ""
 
 outputs:
   automerge:
@@ -29,7 +33,7 @@ runs:
       env:
         GH_TOKEN: ${{ github.token }}
         GH_REPO: ${{ github.repository }}
-        COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
+        COMMIT_SHA: ${{ inputs.summary-commit-sha || github.event.pull_request.head.sha }}
         RULES: ${{ inputs.rules }}
         STACK_RESULTS: ${{ inputs.stack-results }}
       run: |
