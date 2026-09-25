@@ -79,7 +79,7 @@ The action fails if a constraint uses syntax it doesn't know, such as a pre-rele
 ### Limitations
 
 - Only `required_version` in `terraform` blocks, in `*.tf` files directly in `working-directory`, is read. The action doesn't read `*.tf.json` files or child modules. `terraform init` still checks every constraint, so a missed constraint makes `init` fail instead of installing a wrong release.
-- The action doesn't know which releases exist. It notices that the deny list excludes every release a configuration allows only when no version at all is left, such as with `= 1.9.1` and 1.9.1 denied. Otherwise, `setup-terraform` fails.
+- The action doesn't know which releases exist. When the deny list leaves a range with no release in it, such as `>= 1.9.1, <= 1.9.2` with both 1.9.1 and 1.9.2 denied, the action still outputs the range without a warning, and `setup-terraform` fails with `No matching version found for constraint`. Widen `required_version`, or set `use-denylist: "false"` until the deny list is fixed. The action only detects the problem when the constraints themselves leave no version, such as `= 1.9.1` with 1.9.1 denied. Then it ignores the deny list with a warning.
 
 ## Deny list
 
