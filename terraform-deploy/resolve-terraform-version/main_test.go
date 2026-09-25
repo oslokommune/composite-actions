@@ -44,7 +44,6 @@ func TestRun(t *testing.T) {
 	tests := []struct {
 		name    string
 		files   map[string]string
-		extra   string
 		want    string
 		wantErr bool
 	}{
@@ -77,18 +76,6 @@ func TestRun(t *testing.T) {
 			name:  "not equals",
 			files: map[string]string{"main.tf": `terraform { required_version = "~> 1.9.0, != 1.9.3" }`},
 			want:  "1.9.2",
-		},
-		{
-			name:  "extra constraint excludes a version",
-			files: map[string]string{"main.tf": `terraform { required_version = "~> 1.9.0" }`},
-			extra: "!= 1.9.3",
-			want:  "1.9.2",
-		},
-		{
-			name:  "extra constraint without required_version",
-			files: map[string]string{"main.tf": `output "x" { value = 1 }`},
-			extra: "< 1.10.0",
-			want:  "1.9.3",
 		},
 		{
 			name: "constraints across multiple files and blocks",
@@ -129,12 +116,6 @@ terraform {
 			wantErr: true,
 		},
 		{
-			name:    "invalid extra constraint",
-			files:   map[string]string{"main.tf": `terraform { required_version = ">= 1.9.0" }`},
-			extra:   "banana",
-			wantErr: true,
-		},
-		{
 			name:    "invalid HCL",
 			files:   map[string]string{"main.tf": `terraform {`},
 			wantErr: true,
@@ -144,7 +125,7 @@ terraform {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			dir := writeFiles(t, tt.files)
-			got, err := run(dir, tt.extra, server.URL, nil, io.Discard)
+			got, err := run(dir, server.URL, nil, io.Discard)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatalf("expected error, got %s", got)
@@ -168,7 +149,7 @@ func TestRunFailsOnIndexError(t *testing.T) {
 	defer server.Close()
 
 	dir := writeFiles(t, map[string]string{"main.tf": `terraform { required_version = ">= 1.9.0" }`})
-	if _, err := run(dir, "", server.URL, nil, io.Discard); err == nil {
+	if _, err := run(dir, server.URL, nil, io.Discard); err == nil {
 		t.Fatal("expected error")
 	}
 }
@@ -274,7 +255,7 @@ func TestDenylist(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			dir := writeFiles(t, map[string]string{"main.tf": `terraform { required_version = "` + tt.constraint + `" }`})
 			var log strings.Builder
-			got, err := run(dir, "", server.URL, tt.denied, &log)
+			got, err := run(dir, server.URL, tt.denied, &log)
 			if err != nil {
 				t.Fatal(err)
 			}

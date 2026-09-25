@@ -1,6 +1,6 @@
 // Command resolve-terraform-version prints the newest stable Terraform version
 // that satisfies the required_version constraints in a Terraform configuration
-// directory, plus any extra constraints given on the command line.
+// directory.
 //
 // Constraints are evaluated with hashicorp/go-version, the same library
 // Terraform uses, so operators like "~>" and "!=" behave exactly as they do in
@@ -36,7 +36,6 @@ const defaultIndexURL = "https://releases.hashicorp.com/terraform/index.json"
 
 func main() {
 	dir := flag.String("dir", ".", "Terraform configuration directory to read required_version from")
-	extra := flag.String("constraint", "", `extra version constraint to apply, e.g. "!= 1.9.3"`)
 	indexURL := flag.String("index-url", defaultIndexURL, "URL of the Terraform release index")
 	denylistPath := flag.String("denylist", "", "path to a JSON file listing Terraform releases to skip")
 	flag.Parse()
@@ -50,7 +49,7 @@ func main() {
 		}
 	}
 
-	v, err := run(*dir, *extra, *indexURL, denied, os.Stderr)
+	v, err := run(*dir, *indexURL, denied, os.Stderr)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		os.Exit(1)
@@ -61,17 +60,10 @@ func main() {
 // run resolves the Terraform version, skipping the releases in denied (a map
 // from version to the reason it is denied). Warnings and notices are written
 // to log as GitHub Actions workflow commands.
-func run(dir, extra, indexURL string, denied map[string]string, log io.Writer) (*version.Version, error) {
+func run(dir, indexURL string, denied map[string]string, log io.Writer) (*version.Version, error) {
 	constraints, err := requiredVersions(dir)
 	if err != nil {
 		return nil, err
-	}
-	if strings.TrimSpace(extra) != "" {
-		c, err := version.NewConstraint(extra)
-		if err != nil {
-			return nil, fmt.Errorf("parse extra constraint %q: %w", extra, err)
-		}
-		constraints = append(constraints, c...)
 	}
 
 	available, err := fetchVersions(indexURL)
