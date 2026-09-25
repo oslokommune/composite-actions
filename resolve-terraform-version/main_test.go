@@ -2,8 +2,6 @@ package main
 
 import (
 	"io"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"slices"
@@ -12,20 +10,6 @@ import (
 
 	"github.com/hashicorp/go-version"
 )
-
-const testIndex = `{
-  "name": "terraform",
-  "versions": {
-    "1.5.7": {},
-    "1.9.0": {},
-    "1.9.2": {},
-    "1.9.3": {},
-    "1.10.0-beta1": {},
-    "1.10.0": {},
-    "1.10.5": {},
-    "1.11.0-rc1": {}
-  }
-}`
 
 func writeFiles(t *testing.T, files map[string]string) string {
 	t.Helper()
@@ -39,11 +23,6 @@ func writeFiles(t *testing.T, files map[string]string) string {
 }
 
 func TestRun(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(testIndex))
-	}))
-	defer server.Close()
-
 	tests := []struct {
 		name    string
 		files   map[string]string
@@ -53,37 +32,37 @@ func TestRun(t *testing.T) {
 		{
 			name:  "greater than or equal",
 			files: map[string]string{"main.tf": `terraform { required_version = ">= 1.9.0" }`},
-			want:  "1.10.5",
+			want:  ">=1.9.0",
 		},
 		{
 			name:  "exact version",
 			files: map[string]string{"main.tf": `terraform { required_version = "= 1.9.2" }`},
-			want:  "1.9.2",
+			want:  "=1.9.2",
 		},
 		{
 			name:  "bare version means exact",
 			files: map[string]string{"main.tf": `terraform { required_version = "1.9.0" }`},
-			want:  "1.9.0",
+			want:  "=1.9.0",
 		},
 		{
 			name:  "pessimistic patch constraint",
 			files: map[string]string{"main.tf": `terraform { required_version = "~> 1.9.0" }`},
-			want:  "1.9.3",
+			want:  ">=1.9.0 <1.10.0",
 		},
 		{
 			name:  "pessimistic minor constraint",
 			files: map[string]string{"main.tf": `terraform { required_version = "~> 1.9" }`},
-			want:  "1.10.5",
+			want:  ">=1.9.0 <2.0.0",
 		},
 		{
 			name:  "not equals",
 			files: map[string]string{"main.tf": `terraform { required_version = "~> 1.9.0, != 1.9.3" }`},
-			want:  "1.9.2",
+			want:  ">=1.9.0 <1.10.0 <1.9.3 || >=1.9.0 <1.10.0 >1.9.3",
 		},
 		{
 			name:  "two not equals",
 			files: map[string]string{"main.tf": `terraform { required_version = "~> 1.9.0, != 1.9.3, != 1.9.2" }`},
-			want:  "1.9.0",
+			want:  ">=1.9.0 <1.10.0 <1.9.2 || >=1.9.0 <1.10.0 >1.9.2 <1.9.3 || >=1.9.0 <1.10.0 >1.9.3",
 		},
 		{
 			name: "constraints across multiple files and blocks",
@@ -96,7 +75,7 @@ terraform {
 }
 `,
 			},
-			want: "1.9.3",
+			want: "<1.10.0 >=1.9.0",
 		},
 		{
 			name: "override file replaces required_version",
@@ -104,7 +83,7 @@ terraform {
 				"versions.tf":          `terraform { required_version = "~> 1.9.0" }`,
 				"versions_override.tf": `terraform { required_version = "~> 1.10.0" }`,
 			},
-			want: "1.10.5",
+			want: ">=1.10.0 <1.11.0",
 		},
 		{
 			name: "override.tf replaces required_version",
@@ -112,7 +91,7 @@ terraform {
 				"versions.tf": `terraform { required_version = "~> 1.9.0" }`,
 				"override.tf": `terraform { required_version = "= 1.5.7" }`,
 			},
-			want: "1.5.7",
+			want: "=1.5.7",
 		},
 		{
 			name: "override file without required_version keeps the primary constraints",
@@ -120,7 +99,7 @@ terraform {
 				"versions.tf":         `terraform { required_version = "~> 1.9.0" }`,
 				"backend_override.tf": "terraform {\n  backend \"s3\" {}\n}\n",
 			},
-			want: "1.9.3",
+			want: ">=1.9.0 <1.10.0",
 		},
 		{
 			name: "last override file wins",
@@ -129,7 +108,7 @@ terraform {
 				"a_override.tf": `terraform { required_version = "= 1.5.7" }`,
 				"b_override.tf": `terraform { required_version = "~> 1.9.0" }`,
 			},
-			want: "1.9.3",
+			want: ">=1.9.0 <1.10.0",
 		},
 		{
 			name: "file named like an override without the underscore is primary",
@@ -137,7 +116,7 @@ terraform {
 				"versions.tf":   `terraform { required_version = "~> 1.9.0" }`,
 				"nooverride.tf": `terraform { required_version = "!= 1.9.3" }`,
 			},
-			want: "1.9.2",
+			want: ">=1.9.0 <1.10.0 <1.9.3 || >=1.9.0 <1.10.0 >1.9.3",
 		},
 		{
 			name: "reads files starting with underscores",
@@ -145,7 +124,7 @@ terraform {
 				"__gp_versions.tf": `terraform { required_version = "~> 1.9.0" }`,
 				"main.tf":          `output "x" { value = 1 }`,
 			},
-			want: "1.9.3",
+			want: ">=1.9.0 <1.10.0",
 		},
 		{
 			name: "ignores hidden files",
@@ -153,26 +132,31 @@ terraform {
 				"versions.tf":   `terraform { required_version = "~> 1.9.0" }`,
 				".#versions.tf": `terraform { required_version = "= 1.5.7" }`,
 			},
-			want: "1.9.3",
+			want: ">=1.9.0 <1.10.0",
 		},
 		{
 			name:  "ignores JSON configuration",
 			files: map[string]string{"main.tf": `terraform { required_version = "~> 1.9.0" }`, "main.tf.json": `{"terraform": {"required_version": "= 1.5.7"}}`},
-			want:  "1.9.3",
+			want:  ">=1.9.0 <1.10.0",
 		},
 		{
-			name:  "no constraints picks newest stable",
+			name:  "no constraints allows every release",
 			files: map[string]string{"main.tf": `output "x" { value = 1 }`},
-			want:  "1.10.5",
+			want:  "*",
 		},
 		{
 			name:  "ignores non-Terraform files",
 			files: map[string]string{"main.tf": `terraform { required_version = "~> 1.9.0" }`, "notes.txt": "not hcl {"},
-			want:  "1.9.3",
+			want:  ">=1.9.0 <1.10.0",
 		},
 		{
-			name:    "no matching release",
-			files:   map[string]string{"main.tf": `terraform { required_version = ">= 2.0.0" }`},
+			name:    "pessimistic constraint with a pre-release",
+			files:   map[string]string{"main.tf": `terraform { required_version = "~> 1.10.0-beta1" }`},
+			wantErr: true,
+		},
+		{
+			name:    "more than three segments",
+			files:   map[string]string{"main.tf": `terraform { required_version = ">= 1.9.0.1" }`},
 			wantErr: true,
 		},
 		{
@@ -190,7 +174,7 @@ terraform {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			dir := writeFiles(t, tt.files)
-			got, err := run(dir, server.URL, nil, io.Discard)
+			got, err := run(dir, nil, io.Discard)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatalf("expected error, got %s", got)
@@ -200,22 +184,10 @@ terraform {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got.String() != tt.want {
-				t.Errorf("got %s, want %s", got, tt.want)
+			if got != tt.want {
+				t.Errorf("got %q, want %q", got, tt.want)
 			}
 		})
-	}
-}
-
-func TestRunFailsOnIndexError(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, "boom", http.StatusInternalServerError)
-	}))
-	defer server.Close()
-
-	dir := writeFiles(t, map[string]string{"main.tf": `terraform { required_version = ">= 1.9.0" }`})
-	if _, err := run(dir, server.URL, nil, io.Discard); err == nil {
-		t.Fatal("expected error")
 	}
 }
 
@@ -272,100 +244,111 @@ func TestReadDenylistMissingFile(t *testing.T) {
 	}
 }
 
-func versions(t *testing.T, raw ...string) []*version.Version {
-	t.Helper()
-	vs := make([]*version.Version, len(raw))
-	for i, r := range raw {
-		vs[i] = version.Must(version.NewVersion(r))
-	}
-	return vs
-}
-
-func TestResolve(t *testing.T) {
-	available := versions(t, "1.5.7", "1.9.0", "1.9.2", "1.9.3", "1.10.0-beta1", "1.10.0", "1.10.5", "1.11.0-rc1")
+func TestSemverRange(t *testing.T) {
 	denied, err := parseDenylist(strings.NewReader(testDenylist), io.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	tests := []struct {
-		name                string
-		constraint          string
-		denied              map[string]string
-		want                string
-		wantSkipped         []string
-		wantIgnoredDenylist bool
+		name        string
+		constraint  string
+		denied      map[string]string
+		want        string
+		wantSkipped []string
+		wantIgnored string
 	}{
 		{
-			name:        "skips a denied release",
-			constraint:  "< 1.9.3",
-			denied:      denied,
-			want:        "1.9.0",
-			wantSkipped: []string{"1.9.2"},
+			name:       "no deny list",
+			constraint: ">= 1.10.0",
+			want:       ">=1.10.0",
 		},
 		{
-			name:        "skips several denied releases",
+			name:        "excludes two releases",
+			constraint:  ">= 1.10.0",
+			denied:      map[string]string{"1.16.3": "b", "1.15.9": "a"},
+			want:        ">=1.10.0 <1.15.9 || >=1.10.0 >1.15.9 <1.16.3 || >=1.10.0 >1.16.3",
+			wantSkipped: []string{"1.15.9", "1.16.3"},
+		},
+		{
+			name:        "leaves out denied releases the constraints don't allow",
 			constraint:  "~> 1.9.0",
 			denied:      denied,
-			want:        "1.9.0",
-			wantSkipped: []string{"1.9.3", "1.9.2"},
+			want:        ">=1.9.0 <1.10.0 <1.9.2 || >=1.9.0 <1.10.0 >1.9.2 <1.9.3 || >=1.9.0 <1.10.0 >1.9.3",
+			wantSkipped: []string{"1.9.2", "1.9.3"},
 		},
 		{
 			name:        "combines exclusions in required_version with the deny list",
 			constraint:  "~> 1.9.0, != 1.9.3",
-			denied:      denied,
-			want:        "1.9.0",
-			wantSkipped: []string{"1.9.2"},
+			denied:      map[string]string{"1.9.3": "a", "1.9.2": "b"},
+			want:        ">=1.9.0 <1.10.0 <1.9.2 || >=1.9.0 <1.10.0 >1.9.2 <1.9.3 || >=1.9.0 <1.10.0 >1.9.3",
+			wantSkipped: []string{"1.9.2", "1.9.3"},
 		},
 		{
-			name:       "nothing skipped when the newest release is allowed",
+			name:       "nothing to exclude",
 			constraint: "< 1.9.2",
 			denied:     denied,
-			want:       "1.9.0",
+			want:       "<1.9.2",
 		},
 		{
-			name:                "ignores the deny list when every allowed release is denied",
-			constraint:          "= 1.9.3",
-			denied:              denied,
-			want:                "1.9.3",
-			wantIgnoredDenylist: true,
+			name:        "no constraints",
+			denied:      map[string]string{"1.9.3": "a"},
+			want:        "<1.9.3 || >1.9.3",
+			wantSkipped: []string{"1.9.3"},
 		},
 		{
-			name:       "no deny list",
-			constraint: "~> 1.9.0",
-			want:       "1.9.3",
+			name:        "keeps a pinned denied release",
+			constraint:  "= 1.9.3",
+			denied:      denied,
+			want:        "=1.9.3",
+			wantIgnored: "1.9.3",
+		},
+		{
+			name:       "pessimistic major constraint only sets a lower bound",
+			constraint: "~> 1",
+			want:       ">=1.0.0",
+		},
+		{
+			name:       "pads partial versions",
+			constraint: ">= 1.10, < 2",
+			want:       ">=1.10.0 <2.0.0",
+		},
+		{
+			name:       "keeps pre-releases",
+			constraint: ">= 1.10.0-beta1",
+			want:       ">=1.10.0-beta1",
+		},
+		{
+			name:       "drops build metadata",
+			constraint: "= 1.10.0+ent",
+			want:       "=1.10.0",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := resolve(available, version.MustConstraints(version.NewConstraint(tt.constraint)), tt.denied)
+			var constraints version.Constraints
+			if tt.constraint != "" {
+				constraints = version.MustConstraints(version.NewConstraint(tt.constraint))
+			}
+			got, err := semverRange(constraints, tt.denied)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got.version.String() != tt.want {
-				t.Errorf("version: got %s, want %s", got.version, tt.want)
+			if got.semver != tt.want {
+				t.Errorf("range: got %q, want %q", got.semver, tt.want)
 			}
-			var skipped []string
-			for _, s := range got.skipped {
-				skipped = append(skipped, s.String())
+			if !slices.Equal(got.skipped, tt.wantSkipped) {
+				t.Errorf("skipped: got %v, want %v", got.skipped, tt.wantSkipped)
 			}
-			if !slices.Equal(skipped, tt.wantSkipped) {
-				t.Errorf("skipped: got %v, want %v", skipped, tt.wantSkipped)
-			}
-			if got.ignoredDenylist != tt.wantIgnoredDenylist {
-				t.Errorf("ignoredDenylist: got %v, want %v", got.ignoredDenylist, tt.wantIgnoredDenylist)
+			if got.ignoredDenied != tt.wantIgnored {
+				t.Errorf("ignoredDenied: got %q, want %q", got.ignoredDenied, tt.wantIgnored)
 			}
 		})
 	}
 }
 
 func TestDenylistFileWithTwoEntries(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(testIndex))
-	}))
-	defer server.Close()
-
 	dir := writeFiles(t, map[string]string{
 		"versions.tf": `terraform { required_version = "~> 1.9.0" }`,
 		"denylist.json": `{
@@ -380,29 +363,23 @@ func TestDenylistFileWithTwoEntries(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got, err := run(dir, server.URL, denied, io.Discard)
+	got, err := run(dir, denied, io.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}
-	// ~> 1.9.0 allows 1.9.0, 1.9.2 and 1.9.3; both newer ones are denied
-	if want := "1.9.0"; got.String() != want {
-		t.Errorf("got %s, want %s", got, want)
+	if want := ">=1.9.0 <1.10.0 <1.9.2 || >=1.9.0 <1.10.0 >1.9.2 <1.9.3 || >=1.9.0 <1.10.0 >1.9.3"; got != want {
+		t.Errorf("got %q, want %q", got, want)
 	}
 }
 
 func TestRunLogsSkippedReleases(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(testIndex))
-	}))
-	defer server.Close()
-
 	denied, err := parseDenylist(strings.NewReader(testDenylist), io.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}
 	dir := writeFiles(t, map[string]string{"main.tf": `terraform { required_version = "< 1.9.3" }`})
 	var log strings.Builder
-	if _, err := run(dir, server.URL, denied, &log); err != nil {
+	if _, err := run(dir, denied, &log); err != nil {
 		t.Fatal(err)
 	}
 	// The reason must reach the user; the wording is free to change
@@ -410,12 +387,5 @@ func TestRunLogsSkippedReleases(t *testing.T) {
 		if !strings.Contains(log.String(), want) {
 			t.Errorf("log %q does not mention %q", log.String(), want)
 		}
-	}
-}
-
-func TestDenyConstraints(t *testing.T) {
-	got := denyConstraints(map[string]string{"1.9.3": "a", "1.10.5": "b"}).String()
-	if want := "!= 1.10.5,!= 1.9.3"; got != want {
-		t.Errorf("got %q, want %q", got, want)
 	}
 }

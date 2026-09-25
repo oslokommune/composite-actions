@@ -1,5 +1,5 @@
 name: "Resolve Terraform version"
-description: "Resolve the required_version constraints of a Terraform configuration to a concrete Terraform release, skipping releases on a central deny list"
+description: "Translate the required_version constraints of a Terraform configuration into a version range for hashicorp/setup-terraform, skipping releases on a central deny list"
 
 inputs:
   working-directory:
@@ -13,7 +13,7 @@ inputs:
 
 outputs:
   terraform-version:
-    description: "The newest stable Terraform release that satisfies the constraints (e.g., `1.9.7`)"
+    description: "An npm semver range that allows the same Terraform releases as the constraints, for the `terraform_version` input of `hashicorp/setup-terraform` (e.g., `>=1.9.0 <1.10.0`)"
     value: ${{ steps.resolve.outputs.terraform-version }}
 
 runs:
@@ -40,8 +40,8 @@ runs:
 
     - name: Resolve Terraform version
       # NOTE: setup-terraform evaluates version constraints with npm semver, which doesn't
-      # understand Terraform's `~>` operator. Resolve the constraints to a concrete version
-      # with the same library Terraform uses instead.
+      # understand Terraform's `~>` and `!=` operators. Translate the constraints to an
+      # npm semver range, and let setup-terraform pick the newest release in it.
       id: resolve
       shell: bash --noprofile --norc -euo pipefail {0}
       working-directory: ${{ inputs.working-directory }}
@@ -49,5 +49,5 @@ runs:
         RESOLVER_DIR: ${{ github.action_path }}
         DENYLIST: ${{ inputs.use-denylist == 'true' && format('{0}/terraform-version-denylist.json', runner.temp) || '' }}
       run: |
-        version="$(go run -C "$RESOLVER_DIR" . -dir "$PWD" -denylist "$DENYLIST")"
-        echo "terraform-version=$version" >> "$GITHUB_OUTPUT"
+        range="$(go run -C "$RESOLVER_DIR" . -dir "$PWD" -denylist "$DENYLIST")"
+        echo "terraform-version=$range" >> "$GITHUB_OUTPUT"
