@@ -1,3 +1,5 @@
 {
-  "denied": []
+  "denied": [
+    { "version": "1.16.4", "reason": "Temporary test entry for #290, not a broken release" }
+  ]
 }
