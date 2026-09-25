@@ -95,7 +95,7 @@ func run(dir, indexURL string, denied map[string]string, log io.Writer) (*versio
 }
 
 // requiredVersions collects the required_version constraints from all
-// terraform blocks in the .tf and .tf.json files in dir.
+// terraform blocks in the .tf files in dir.
 func requiredVersions(dir string) (version.Constraints, error) {
 	parser := hclparse.NewParser()
 	var constraints version.Constraints
@@ -105,25 +105,16 @@ func requiredVersions(dir string) (version.Constraints, error) {
 		return nil, err
 	}
 	for _, entry := range entries {
-		if entry.IsDir() {
+		name := entry.Name()
+		if entry.IsDir() || !strings.HasSuffix(name, ".tf") {
 			continue
 		}
-		path := filepath.Join(dir, entry.Name())
+		path := filepath.Join(dir, name)
 
-		var file *hcl.File
-		var diags hcl.Diagnostics
-		switch {
-		case strings.HasSuffix(entry.Name(), ".tf"):
-			file, diags = parser.ParseHCLFile(path)
-		case strings.HasSuffix(entry.Name(), ".tf.json"):
-			file, diags = parser.ParseJSONFile(path)
-		default:
-			continue
-		}
+		file, diags := parser.ParseHCLFile(path)
 		if diags.HasErrors() {
 			return nil, diags
 		}
-
 		c, err := fileRequiredVersions(file)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", path, err)

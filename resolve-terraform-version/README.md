@@ -51,7 +51,7 @@ Resolve the required_version constraints of a Terraform configuration to a concr
     terraform_version: ${{ steps.terraform-version.outputs.terraform-version }}
 ```
 
-The action reads `required_version` from every `terraform` block in the `*.tf` and `*.tf.json` files in `working-directory`. It evaluates the constraints with `hashicorp/go-version`, the library Terraform itself uses, and picks the newest stable release from `releases.hashicorp.com`. It fails if no release satisfies the constraints.
+The action reads `required_version` from every `terraform` block in the `*.tf` files in `working-directory`. It evaluates the constraints with `hashicorp/go-version`, the library Terraform itself uses, and picks the newest stable release from `releases.hashicorp.com`. It fails if no release satisfies the constraints.
 
 The action runs `actions/setup-go`, so later steps in the job get that Go version on `PATH`.
 
