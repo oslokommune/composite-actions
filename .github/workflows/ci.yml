@@ -513,8 +513,6 @@ jobs:
           tag: "test-app/v1.0.0"
           github-deploy-key: ${{ steps.ssh-key.outputs.private-key }}
           cancel-if-stale: "false"
-          # This job pins Terraform 1.15.0 on purpose, so it must not be affected by the deny list
-          terraform-version-denylist: "false"
 
       - name: Verify Terraform outputs survive the polluted stdout
         env:

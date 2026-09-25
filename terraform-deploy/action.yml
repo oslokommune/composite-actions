@@ -46,10 +46,6 @@ inputs:
   datadog-api-key:
     description: "Datadog API key for sending deployment events"
     required: false
-  terraform-version-denylist:
-    description: "Whether to skip Terraform releases listed in `terraform-deploy/terraform-version-denylist.json` on the main branch of this repository. The list is fetched at run time and ignored with a warning if it can't be read. Set to `false` to resolve from `required_version` alone."
-    required: false
-    default: "true"
 
 outputs:
   # NOTE: A composite action can't have dynamic outputs, so
@@ -145,43 +141,20 @@ runs:
       with:
         ssh-private-key: ${{ inputs.github-deploy-key }}
 
-    - name: Set up Go
-      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-      with:
-        go-version-file: ${{ github.action_path }}/resolve-terraform-version/go.mod
-        cache-dependency-path: ${{ github.action_path }}/resolve-terraform-version/go.sum
-
-    - name: Download Terraform version deny list
-      # NOTE: Read from main, not the action ref, so changes apply to every caller right away.
-      # If the download fails, the resolver warns and resolves without the deny list.
-      if: inputs.terraform-version-denylist == 'true'
-      continue-on-error: true
-      shell: bash --noprofile --norc -euo pipefail {0}
-      env:
-        GH_TOKEN: ${{ github.token }}
-      run: |
-        gh api -H "Accept: application/vnd.github.raw" \
-          "repos/oslokommune/composite-actions/contents/terraform-deploy/terraform-version-denylist.json?ref=main" \
-          > "$RUNNER_TEMP/terraform-version-denylist.json"
-
-    - name: Resolve Terraform version
-      # NOTE: setup-terraform evaluates version constraints with npm semver, which doesn't
-      # understand Terraform's `~>` operator. Resolve the constraints to a concrete version
-      # with the same library Terraform uses instead.
+    - name: Extract Terraform version
       id: v
       shell: bash --noprofile --norc -euo pipefail {0}
       working-directory: ${{ steps.get-stack-dir.outputs.stack-dir }}
-      env:
-        RESOLVER_DIR: ${{ github.action_path }}/resolve-terraform-version
-        DENYLIST: ${{ inputs.terraform-version-denylist == 'true' && format('{0}/terraform-version-denylist.json', runner.temp) || '' }}
       run: |
-        version="$(go run -C "$RESOLVER_DIR" . -dir "$PWD" -denylist "$DENYLIST")"
-        echo "terraform-version=$version" >> "$GITHUB_OUTPUT"
+        echo Extract Terraform version
+        pwd
+        ls -lah
+        echo "TERRAFORM_VERSION=$(grep required_version *.tf | sed -E 's/[^"]+"([^"]+)"+/\1/')" >> "$GITHUB_OUTPUT"
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
       with:
-        terraform_version: ${{ steps.v.outputs.terraform-version }}
+        terraform_version: ${{ steps.v.outputs.TERRAFORM_VERSION }}
 
     - name: Initialize the working directory containing Terraform configuration files
       id: init
