@@ -50,6 +50,10 @@ inputs:
     description: "Extra Terraform version constraint to combine with `required_version` in the stack, using Terraform's constraint syntax (e.g. `!= 1.9.3` to skip a broken release)."
     required: false
     default: ""
+  terraform-version-denylist:
+    description: "Whether to skip Terraform releases listed in `terraform-deploy/terraform-version-denylist.txt` on the main branch of this repository. The list is fetched at run time and ignored with a warning if it can't be read. Set to `false` to resolve from `required_version` alone."
+    required: false
+    default: "true"
 
 outputs:
   # NOTE: A composite action can't have dynamic outputs, so
@@ -161,8 +165,13 @@ runs:
       env:
         RESOLVER_DIR: ${{ github.action_path }}/resolve-terraform-version
         EXTRA_CONSTRAINT: ${{ inputs.terraform-version-constraint }}
+        USE_DENYLIST: ${{ inputs.terraform-version-denylist }}
       run: |
-        version="$(go run -C "$RESOLVER_DIR" . -dir "$PWD" -constraint "$EXTRA_CONSTRAINT")"
+        args=(-dir "$PWD" -constraint "$EXTRA_CONSTRAINT")
+        if [ "$USE_DENYLIST" != "true" ]; then
+          args+=(-denylist-url "")
+        fi
+        version="$(go run -C "$RESOLVER_DIR" . "${args[@]}")"
         echo "Resolved Terraform version: $version"
         echo "TERRAFORM_VERSION=$version" >> "$GITHUB_OUTPUT"
 
