@@ -81,6 +81,11 @@ func TestRun(t *testing.T) {
 			want:  "1.9.2",
 		},
 		{
+			name:  "two not equals",
+			files: map[string]string{"main.tf": `terraform { required_version = "~> 1.9.0, != 1.9.3, != 1.9.2" }`},
+			want:  "1.9.0",
+		},
+		{
 			name: "constraints across multiple files and blocks",
 			files: map[string]string{
 				"versions.tf": `terraform { required_version = ">= 1.9.0" }`,
