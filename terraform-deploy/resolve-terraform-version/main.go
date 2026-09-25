@@ -5,13 +5,19 @@
 // Constraints are evaluated with hashicorp/go-version, the same library
 // Terraform uses, so operators like "~>" and "!=" behave exactly as they do in
 // Terraform itself.
+//
+// Releases on a deny list fetched at run time are skipped. The deny list is
+// best-effort: if it can't be fetched, or it would rule out every release the
+// constraints allow, a warning is printed and the deny list is ignored.
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -24,15 +30,19 @@ import (
 	"github.com/zclconf/go-cty/cty"
 )
 
-const defaultIndexURL = "https://releases.hashicorp.com/terraform/index.json"
+const (
+	defaultIndexURL    = "https://releases.hashicorp.com/terraform/index.json"
+	defaultDenylistURL = "https://raw.githubusercontent.com/oslokommune/composite-actions/main/terraform-deploy/terraform-version-denylist.txt"
+)
 
 func main() {
 	dir := flag.String("dir", ".", "Terraform configuration directory to read required_version from")
 	extra := flag.String("constraint", "", `extra version constraint to apply, e.g. "!= 1.9.3"`)
 	indexURL := flag.String("index-url", defaultIndexURL, "URL of the Terraform release index")
+	denylistURL := flag.String("denylist-url", defaultDenylistURL, "URL of the list of Terraform releases to skip (empty to disable)")
 	flag.Parse()
 
-	v, err := run(*dir, *extra, *indexURL)
+	v, err := run(*dir, *extra, *indexURL, *denylistURL, os.Stderr)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		os.Exit(1)
@@ -40,7 +50,9 @@ func main() {
 	fmt.Println(v)
 }
 
-func run(dir, extra, indexURL string) (*version.Version, error) {
+// run resolves the Terraform version. Warnings and notices are written to log
+// as GitHub Actions workflow commands.
+func run(dir, extra, indexURL, denylistURL string, log io.Writer) (*version.Version, error) {
 	constraints, err := requiredVersions(dir)
 	if err != nil {
 		return nil, err
@@ -57,7 +69,34 @@ func run(dir, extra, indexURL string) (*version.Version, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newestMatching(available, constraints)
+	best, err := newestMatching(available, constraints)
+	if err != nil {
+		return nil, err
+	}
+	if denylistURL == "" {
+		return best, nil
+	}
+
+	denied, err := fetchDenylist(denylistURL, log)
+	if err != nil {
+		fmt.Fprintf(log, "::warning::Could not read the Terraform version deny list, resolving without it: %s\n", err)
+		return best, nil
+	}
+	allowed := make([]*version.Version, 0, len(available))
+	for _, v := range available {
+		if _, ok := denied[v.String()]; !ok {
+			allowed = append(allowed, v)
+		}
+	}
+	v, err := newestMatching(allowed, constraints)
+	if err != nil {
+		fmt.Fprintf(log, "::warning::Every Terraform release allowed by %q is on the deny list, using %s anyway (%s)\n", constraints.String(), best, denied[best.String()])
+		return best, nil
+	}
+	if !v.Equal(best) {
+		fmt.Fprintf(log, "::notice::Skipping Terraform %s because it is on the deny list (%s), using %s\n", best, denied[best.String()], v)
+	}
+	return v, nil
 }
 
 // requiredVersions collects the required_version constraints from all
@@ -164,6 +203,46 @@ func fetchVersions(url string) ([]*version.Version, error) {
 		versions = append(versions, v)
 	}
 	return versions, nil
+}
+
+// fetchDenylist returns the denied versions mapped to the reason they are
+// denied. Each line holds a version, optionally followed by "# reason". Blank
+// lines and lines starting with "#" are ignored, and invalid lines are skipped
+// with a warning.
+func fetchDenylist(url string, log io.Writer) (map[string]string, error) {
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("fetch %s: %s", url, resp.Status)
+	}
+
+	denied := map[string]string{}
+	scanner := bufio.NewScanner(io.LimitReader(resp.Body, 1<<20))
+	for scanner.Scan() {
+		entry, reason, _ := strings.Cut(scanner.Text(), "#")
+		entry = strings.TrimSpace(entry)
+		if entry == "" {
+			continue
+		}
+		v, err := version.NewVersion(entry)
+		if err != nil {
+			fmt.Fprintf(log, "::warning::Skipping invalid entry %q in the Terraform version deny list\n", entry)
+			continue
+		}
+		reason = strings.TrimSpace(reason)
+		if reason == "" {
+			reason = "no reason given"
+		}
+		denied[v.String()] = reason
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	return denied, nil
 }
 
 // newestMatching returns the newest stable version that satisfies all

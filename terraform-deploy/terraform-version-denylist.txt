@@ -1,0 +1,11 @@
+# Terraform releases that terraform-deploy skips when resolving required_version.
+#
+# The action fetches this file from the main branch at run time, so changes
+# take effect for every caller as soon as they are merged. The list is
+# best-effort: if it can't be fetched, or it rules out every release a stack
+# allows, the action warns and resolves without it. Callers can turn it off
+# with the terraform-version-denylist input.
+#
+# One version per line, followed by the reason:
+#
+#   1.9.3  # breaks the S3 backend (link to upstream issue)
