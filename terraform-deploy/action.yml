@@ -46,6 +46,10 @@ inputs:
   datadog-api-key:
     description: "Datadog API key for sending deployment events"
     required: false
+  terraform-version-constraint:
+    description: "Extra Terraform version constraint to combine with `required_version` in the stack, using Terraform's constraint syntax (e.g. `!= 1.9.3` to skip a broken release)."
+    required: false
+    default: ""
 
 outputs:
   # NOTE: A composite action can't have dynamic outputs, so
@@ -156,8 +160,9 @@ runs:
       working-directory: ${{ steps.get-stack-dir.outputs.stack-dir }}
       env:
         RESOLVER_DIR: ${{ github.action_path }}/resolve-terraform-version
+        EXTRA_CONSTRAINT: ${{ inputs.terraform-version-constraint }}
       run: |
-        version="$(go run -C "$RESOLVER_DIR" . -dir "$PWD")"
+        version="$(go run -C "$RESOLVER_DIR" . -dir "$PWD" -constraint "$EXTRA_CONSTRAINT")"
         echo "Resolved Terraform version: $version"
         echo "TERRAFORM_VERSION=$version" >> "$GITHUB_OUTPUT"
 
