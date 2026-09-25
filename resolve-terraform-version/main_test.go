@@ -360,6 +360,36 @@ func TestResolve(t *testing.T) {
 	}
 }
 
+func TestDenylistFileWithTwoEntries(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(testIndex))
+	}))
+	defer server.Close()
+
+	dir := writeFiles(t, map[string]string{
+		"versions.tf": `terraform { required_version = "~> 1.9.0" }`,
+		"denylist.json": `{
+  "denied": [
+    {"version": "1.9.3", "reason": "first broken release"},
+    {"version": "1.9.2", "reason": "second broken release"}
+  ]
+}`,
+	})
+
+	denied, err := readDenylist(filepath.Join(dir, "denylist.json"), io.Discard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := run(dir, server.URL, denied, io.Discard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// ~> 1.9.0 allows 1.9.0, 1.9.2 and 1.9.3; both newer ones are denied
+	if want := "1.9.0"; got.String() != want {
+		t.Errorf("got %s, want %s", got, want)
+	}
+}
+
 func TestRunLogsSkippedReleases(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(testIndex))
