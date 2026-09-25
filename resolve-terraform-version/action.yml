@@ -1,5 +1,5 @@
 name: "Resolve Terraform version"
-description: "Resolve the required_version constraints of a Terraform configuration to a concrete Terraform release, skipping releases on a central deny list"
+description: "Convert the required_version constraints of a Terraform configuration to a version range for setup-terraform, excluding releases on a central deny list"
 
 inputs:
   working-directory:
@@ -7,24 +7,18 @@ inputs:
     required: false
     default: "."
   use-denylist:
-    description: "Whether to skip Terraform releases listed in `resolve-terraform-version/denylist.json` on the main branch of this repository. The list is fetched at run time and ignored with a warning if it can't be read."
+    description: "Whether to exclude Terraform releases listed in `resolve-terraform-version/denylist.json` on the main branch of this repository. The list is fetched at run time and ignored with a warning if it can't be read."
     required: false
     default: "true"
 
 outputs:
   terraform-version:
-    description: "The newest stable Terraform release that satisfies the constraints (e.g., `1.9.7`)"
+    description: "An npm semver range for the `terraform_version` input of `hashicorp/setup-terraform` (e.g., `>=1.9.0 <1.10.0 <1.9.3 || >=1.9.0 <1.10.0 >1.9.3`)"
     value: ${{ steps.resolve.outputs.terraform-version }}
 
 runs:
   using: composite
   steps:
-    - name: Set up Go
-      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-      with:
-        go-version-file: ${{ github.action_path }}/go.mod
-        cache-dependency-path: ${{ github.action_path }}/go.sum
-
     - name: Download deny list
       # NOTE: Read from main, not the action ref, so changes apply to every caller right away.
       # If the download fails, the resolver warns and resolves without the deny list.
@@ -39,15 +33,16 @@ runs:
           > "$RUNNER_TEMP/terraform-version-denylist.json"
 
     - name: Resolve Terraform version
-      # NOTE: setup-terraform evaluates version constraints with npm semver, which doesn't
-      # understand Terraform's `~>` operator. Resolve the constraints to a concrete version
-      # with the same library Terraform uses instead.
+      # NOTE: setup-terraform evaluates version constraints with npm semver, which reads
+      # Terraform's `~>`, `!=` and commas differently. Rewrite the constraints to an npm
+      # semver range that allows the same releases.
       id: resolve
       shell: bash --noprofile --norc -euo pipefail {0}
       working-directory: ${{ inputs.working-directory }}
       env:
-        RESOLVER_DIR: ${{ github.action_path }}
+        RESOLVER: ${{ github.action_path }}/resolve_terraform_version.py
         DENYLIST: ${{ inputs.use-denylist == 'true' && format('{0}/terraform-version-denylist.json', runner.temp) || '' }}
       run: |
-        version="$(go run -C "$RESOLVER_DIR" . -dir "$PWD" -denylist "$DENYLIST")"
+        version="$(python3 "$RESOLVER" --dir "$PWD" --denylist "$DENYLIST")"
+        echo "Terraform version range: $version"
         echo "terraform-version=$version" >> "$GITHUB_OUTPUT"

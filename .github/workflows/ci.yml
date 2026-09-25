@@ -68,23 +68,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
-      - name: Set up Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: resolve-terraform-version/go.mod
-          cache-dependency-path: resolve-terraform-version/go.sum
-
-      - name: Check formatting
-        working-directory: ./resolve-terraform-version
-        run: test -z "$(gofmt -l .)"
-
-      - name: Run go vet
-        working-directory: ./resolve-terraform-version
-        run: go vet ./...
-
       - name: Run tests
         working-directory: ./resolve-terraform-version
-        run: go test -v ./...
+        run: python3 test_resolve_terraform_version.py
 
   test-e2e-resolve-terraform-version:
     name: Test E2E resolve-terraform-version composite action
@@ -107,7 +93,7 @@ jobs:
           mkdir -p test-stack-invalid
           cat > test-stack-invalid/versions.tf << 'EOF'
           terraform {
-            required_version = ">= 99.0.0"
+            required_version = "banana"
           }
           EOF
 
@@ -124,25 +110,46 @@ jobs:
           working-directory: test-stack
           use-denylist: "false"
 
-      - name: Verify resolved versions
-        env:
-          VERSION: ${{ steps.resolve.outputs.terraform-version }}
-          VERSION_WITHOUT_DENYLIST: ${{ steps.resolve-without-denylist.outputs.terraform-version }}
-        run: |
-          echo "With deny list: $VERSION"
-          echo "Without deny list: $VERSION_WITHOUT_DENYLIST"
-          [[ "$VERSION" =~ ^1\.9\.[0-9]+$ ]]
-          [[ "$VERSION_WITHOUT_DENYLIST" =~ ^1\.9\.[0-9]+$ ]]
-          test "$VERSION_WITHOUT_DENYLIST" != "1.9.1"
+      - name: Setup Terraform with the resolved range
+        uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
+        with:
+          terraform_version: ${{ steps.resolve.outputs.terraform-version }}
+          terraform_wrapper: false
 
-      - name: Run resolve-terraform-version with an unsatisfiable constraint
+      - name: Verify installed version
+        env:
+          RANGE: ${{ steps.resolve.outputs.terraform-version }}
+        run: |
+          version="$(terraform version -json | jq -r '.terraform_version')"
+          echo "Range: $RANGE"
+          echo "Installed: $version"
+          [[ "$version" =~ ^1\.9\.[0-9]+$ ]]
+          test "$version" != "1.9.1"
+
+      - name: Setup Terraform with the range resolved without the deny list
+        uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
+        with:
+          terraform_version: ${{ steps.resolve-without-denylist.outputs.terraform-version }}
+          terraform_wrapper: false
+
+      - name: Verify installed version without the deny list
+        env:
+          RANGE: ${{ steps.resolve-without-denylist.outputs.terraform-version }}
+        run: |
+          version="$(terraform version -json | jq -r '.terraform_version')"
+          echo "Range: $RANGE"
+          echo "Installed: $version"
+          [[ "$version" =~ ^1\.9\.[0-9]+$ ]]
+          test "$version" != "1.9.1"
+
+      - name: Run resolve-terraform-version with an invalid constraint
         id: resolve-invalid
         uses: ./resolve-terraform-version
         continue-on-error: true
         with:
           working-directory: test-stack-invalid
 
-      - name: Verify unsatisfiable constraint was rejected
+      - name: Verify invalid constraint was rejected
         run: test "${{ steps.resolve-invalid.outcome }}" = "failure"
 
   test-e2e-build-gp-config:
