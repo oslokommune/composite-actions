@@ -12,6 +12,10 @@ from resolve_terraform_version import read_denylist, read_required_versions, to_
 SCRIPT = Path(__file__).with_name("resolve_terraform_version.py")
 
 
+def read_constraints(directory):
+    return [constraint for _, constraint in read_required_versions(directory)]
+
+
 def write_files(files):
     directory = tempfile.mkdtemp()
     for name, content in files.items():
@@ -46,6 +50,13 @@ class TestToRange(unittest.TestCase):
             (["~> 1.9.0, != 1.9.2"], ["1.9.3"], ">=1.9.0 <1.10.0 <1.9.2 || >=1.9.0 <1.10.0 >1.9.2 <1.9.3 || >=1.9.0 <1.10.0 >1.9.3"),
             # Sorted by number, not by text
             ([], ["1.10.0", "1.9.0"], "<1.9.0 || >1.9.0 <1.10.0 || >1.10.0"),
+            # A deny list that excludes every allowed version is ignored
+            (["= 1.9.1"], ["1.9.1"], "=1.9.1"),
+            ([">= 1.9.1, <= 1.9.1"], ["1.9.1"], ">=1.9.1 <=1.9.1"),
+            (["= 1.9.1, != 1.9.2"], ["1.9.1"], "=1.9.1 <1.9.2 || =1.9.1 >1.9.2"),
+            # A deny list that leaves some allowed version is used
+            (["= 1.9.1"], ["1.9.2"], "=1.9.1 <1.9.2 || =1.9.1 >1.9.2"),
+            ([">= 1.9.1, <= 1.9.2"], ["1.9.1"], ">=1.9.1 <=1.9.2 <1.9.1 || >=1.9.1 <=1.9.2 >1.9.1"),
         ]
         for constraints, excluded, want in cases:
             with self.subTest(constraints=constraints, excluded=excluded):
@@ -68,36 +79,56 @@ class TestReadRequiredVersions(unittest.TestCase):
                 "notes.txt": 'required_version = "= 1.5.7"\n',
             }
         )
-        self.assertEqual(read_required_versions(directory), ["< 1.10.0", ">= 1.9.0"])
+        self.assertEqual(read_constraints(directory), ["< 1.10.0", ">= 1.9.0"])
 
     def test_override_files(self):
         versions = 'terraform {\n  required_version = "~> 1.9.0"\n}\n'
         cases = [
-            ("override file replaces required_version", {"versions_override.tf": '  required_version = "~> 1.10.0"\n'}, ["~> 1.10.0"]),
-            ("override.tf replaces required_version", {"override.tf": '  required_version = "= 1.5.7"\n'}, ["= 1.5.7"]),
+            ("override file replaces required_version", {"versions_override.tf": 'terraform {\n  required_version = "~> 1.10.0"\n}\n'}, ["~> 1.10.0"]),
+            ("override.tf replaces required_version", {"override.tf": 'terraform {\n  required_version = "= 1.5.7"\n}\n'}, ["= 1.5.7"]),
             ("override file without required_version keeps primary", {"backend_override.tf": 'terraform {\n  backend "s3" {}\n}\n'}, ["~> 1.9.0"]),
             (
                 "last override file wins",
-                {"a_override.tf": '  required_version = "= 1.5.7"\n', "b_override.tf": '  required_version = "~> 1.10.0"\n'},
+                {"a_override.tf": 'terraform {\n  required_version = "= 1.5.7"\n}\n', "b_override.tf": 'terraform {\n  required_version = "~> 1.10.0"\n}\n'},
                 ["~> 1.10.0"],
             ),
             (
                 "override file with required_version wins over a later one without",
-                {"a_override.tf": '  required_version = "= 1.5.7"\n', "b_override.tf": 'terraform {\n  backend "s3" {}\n}\n'},
+                {"a_override.tf": 'terraform {\n  required_version = "= 1.5.7"\n}\n', "b_override.tf": 'terraform {\n  backend "s3" {}\n}\n'},
                 ["= 1.5.7"],
             ),
-            ("name without underscore is primary", {"nooverride.tf": '  required_version = "!= 1.9.3"\n'}, ["!= 1.9.3", "~> 1.9.0"]),
-            ("reads files starting with underscores", {"__gp_versions.tf": '  required_version = "< 1.9.5"\n'}, ["< 1.9.5", "~> 1.9.0"]),
-            ("ignores hidden files", {".#versions.tf": '  required_version = "= 1.5.7"\n'}, ["~> 1.9.0"]),
+            ("name without underscore is primary", {"nooverride.tf": 'terraform {\n  required_version = "!= 1.9.3"\n}\n'}, ["!= 1.9.3", "~> 1.9.0"]),
+            ("reads files starting with underscores", {"__gp_versions.tf": 'terraform {\n  required_version = "< 1.9.5"\n}\n'}, ["< 1.9.5", "~> 1.9.0"]),
+            ("ignores hidden files", {".#versions.tf": 'terraform {\n  required_version = "= 1.5.7"\n}\n'}, ["~> 1.9.0"]),
         ]
         for name, files, want in cases:
             with self.subTest(name):
                 directory = write_files({"versions.tf": versions, **files})
-                self.assertEqual(read_required_versions(directory), want)
+                self.assertEqual(read_constraints(directory), want)
+
+    def test_reads_only_terraform_blocks(self):
+        cases = [
+            ("single-line block", 'terraform { required_version = "~> 1.5.0" }\n', ["~> 1.5.0"]),
+            ("block comment", '/*\nterraform {\n  required_version = "= 0.13.0"\n}\n*/\n', []),
+            ("line comments", 'terraform {\n  // required_version = "= 0.13.0"\n  # required_version = "= 0.12.0"\n}\n', []),
+            ("module argument", 'module "x" {\n  required_version = "= 0.13.0"\n}\n', []),
+            ("nested block", 'terraform {\n  cloud {\n    required_version = "= 0.13.0"\n  }\n}\n', []),
+            ("attribute outside block", 'required_version = "= 0.13.0"\n', []),
+            ("braces in strings", 'locals {\n  x = "}"\n}\nterraform {\n  y = "{"\n  required_version = ">= 1.9"\n}\n', [">= 1.9"]),
+            ("comment marker in string", 'terraform {\n  x = "a # b /* c"\n  required_version = ">= 1.9"\n}\n', [">= 1.9"]),
+        ]
+        for name, content, want in cases:
+            with self.subTest(name):
+                self.assertEqual(read_constraints(write_files({"main.tf": content})), want)
+
+    def test_skips_directories(self):
+        directory = write_files({"versions.tf": 'terraform {\n  required_version = ">= 1.9.0"\n}\n'})
+        Path(directory, "modules.tf").mkdir()
+        self.assertEqual(read_constraints(directory), [">= 1.9.0"])
 
     def test_no_required_version(self):
         directory = write_files({"main.tf": 'output "x" { value = 1 }\n'})
-        self.assertEqual(read_required_versions(directory), [])
+        self.assertEqual(read_constraints(directory), [])
 
 
 class TestReadDenylist(unittest.TestCase):
@@ -159,7 +190,19 @@ class TestMain(unittest.TestCase):
         result = self.run_script("--dir", directory)
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(result.stdout, "")
-        self.assertIn("banana", result.stderr)
+        self.assertIn("versions.tf: unsupported required_version constraint 'banana'", result.stderr)
+
+    def test_ignores_denylist_that_excludes_every_allowed_version(self):
+        directory = write_files(
+            {
+                "versions.tf": 'terraform {\n  required_version = "= 1.9.1"\n}\n',
+                "denylist.json": '{"denied": [{"version": "1.9.1", "reason": "broken"}]}',
+            }
+        )
+        result = self.run_script("--dir", directory, "--denylist", str(Path(directory, "denylist.json")))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.strip(), "=1.9.1")
+        self.assertIn("::warning::Ignoring deny list", result.stderr)
 
 
 if __name__ == "__main__":

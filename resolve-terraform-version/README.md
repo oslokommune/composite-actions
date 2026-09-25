@@ -78,8 +78,8 @@ The action fails if a constraint uses syntax it doesn't know, such as a pre-rele
 
 ### Limitations
 
-- Only `required_version` on a single line, in a `*.tf` file directly in `working-directory`, is read. The action doesn't read `*.tf.json` files or child modules. `terraform init` still checks every constraint, so a missed constraint makes `init` fail instead of installing a wrong release.
-- The action doesn't know which releases exist. If the deny list excludes every release a configuration allows, `setup-terraform` fails.
+- Only `required_version` in `terraform` blocks, in `*.tf` files directly in `working-directory`, is read. The action doesn't read `*.tf.json` files or child modules. `terraform init` still checks every constraint, so a missed constraint makes `init` fail instead of installing a wrong release.
+- The action doesn't know which releases exist. It notices that the deny list excludes every release a configuration allows only when no version at all is left, such as with `= 1.9.1` and 1.9.1 denied. Otherwise, `setup-terraform` fails.
 
 ## Deny list
 
@@ -95,7 +95,7 @@ The action fails if a constraint uses syntax it doesn't know, such as a pre-rele
 
 The action fetches the file from the `main` branch at run time, so a merged change applies to every caller without a new release. Each entry is excluded from the range, and logged with its reason.
 
-The deny list is best-effort. If it can't be fetched or parsed, the action prints a warning and resolves without it. Set `use-denylist: "false"` to turn it off.
+The deny list is best-effort. If it can't be fetched or parsed, or it leaves no version the configuration allows, the action prints a warning and resolves without it. Set `use-denylist: "false"` to turn it off.
 
 ## Run locally
 
