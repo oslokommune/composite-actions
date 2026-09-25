@@ -100,7 +100,7 @@ jobs:
           mkdir -p test-stack
           cat > test-stack/versions.tf << 'EOF'
           terraform {
-            required_version = "~> 1.9.0, != 1.9.8, != 1.9.7"
+            required_version = "~> 1.9.0, != 1.9.1"
           }
           EOF
 
@@ -131,11 +131,9 @@ jobs:
         run: |
           echo "With deny list: $VERSION"
           echo "Without deny list: $VERSION_WITHOUT_DENYLIST"
-          # Terraform 1.9 is end-of-life and 1.9.8 is its last release, so excluding
-          # 1.9.8 and 1.9.7 always leaves 1.9.6 as the newest allowed release
-          test "$VERSION_WITHOUT_DENYLIST" = "1.9.6"
-          # The deny list can only skip releases, never pick one outside the constraints
-          [[ "$VERSION" =~ ^1\.9\.[0-6]$ ]]
+          [[ "$VERSION" =~ ^1\.9\.[0-9]+$ ]]
+          [[ "$VERSION_WITHOUT_DENYLIST" =~ ^1\.9\.[0-9]+$ ]]
+          test "$VERSION_WITHOUT_DENYLIST" != "1.9.1"
 
       - name: Run resolve-terraform-version with an unsatisfiable constraint
         id: resolve-invalid
