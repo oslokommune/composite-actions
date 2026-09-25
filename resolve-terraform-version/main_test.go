@@ -132,6 +132,14 @@ terraform {
 			want: "1.9.2",
 		},
 		{
+			name: "reads files starting with underscores",
+			files: map[string]string{
+				"__gp_versions.tf": `terraform { required_version = "~> 1.9.0" }`,
+				"main.tf":          `output "x" { value = 1 }`,
+			},
+			want: "1.9.3",
+		},
+		{
 			name: "ignores hidden files",
 			files: map[string]string{
 				"versions.tf":   `terraform { required_version = "~> 1.9.0" }`,
