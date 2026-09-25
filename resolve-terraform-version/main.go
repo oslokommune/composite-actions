@@ -106,7 +106,8 @@ func requiredVersions(dir string) (version.Constraints, error) {
 	}
 	for _, entry := range entries {
 		name := entry.Name()
-		if entry.IsDir() || !strings.HasSuffix(name, ".tf") {
+		// Terraform ignores hidden files, such as editor lock files
+		if entry.IsDir() || !strings.HasSuffix(name, ".tf") || strings.HasPrefix(name, ".") {
 			continue
 		}
 		path := filepath.Join(dir, name)

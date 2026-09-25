@@ -91,6 +91,14 @@ terraform {
 			want: "1.9.3",
 		},
 		{
+			name: "ignores hidden files",
+			files: map[string]string{
+				"versions.tf":   `terraform { required_version = "~> 1.9.0" }`,
+				".#versions.tf": `terraform { required_version = "= 1.5.7" }`,
+			},
+			want: "1.9.3",
+		},
+		{
 			name:  "ignores JSON configuration",
 			files: map[string]string{"main.tf": `terraform { required_version = "~> 1.9.0" }`, "main.tf.json": `{"terraform": {"required_version": "= 1.5.7"}}`},
 			want:  "1.9.3",
