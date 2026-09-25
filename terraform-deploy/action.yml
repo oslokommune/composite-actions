@@ -47,7 +47,7 @@ inputs:
     description: "Datadog API key for sending deployment events"
     required: false
   terraform-version-denylist:
-    description: "Whether to skip Terraform releases listed in `terraform-deploy/terraform-version-denylist.json` on the main branch of this repository. The list is fetched at run time with the GitHub CLI and ignored with a warning if it can't be read. Set to `false` to resolve from `required_version` alone."
+    description: "Whether to skip Terraform releases listed in `terraform-deploy/terraform-version-denylist.json` on the main branch of this repository. The list is fetched at run time and ignored with a warning if it can't be read. Set to `false` to resolve from `required_version` alone."
     required: false
     default: "true"
 
@@ -151,6 +151,19 @@ runs:
         go-version-file: ${{ github.action_path }}/resolve-terraform-version/go.mod
         cache-dependency-path: ${{ github.action_path }}/resolve-terraform-version/go.sum
 
+    - name: Download Terraform version deny list
+      # NOTE: Read from main, not the action ref, so changes apply to every caller right away.
+      # If the download fails, the resolver warns and resolves without the deny list.
+      if: inputs.terraform-version-denylist == 'true'
+      continue-on-error: true
+      shell: bash --noprofile --norc -euo pipefail {0}
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        gh api -H "Accept: application/vnd.github.raw" \
+          "repos/oslokommune/composite-actions/contents/terraform-deploy/terraform-version-denylist.json?ref=main" \
+          > "$RUNNER_TEMP/terraform-version-denylist.json"
+
     - name: Resolve Terraform version
       # NOTE: setup-terraform evaluates version constraints with npm semver, which doesn't
       # understand Terraform's `~>` operator. Resolve the constraints to a concrete version
@@ -160,30 +173,13 @@ runs:
       working-directory: ${{ steps.get-stack-dir.outputs.stack-dir }}
       env:
         RESOLVER_DIR: ${{ github.action_path }}/resolve-terraform-version
-        USE_DENYLIST: ${{ inputs.terraform-version-denylist }}
-        GH_TOKEN: ${{ github.token }}
-      run: |
-        args=(-dir "$PWD")
-        if [ "$USE_DENYLIST" = "true" ]; then
-          # Read the deny list from main, not the action ref, so changes apply to every caller
-          # right away. It's best-effort: resolve without it if it can't be fetched.
-          denylist="$RUNNER_TEMP/terraform-version-denylist.json"
-          if timeout 30 gh api -H "Accept: application/vnd.github.raw" \
-            "repos/oslokommune/composite-actions/contents/terraform-deploy/terraform-version-denylist.json?ref=main" \
-            > "$denylist"; then
-            args+=(-denylist "$denylist")
-          else
-            echo "::warning::Could not fetch the Terraform version deny list, resolving without it"
-          fi
-        fi
-        version="$(go run -C "$RESOLVER_DIR" . "${args[@]}")"
-        echo "Resolved Terraform version: $version"
-        echo "TERRAFORM_VERSION=$version" >> "$GITHUB_OUTPUT"
+        DENYLIST: ${{ inputs.terraform-version-denylist == 'true' && format('{0}/terraform-version-denylist.json', runner.temp) || '' }}
+      run: go run -C "$RESOLVER_DIR" . -dir "$PWD" -denylist "$DENYLIST"
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
       with:
-        terraform_version: ${{ steps.v.outputs.TERRAFORM_VERSION }}
+        terraform_version: ${{ steps.v.outputs.terraform-version }}
 
     - name: Initialize the working directory containing Terraform configuration files
       id: init

@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/hashicorp/go-version"
 )
 
 const testIndex = `{
@@ -193,6 +195,14 @@ func TestParseDenylistInvalidJSON(t *testing.T) {
 	}
 }
 
+func TestParseDenylistWithoutDeniedList(t *testing.T) {
+	// gh api writes the error response to stdout when the download fails
+	body := `{"message":"Not Found","status":"404"}`
+	if _, err := parseDenylist(strings.NewReader(body), io.Discard); err == nil {
+		t.Fatal("expected error")
+	}
+}
+
 func TestReadDenylistMissingFile(t *testing.T) {
 	if _, err := readDenylist(filepath.Join(t.TempDir(), "missing.json"), io.Discard); err == nil {
 		t.Fatal("expected error")
@@ -272,6 +282,21 @@ func TestDenylist(t *testing.T) {
 func TestDenyConstraints(t *testing.T) {
 	got := denyConstraints(map[string]string{"1.9.3": "a", "1.10.5": "b"}).String()
 	if want := "!= 1.10.5,!= 1.9.3"; got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestWriteOutput(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "output")
+	t.Setenv("GITHUB_OUTPUT", path)
+	if err := writeOutput(version.Must(version.NewVersion("1.9.3"))); err != nil {
+		t.Fatal(err)
+	}
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "terraform-version=1.9.3\n"; string(got) != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }

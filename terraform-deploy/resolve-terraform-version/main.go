@@ -1,6 +1,7 @@
 // Command resolve-terraform-version prints the newest stable Terraform version
 // that satisfies the required_version constraints in a Terraform configuration
-// directory.
+// directory. When run in GitHub Actions, it also writes the version to the
+// terraform-version step output.
 //
 // Constraints are evaluated with hashicorp/go-version, the same library
 // Terraform uses, so operators like "~>" and "!=" behave exactly as they do in
@@ -36,7 +37,6 @@ const defaultIndexURL = "https://releases.hashicorp.com/terraform/index.json"
 
 func main() {
 	dir := flag.String("dir", ".", "Terraform configuration directory to read required_version from")
-	indexURL := flag.String("index-url", defaultIndexURL, "URL of the Terraform release index")
 	denylistPath := flag.String("denylist", "", "path to a JSON file listing Terraform releases to skip")
 	flag.Parse()
 
@@ -49,12 +49,32 @@ func main() {
 		}
 	}
 
-	v, err := run(*dir, *indexURL, denied, os.Stderr)
+	v, err := run(*dir, defaultIndexURL, denied, os.Stderr)
+	if err == nil {
+		err = writeOutput(v)
+	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		os.Exit(1)
 	}
 	fmt.Println(v)
+}
+
+// writeOutput appends the version to $GITHUB_OUTPUT, if it is set.
+func writeOutput(v *version.Version) error {
+	path := os.Getenv("GITHUB_OUTPUT")
+	if path == "" {
+		return nil
+	}
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644)
+	if err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(f, "terraform-version=%s\n", v); err != nil {
+		f.Close()
+		return err
+	}
+	return f.Close()
 }
 
 // run resolves the Terraform version, skipping the releases in denied (a map
@@ -223,6 +243,9 @@ func parseDenylist(r io.Reader, log io.Writer) (map[string]string, error) {
 	var list denylist
 	if err := json.NewDecoder(r).Decode(&list); err != nil {
 		return nil, fmt.Errorf("decode deny list: %w", err)
+	}
+	if list.Denied == nil {
+		return nil, errors.New(`deny list has no "denied" list`)
 	}
 
 	denied := map[string]string{}
