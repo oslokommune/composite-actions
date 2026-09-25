@@ -88,10 +88,25 @@ func run(dir, indexURL string, denied map[string]string, log io.Writer) (*versio
 		fmt.Fprintf(log, "%s: warning: every release allowed by %q is denied, using %s anyway (%s)\n", progName, constraints.String(), best, denied[best.String()])
 		return best, nil
 	}
-	if !v.Equal(best) {
-		fmt.Fprintf(log, "%s: skipping denied release %s (%s), using %s\n", progName, best, denied[best.String()], v)
+	for _, s := range skippedReleases(available, constraints, v) {
+		fmt.Fprintf(log, "%s: skipping denied release %s (%s)\n", progName, s, denied[s.String()])
 	}
 	return v, nil
+}
+
+// skippedReleases returns the stable releases that satisfy the constraints
+// and are newer than the chosen version, newest first. When the chosen
+// version was resolved with the deny list, these are the denied releases
+// that were skipped.
+func skippedReleases(available []*version.Version, constraints version.Constraints, chosen *version.Version) []*version.Version {
+	var skipped []*version.Version
+	for _, v := range available {
+		if v.Prerelease() == "" && constraints.Check(v) && v.GreaterThan(chosen) {
+			skipped = append(skipped, v)
+		}
+	}
+	slices.SortFunc(skipped, func(a, b *version.Version) int { return b.Compare(a) })
+	return skipped
 }
 
 // requiredVersions collects the required_version constraints from all

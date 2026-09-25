@@ -67,7 +67,7 @@ The action runs `actions/setup-go`, so later steps in the job get that Go versio
 }
 ```
 
-The action fetches the file from the `main` branch at run time, so a merged change applies to every caller without a new release. Each entry becomes a `!= <version>` constraint, and the reason appears in the job log when a release is skipped.
+The action fetches the file from the `main` branch at run time, so a merged change applies to every caller without a new release. Each entry becomes a `!= <version>` constraint, and each skipped release is logged with its reason.
 
 The deny list is best-effort. If it can't be fetched or parsed, or it would rule out every release a configuration allows, the action prints a warning and resolves without it. Set `use-denylist: "false"` to turn it off.
 
@@ -77,6 +77,7 @@ The resolver is a plain command-line tool. It prints the version on standard out
 
 ```console
 $ go run . -dir ~/iac/stacks/dev/app-km -denylist denylist.json
-resolve-terraform-version: skipping denied release 1.9.8 (breaks the S3 backend), using 1.9.7
-1.9.7
+resolve-terraform-version: skipping denied release 1.9.8 (breaks the S3 backend)
+resolve-terraform-version: skipping denied release 1.9.7 (also broken)
+1.9.6
 ```

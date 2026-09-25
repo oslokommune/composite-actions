@@ -287,31 +287,32 @@ func TestDenylist(t *testing.T) {
 			constraint: "< 1.9.3",
 			denied:     denied,
 			want:       "1.9.0",
-			wantLog:    "resolve-terraform-version: skipping denied release 1.9.2 (also broken), using 1.9.0",
+			wantLog:    "resolve-terraform-version: skipping denied release 1.9.2 (also broken)\n",
 		},
 		{
 			name:       "skips several denied releases",
 			constraint: "~> 1.9.0",
 			denied:     denied,
 			want:       "1.9.0",
-			wantLog:    "resolve-terraform-version: skipping denied release 1.9.3 (breaks the S3 backend), using 1.9.0",
+			wantLog: "resolve-terraform-version: skipping denied release 1.9.3 (breaks the S3 backend)\n" +
+				"resolve-terraform-version: skipping denied release 1.9.2 (also broken)\n",
 		},
 		{
 			name:       "combines exclusions in required_version with the deny list",
 			constraint: "~> 1.9.0, != 1.9.3",
 			denied:     denied,
 			want:       "1.9.0",
-			wantLog:    "resolve-terraform-version: skipping denied release 1.9.2 (also broken), using 1.9.0",
+			wantLog:    "resolve-terraform-version: skipping denied release 1.9.2 (also broken)\n",
 		},
 		{
 			name:       "entry without a reason",
 			constraint: ">= 1.10.0",
 			denied:     denied,
 			want:       "1.10.0",
-			wantLog:    "resolve-terraform-version: skipping denied release 1.10.5 (no reason given), using 1.10.0",
+			wantLog:    "resolve-terraform-version: skipping denied release 1.10.5 (no reason given)\n",
 		},
 		{
-			name:       "no notice when the newest release is allowed",
+			name:       "no log when the newest release is allowed",
 			constraint: "< 1.9.2",
 			denied:     denied,
 			want:       "1.9.0",
@@ -321,7 +322,7 @@ func TestDenylist(t *testing.T) {
 			constraint: "= 1.9.3",
 			denied:     denied,
 			want:       "1.9.3",
-			wantLog:    `resolve-terraform-version: warning: every release allowed by "= 1.9.3" is denied, using 1.9.3 anyway (breaks the S3 backend)`,
+			wantLog:    "resolve-terraform-version: warning: every release allowed by \"= 1.9.3\" is denied, using 1.9.3 anyway (breaks the S3 backend)\n",
 		},
 		{
 			name:       "no deny list",
@@ -341,8 +342,8 @@ func TestDenylist(t *testing.T) {
 			if got.String() != tt.want {
 				t.Errorf("got %s, want %s", got, tt.want)
 			}
-			if !strings.Contains(log.String(), tt.wantLog) || (tt.wantLog == "" && log.Len() > 0) {
-				t.Errorf("log %q, want %q", log.String(), tt.wantLog)
+			if log.String() != tt.wantLog {
+				t.Errorf("log:\n%s\nwant:\n%s", log.String(), tt.wantLog)
 			}
 		})
 	}
