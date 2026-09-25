@@ -45,3 +45,19 @@ Deploy application through infrastructure
 
 
 <!-- BOILERPLATE END -->
+
+## Terraform version deny list
+
+`terraform-version-denylist.json` lists Terraform releases that this action skips when it resolves `required_version`:
+
+```json
+{
+  "denied": [
+    { "version": "1.9.3", "reason": "Breaks the S3 backend (link to upstream issue)" }
+  ]
+}
+```
+
+The action fetches the file from the `main` branch at run time, so a merged change applies to every caller without a new release. Each entry becomes a `!= <version>` constraint, and the reason appears in the job log when a release is skipped.
+
+The deny list is best-effort. If it can't be fetched or parsed, or it would rule out every release a stack allows, the action prints a warning and resolves without it. Set `terraform-version-denylist: "false"` to turn it off.
