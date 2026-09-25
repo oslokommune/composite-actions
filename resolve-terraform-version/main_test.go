@@ -91,6 +91,47 @@ terraform {
 			want: "1.9.3",
 		},
 		{
+			name: "override file replaces required_version",
+			files: map[string]string{
+				"versions.tf":          `terraform { required_version = "~> 1.9.0" }`,
+				"versions_override.tf": `terraform { required_version = "~> 1.10.0" }`,
+			},
+			want: "1.10.5",
+		},
+		{
+			name: "override.tf replaces required_version",
+			files: map[string]string{
+				"versions.tf": `terraform { required_version = "~> 1.9.0" }`,
+				"override.tf": `terraform { required_version = "= 1.5.7" }`,
+			},
+			want: "1.5.7",
+		},
+		{
+			name: "override file without required_version keeps the primary constraints",
+			files: map[string]string{
+				"versions.tf":         `terraform { required_version = "~> 1.9.0" }`,
+				"backend_override.tf": "terraform {\n  backend \"s3\" {}\n}\n",
+			},
+			want: "1.9.3",
+		},
+		{
+			name: "last override file wins",
+			files: map[string]string{
+				"versions.tf":   `terraform { required_version = ">= 1.0.0" }`,
+				"a_override.tf": `terraform { required_version = "= 1.5.7" }`,
+				"b_override.tf": `terraform { required_version = "~> 1.9.0" }`,
+			},
+			want: "1.9.3",
+		},
+		{
+			name: "file named like an override without the underscore is primary",
+			files: map[string]string{
+				"versions.tf":   `terraform { required_version = "~> 1.9.0" }`,
+				"nooverride.tf": `terraform { required_version = "!= 1.9.3" }`,
+			},
+			want: "1.9.2",
+		},
+		{
 			name: "ignores hidden files",
 			files: map[string]string{
 				"versions.tf":   `terraform { required_version = "~> 1.9.0" }`,

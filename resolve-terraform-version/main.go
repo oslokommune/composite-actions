@@ -95,11 +95,15 @@ func run(dir, indexURL string, denied map[string]string, log io.Writer) (*versio
 }
 
 // requiredVersions collects the required_version constraints from all
-// terraform blocks in the .tf files in dir.
+// terraform blocks in the .tf files in dir, merged the way Terraform merges
+// them: constraints from primary files add up, and each override file that
+// sets required_version replaces everything before it.
 func requiredVersions(dir string) (version.Constraints, error) {
 	parser := hclparse.NewParser()
-	var constraints version.Constraints
+	var constraints, overrides version.Constraints
 
+	// ReadDir sorts by file name, which is the order Terraform applies
+	// override files in.
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
@@ -120,7 +124,18 @@ func requiredVersions(dir string) (version.Constraints, error) {
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", path, err)
 		}
-		constraints = append(constraints, c...)
+
+		base := strings.TrimSuffix(name, ".tf")
+		if base == "override" || strings.HasSuffix(base, "_override") {
+			if len(c) > 0 {
+				overrides = c
+			}
+		} else {
+			constraints = append(constraints, c...)
+		}
+	}
+	if overrides != nil {
+		return overrides, nil
 	}
 	return constraints, nil
 }
