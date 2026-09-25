@@ -141,20 +141,18 @@ runs:
       with:
         ssh-private-key: ${{ inputs.github-deploy-key }}
 
-    - name: Extract Terraform version
+    - name: Resolve Terraform version
       id: v
-      shell: bash --noprofile --norc -euo pipefail {0}
-      working-directory: ${{ steps.get-stack-dir.outputs.stack-dir }}
-      run: |
-        echo Extract Terraform version
-        pwd
-        ls -lah
-        echo "TERRAFORM_VERSION=$(grep required_version *.tf | sed -E 's/[^"]+"([^"]+)"+/\1/')" >> "$GITHUB_OUTPUT"
+      # TODO: This digest is the head of #290, not a release. Repoint it to the next
+      # resolve-terraform-version release before merging.
+      uses: oslokommune/composite-actions/resolve-terraform-version@cb0acad5ca2e99456f8f4d3aea4a71e8b645a2e5
+      with:
+        working-directory: ${{ steps.get-stack-dir.outputs.stack-dir }}
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
       with:
-        terraform_version: ${{ steps.v.outputs.TERRAFORM_VERSION }}
+        terraform_version: ${{ steps.v.outputs.terraform-version }}
 
     - name: Initialize the working directory containing Terraform configuration files
       id: init
