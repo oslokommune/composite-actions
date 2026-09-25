@@ -280,3 +280,10 @@ func TestDenylist(t *testing.T) {
 		})
 	}
 }
+
+func TestDenyConstraints(t *testing.T) {
+	got := denyConstraints(map[string]string{"1.9.3": "a", "1.10.5": "b"}).String()
+	if want := "!= 1.10.5,!= 1.9.3"; got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}

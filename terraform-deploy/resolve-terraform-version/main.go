@@ -6,9 +6,10 @@
 // Terraform uses, so operators like "~>" and "!=" behave exactly as they do in
 // Terraform itself.
 //
-// Releases in an optional deny list file are skipped. The deny list is
-// best-effort: if the file can't be read, or it would rule out every release
-// the constraints allow, a warning is printed and the deny list is ignored.
+// Each release in an optional deny list file is added as a "!=" constraint.
+// The deny list is best-effort: if the file can't be read, or it would rule
+// out every release the constraints allow, a warning is printed and the deny
+// list is ignored.
 package main
 
 import (
@@ -18,9 +19,11 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -84,13 +87,7 @@ func run(dir, extra, indexURL string, denied map[string]string, log io.Writer) (
 		return best, nil
 	}
 
-	allowed := make([]*version.Version, 0, len(available))
-	for _, v := range available {
-		if _, ok := denied[v.String()]; !ok {
-			allowed = append(allowed, v)
-		}
-	}
-	v, err := newestMatching(allowed, constraints)
+	v, err := newestMatching(available, append(slices.Clone(constraints), denyConstraints(denied)...))
 	if err != nil {
 		fmt.Fprintf(log, "::warning::Every Terraform release allowed by %q is on the deny list, using %s anyway (%s)\n", constraints.String(), best, denied[best.String()])
 		return best, nil
@@ -244,6 +241,21 @@ func parseDenylist(r io.Reader, log io.Writer) (map[string]string, error) {
 		return nil, err
 	}
 	return denied, nil
+}
+
+// denyConstraints turns each denied version into a "!=" constraint, in a
+// stable order.
+func denyConstraints(denied map[string]string) version.Constraints {
+	var constraints version.Constraints
+	for _, v := range slices.Sorted(maps.Keys(denied)) {
+		c, err := version.NewConstraint("!= " + v)
+		if err != nil {
+			// Unreachable: the keys are normalized versions from parseDenylist
+			panic(err)
+		}
+		constraints = append(constraints, c...)
+	}
+	return constraints
 }
 
 // newestMatching returns the newest stable version that satisfies all
