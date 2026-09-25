@@ -66,7 +66,7 @@ The action reads the `required_version` lines in the `*.tf` files in `working-di
 | `= 1.9` | Reads it as any 1.9.x release, not 1.9.0 | Versions are padded to three parts: `=1.9.0` |
 | `!= 1.9.3` | Not supported | See below |
 
-npm semver has no `!=` and no parentheses. Instead, each excluded version cuts the range into intervals, and the other constraints are repeated in each interval. The excluded versions come from `!=` constraints and from the deny list. For example, `~> 1.9.0` with 1.9.7 and 1.9.8 excluded becomes:
+npm semver has no `!=` and no parentheses. Instead, each excluded version cuts the range into intervals, and the other constraints are repeated in each interval. The excluded versions come from `!=` constraints and from the deny list. For example, `~> 1.9.0, != 1.9.7, != 1.9.8` becomes:
 
 ```text
 >=1.9.0 <1.10.0 <1.9.7 || >=1.9.0 <1.10.0 >1.9.7 <1.9.8 || >=1.9.0 <1.10.0 >1.9.8
