@@ -59,6 +59,92 @@ jobs:
         working-directory: ./terraform-deploy
         run: python3 test_extract_outputs.py
 
+  test-resolve-terraform-version:
+    name: Test resolve-terraform-version composite action
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: resolve-terraform-version/go.mod
+          cache-dependency-path: resolve-terraform-version/go.sum
+
+      - name: Check formatting
+        working-directory: ./resolve-terraform-version
+        run: test -z "$(gofmt -l .)"
+
+      - name: Run go vet
+        working-directory: ./resolve-terraform-version
+        run: go vet ./...
+
+      - name: Run tests
+        working-directory: ./resolve-terraform-version
+        run: go test -v ./...
+
+  test-e2e-resolve-terraform-version:
+    name: Test E2E resolve-terraform-version composite action
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Prepare Terraform configuration
+        run: |
+          mkdir -p test-stack
+          cat > test-stack/versions.tf << 'EOF'
+          terraform {
+            required_version = "~> 1.9.0, != 1.9.1"
+          }
+          EOF
+
+          mkdir -p test-stack-invalid
+          cat > test-stack-invalid/versions.tf << 'EOF'
+          terraform {
+            required_version = ">= 99.0.0"
+          }
+          EOF
+
+      - name: Resolve Terraform version
+        id: resolve
+        uses: ./resolve-terraform-version
+        with:
+          working-directory: test-stack
+
+      - name: Resolve Terraform version without the deny list
+        id: resolve-without-denylist
+        uses: ./resolve-terraform-version
+        with:
+          working-directory: test-stack
+          use-denylist: "false"
+
+      - name: Verify resolved versions
+        env:
+          VERSION: ${{ steps.resolve.outputs.terraform-version }}
+          VERSION_WITHOUT_DENYLIST: ${{ steps.resolve-without-denylist.outputs.terraform-version }}
+        run: |
+          echo "With deny list: $VERSION"
+          echo "Without deny list: $VERSION_WITHOUT_DENYLIST"
+          [[ "$VERSION" =~ ^1\.9\.[0-9]+$ ]]
+          [[ "$VERSION_WITHOUT_DENYLIST" =~ ^1\.9\.[0-9]+$ ]]
+          test "$VERSION_WITHOUT_DENYLIST" != "1.9.1"
+
+      - name: Run resolve-terraform-version with an unsatisfiable constraint
+        id: resolve-invalid
+        uses: ./resolve-terraform-version
+        continue-on-error: true
+        with:
+          working-directory: test-stack-invalid
+
+      - name: Verify unsatisfiable constraint was rejected
+        run: test "${{ steps.resolve-invalid.outcome }}" = "failure"
+
   test-e2e-build-gp-config:
     name: Test E2E build-gp-config composite action
     runs-on: ubuntu-24.04
