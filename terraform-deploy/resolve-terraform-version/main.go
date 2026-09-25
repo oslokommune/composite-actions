@@ -1,7 +1,9 @@
 // Command resolve-terraform-version prints the newest stable Terraform version
 // that satisfies the required_version constraints in a Terraform configuration
-// directory. When run in GitHub Actions, it also writes the version to the
-// terraform-version step output.
+// directory.
+//
+// The version is printed on standard output. Warnings go to standard error,
+// and the exit status is non-zero if no release satisfies the constraints.
 //
 // Constraints are evaluated with hashicorp/go-version, the same library
 // Terraform uses, so operators like "~>" and "!=" behave exactly as they do in
@@ -33,7 +35,10 @@ import (
 	"github.com/zclconf/go-cty/cty"
 )
 
-const defaultIndexURL = "https://releases.hashicorp.com/terraform/index.json"
+const (
+	progName        = "resolve-terraform-version"
+	defaultIndexURL = "https://releases.hashicorp.com/terraform/index.json"
+)
 
 func main() {
 	dir := flag.String("dir", ".", "Terraform configuration directory to read required_version from")
@@ -45,41 +50,21 @@ func main() {
 		var err error
 		denied, err = readDenylist(*denylistPath, os.Stderr)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "::warning::Could not read the Terraform version deny list, resolving without it: %s\n", err)
+			fmt.Fprintf(os.Stderr, "%s: warning: ignoring deny list: %s\n", progName, err)
 		}
 	}
 
 	v, err := run(*dir, defaultIndexURL, denied, os.Stderr)
-	if err == nil {
-		err = writeOutput(v)
-	}
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "error:", err)
+		fmt.Fprintf(os.Stderr, "%s: %s\n", progName, err)
 		os.Exit(1)
 	}
 	fmt.Println(v)
 }
 
-// writeOutput appends the version to $GITHUB_OUTPUT, if it is set.
-func writeOutput(v *version.Version) error {
-	path := os.Getenv("GITHUB_OUTPUT")
-	if path == "" {
-		return nil
-	}
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644)
-	if err != nil {
-		return err
-	}
-	if _, err := fmt.Fprintf(f, "terraform-version=%s\n", v); err != nil {
-		f.Close()
-		return err
-	}
-	return f.Close()
-}
-
 // run resolves the Terraform version, skipping the releases in denied (a map
 // from version to the reason it is denied). Warnings and notices are written
-// to log as GitHub Actions workflow commands.
+// to log.
 func run(dir, indexURL string, denied map[string]string, log io.Writer) (*version.Version, error) {
 	constraints, err := requiredVersions(dir)
 	if err != nil {
@@ -100,11 +85,11 @@ func run(dir, indexURL string, denied map[string]string, log io.Writer) (*versio
 
 	v, err := newestMatching(available, append(slices.Clone(constraints), denyConstraints(denied)...))
 	if err != nil {
-		fmt.Fprintf(log, "::warning::Every Terraform release allowed by %q is on the deny list, using %s anyway (%s)\n", constraints.String(), best, denied[best.String()])
+		fmt.Fprintf(log, "%s: warning: every release allowed by %q is denied, using %s anyway (%s)\n", progName, constraints.String(), best, denied[best.String()])
 		return best, nil
 	}
 	if !v.Equal(best) {
-		fmt.Fprintf(log, "::notice::Skipping Terraform %s because it is on the deny list (%s), using %s\n", best, denied[best.String()], v)
+		fmt.Fprintf(log, "%s: skipping denied release %s (%s), using %s\n", progName, best, denied[best.String()], v)
 	}
 	return v, nil
 }
@@ -252,7 +237,7 @@ func parseDenylist(r io.Reader, log io.Writer) (map[string]string, error) {
 	for _, entry := range list.Denied {
 		v, err := version.NewVersion(entry.Version)
 		if err != nil {
-			fmt.Fprintf(log, "::warning::Skipping invalid entry %q in the Terraform version deny list\n", entry.Version)
+			fmt.Fprintf(log, "%s: warning: ignoring invalid deny list entry %q\n", progName, entry.Version)
 			continue
 		}
 		reason := strings.TrimSpace(entry.Reason)

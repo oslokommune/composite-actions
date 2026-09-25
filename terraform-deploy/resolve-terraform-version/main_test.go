@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/hashicorp/go-version"
 )
 
 const testIndex = `{
@@ -184,7 +182,7 @@ func TestParseDenylist(t *testing.T) {
 			t.Errorf("reason for %s: got %q, want %q", v, got[v], reason)
 		}
 	}
-	if !strings.Contains(log.String(), `::warning::Skipping invalid entry "banana"`) {
+	if !strings.Contains(log.String(), `resolve-terraform-version: warning: ignoring invalid deny list entry "banana"`) {
 		t.Errorf("log %q does not warn about the invalid entry", log.String())
 	}
 }
@@ -232,14 +230,14 @@ func TestDenylist(t *testing.T) {
 			constraint: "~> 1.9.0",
 			denied:     denied,
 			want:       "1.9.0",
-			wantLog:    "::notice::Skipping Terraform 1.9.3 because it is on the deny list (breaks the S3 backend), using 1.9.0",
+			wantLog:    "resolve-terraform-version: skipping denied release 1.9.3 (breaks the S3 backend), using 1.9.0",
 		},
 		{
 			name:       "entry without a reason",
 			constraint: ">= 1.10.0",
 			denied:     denied,
 			want:       "1.10.0",
-			wantLog:    "::notice::Skipping Terraform 1.10.5 because it is on the deny list (no reason given), using 1.10.0",
+			wantLog:    "resolve-terraform-version: skipping denied release 1.10.5 (no reason given), using 1.10.0",
 		},
 		{
 			name:       "no notice when the newest release is allowed",
@@ -252,7 +250,7 @@ func TestDenylist(t *testing.T) {
 			constraint: "= 1.9.3",
 			denied:     denied,
 			want:       "1.9.3",
-			wantLog:    `::warning::Every Terraform release allowed by "= 1.9.3" is on the deny list, using 1.9.3 anyway (breaks the S3 backend)`,
+			wantLog:    `resolve-terraform-version: warning: every release allowed by "= 1.9.3" is denied, using 1.9.3 anyway (breaks the S3 backend)`,
 		},
 		{
 			name:       "no deny list",
@@ -282,21 +280,6 @@ func TestDenylist(t *testing.T) {
 func TestDenyConstraints(t *testing.T) {
 	got := denyConstraints(map[string]string{"1.9.3": "a", "1.10.5": "b"}).String()
 	if want := "!= 1.10.5,!= 1.9.3"; got != want {
-		t.Errorf("got %q, want %q", got, want)
-	}
-}
-
-func TestWriteOutput(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "output")
-	t.Setenv("GITHUB_OUTPUT", path)
-	if err := writeOutput(version.Must(version.NewVersion("1.9.3"))); err != nil {
-		t.Fatal(err)
-	}
-	got, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if want := "terraform-version=1.9.3\n"; string(got) != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }
