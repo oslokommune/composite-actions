@@ -1,4 +1,4 @@
-module github.com/oslokommune/composite-actions/terraform-deploy/resolve-terraform-version
+module github.com/oslokommune/composite-actions/resolve-terraform-version
 
 go 1.27.1
 

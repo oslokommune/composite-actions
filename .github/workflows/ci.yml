@@ -60,7 +60,7 @@ jobs:
         run: python3 test_extract_outputs.py
 
   test-resolve-terraform-version:
-    name: Test resolve-terraform-version in terraform-deploy
+    name: Test resolve-terraform-version composite action
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -71,19 +71,19 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version-file: terraform-deploy/resolve-terraform-version/go.mod
-          cache-dependency-path: terraform-deploy/resolve-terraform-version/go.sum
+          go-version-file: resolve-terraform-version/go.mod
+          cache-dependency-path: resolve-terraform-version/go.sum
 
       - name: Check formatting
-        working-directory: ./terraform-deploy/resolve-terraform-version
+        working-directory: ./resolve-terraform-version
         run: test -z "$(gofmt -l .)"
 
       - name: Run go vet
-        working-directory: ./terraform-deploy/resolve-terraform-version
+        working-directory: ./resolve-terraform-version
         run: go vet ./...
 
       - name: Run tests
-        working-directory: ./terraform-deploy/resolve-terraform-version
+        working-directory: ./resolve-terraform-version
         run: go test -v ./...
 
   test-e2e-build-gp-config:
