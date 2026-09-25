@@ -3,16 +3,16 @@
 
 # Resolve Terraform version
 
-Resolve the required_version constraints of a Terraform configuration to a concrete Terraform release, skipping releases on a central deny list
+Convert the required_version constraints of a Terraform configuration to a version range for setup-terraform, excluding releases on a central deny list
 
 ## Usage
 
 ### Inputs
 
-|       Input       |                                                                                                 Description                                                                                                 |Required|Default |
-|-------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|--------|
-|`working-directory`|Terraform configuration directory to read `required_version` from (e.g., `stacks/dev/app-km`)                                                                                                                |no      |``.``   |
-|`use-denylist`     |Whether to skip Terraform releases listed in `resolve-terraform-version/denylist.json` on the main branch of this repository. The list is fetched at run time and ignored with a warning if it can't be read.|no      |``true``|
+|       Input       |                                                                                                  Description                                                                                                   |Required|Default |
+|-------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|--------|
+|`working-directory`|Terraform configuration directory to read `required_version` from (e.g., `stacks/dev/app-km`)                                                                                                                   |no      |``.``   |
+|`use-denylist`     |Whether to exclude Terraform releases listed in `resolve-terraform-version/denylist.json` on the main branch of this repository. The list is fetched at run time and ignored with a warning if it can't be read.|no      |``true``|
 
 ### Example
 
@@ -26,9 +26,9 @@ Resolve the required_version constraints of a Terraform configuration to a concr
 
 ## Outputs
 
-|       Name        |                                   Description                                    |                      Value                       |
-|-------------------|----------------------------------------------------------------------------------|--------------------------------------------------|
-|`terraform-version`|The newest stable Terraform release that satisfies the constraints (e.g., `1.9.7`)|``${{ steps.resolve.outputs.terraform-version }}``|
+|       Name        |                                                                  Description                                                                  |                      Value                       |
+|-------------------|-----------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------|
+|`terraform-version`|An npm semver range for the `terraform_version` input of `hashicorp/setup-terraform` (e.g., `>=1.9.0 <1.10.0 <1.9.3 \|\| >=1.9.0 <1.10.0 >1.9.3`)|``${{ steps.resolve.outputs.terraform-version }}``|
 
 
 
@@ -36,7 +36,7 @@ Resolve the required_version constraints of a Terraform configuration to a concr
 
 ## Use with `setup-terraform`
 
-`hashicorp/setup-terraform` matches versions with npm semver, which doesn't understand Terraform's `~>` operator. Resolve the version first and pass the result:
+`hashicorp/setup-terraform` matches versions with npm semver, which reads some of Terraform's constraint syntax differently. Resolve the range first and pass the result:
 
 ```yaml
 - name: Resolve Terraform version
@@ -51,13 +51,39 @@ Resolve the required_version constraints of a Terraform configuration to a concr
     terraform_version: ${{ steps.terraform-version.outputs.terraform-version }}
 ```
 
-The action reads `required_version` from every `terraform` block in the `*.tf` files in `working-directory`, and merges them the way Terraform does: constraints from regular files add up, and an override file (`override.tf` or `*_override.tf`) that sets `required_version` replaces them. It doesn't read `*.tf.json` files or child modules. It evaluates the constraints with `hashicorp/go-version`, the library Terraform itself uses, and picks the newest stable release from `releases.hashicorp.com`. It fails if no release satisfies the constraints.
+`setup-terraform` installs the newest stable release in the range, and fails if no release is in it.
 
-The action runs `actions/setup-go`, so later steps in the job get that Go version on `PATH`.
+The action needs `python3` on the runner. GitHub-hosted runners have it, but some container images don't.
+
+## How it works
+
+The action reads the `required_version` lines in the `*.tf` files in `working-directory`, and merges them the way Terraform does: constraints from regular files add up, and an override file (`override.tf` or `*_override.tf`) that sets `required_version` replaces them. Override files are applied in file name order, so the last one wins. The action then rewrites the constraints to an npm semver range, which `hashicorp/setup-terraform` can read:
+
+| Terraform | npm semver | Rewrite |
+|---|---|---|
+| `>= 1.9.0, < 2.0.0` | npm semver doesn't know commas, and keeps only the last part | Commas become spaces, which npm semver reads as AND: `>=1.9.0 <2.0.0` |
+| `~> 1.9` | Reads it as `< 1.10.0`, not `< 2.0.0` | `>=1.9.0 <2.0.0` |
+| `= 1.9` | Reads it as any 1.9.x release, not 1.9.0 | Versions are padded to three parts: `=1.9.0` |
+| `!= 1.9.3` | Not supported | See below |
+
+npm semver has no `!=` and no parentheses. Instead, each excluded version cuts the range into intervals, and the other constraints are repeated in each interval. The excluded versions come from `!=` constraints and from the deny list. For example, `~> 1.9.0, != 1.9.7, != 1.9.8` becomes:
+
+```text
+>=1.9.0 <1.10.0 <1.9.7 || >=1.9.0 <1.10.0 >1.9.7 <1.9.8 || >=1.9.0 <1.10.0 >1.9.8
+```
+
+A configuration without `required_version` and without exclusions gives `latest`.
+
+The action fails if a constraint uses syntax it doesn't know, such as a pre-release version (`>= 1.10.0-beta1`). This stops `setup-terraform` from getting a range it can't read, because it then silently installs the newest release.
+
+### Limitations
+
+- Only `required_version` in `terraform` blocks, in `*.tf` files directly in `working-directory`, is read. The action doesn't read `*.tf.json` files or child modules. `terraform init` still checks every constraint, so a missed constraint makes `init` fail instead of installing a wrong release.
+- The action doesn't know which releases exist. When the deny list leaves a range with no release in it, such as `>= 1.9.1, <= 1.9.2` with both 1.9.1 and 1.9.2 denied, the action still outputs the range without a warning, and `setup-terraform` fails with `No matching version found for constraint`. Widen `required_version`, or set `use-denylist: "false"` until the deny list is fixed. The action only detects the problem when the constraints themselves leave no version, such as `= 1.9.1` with 1.9.1 denied. Then it ignores the deny list with a warning.
 
 ## Deny list
 
-`denylist.json` lists Terraform releases to skip:
+`denylist.json` lists Terraform releases to exclude:
 
 ```json
 {
@@ -67,17 +93,19 @@ The action runs `actions/setup-go`, so later steps in the job get that Go versio
 }
 ```
 
-The action fetches the file from the `main` branch at run time, so a merged change applies to every caller without a new release. Each entry becomes a `!= <version>` constraint, and each skipped release is logged with its reason.
+The action fetches the file from the `main` branch at run time, so a merged change applies to every caller without a new release. Each entry is excluded from the range, and logged with its reason.
 
-The deny list is best-effort. If it can't be fetched or parsed, or it would rule out every release a configuration allows, the action prints a warning and resolves without it. Set `use-denylist: "false"` to turn it off.
+The deny list is best-effort. If it can't be fetched or parsed, or it leaves no version the configuration allows, the action prints a warning and resolves without it. Set `use-denylist: "false"` to turn it off.
 
 ## Run locally
 
-The resolver is a plain command-line tool. It prints the version on standard output and warnings on standard error:
+The resolver is a Python script that only uses the standard library. It prints the range on standard output and log messages on standard error:
 
 ```console
-$ go run . -dir ~/iac/stacks/dev/app-km -denylist denylist.json
-resolve-terraform-version: skipping denied release 1.9.8 (breaks the S3 backend)
-resolve-terraform-version: skipping denied release 1.9.7 (also broken)
-1.9.6
+$ python3 resolve_terraform_version.py --dir ~/iac/stacks/dev/app-km --denylist denylist.json
+Excluding denied release 1.9.7 (also broken)
+Excluding denied release 1.9.8 (breaks the S3 backend)
+>=1.9.0 <1.10.0 <1.9.7 || >=1.9.0 <1.10.0 >1.9.7 <1.9.8 || >=1.9.0 <1.10.0 >1.9.8
 ```
+
+Run the tests with `python3 test_resolve_terraform_version.py`.
