@@ -6,9 +6,9 @@
 // Terraform uses, so operators like "~>" and "!=" behave exactly as they do in
 // Terraform itself.
 //
-// Releases on a deny list fetched at run time are skipped. The deny list is
-// best-effort: if it can't be fetched, or it would rule out every release the
-// constraints allow, a warning is printed and the deny list is ignored.
+// Releases in an optional deny list file are skipped. The deny list is
+// best-effort: if the file can't be read, or it would rule out every release
+// the constraints allow, a warning is printed and the deny list is ignored.
 package main
 
 import (
@@ -30,19 +30,25 @@ import (
 	"github.com/zclconf/go-cty/cty"
 )
 
-const (
-	defaultIndexURL    = "https://releases.hashicorp.com/terraform/index.json"
-	defaultDenylistURL = "https://raw.githubusercontent.com/oslokommune/composite-actions/main/terraform-deploy/terraform-version-denylist.txt"
-)
+const defaultIndexURL = "https://releases.hashicorp.com/terraform/index.json"
 
 func main() {
 	dir := flag.String("dir", ".", "Terraform configuration directory to read required_version from")
 	extra := flag.String("constraint", "", `extra version constraint to apply, e.g. "!= 1.9.3"`)
 	indexURL := flag.String("index-url", defaultIndexURL, "URL of the Terraform release index")
-	denylistURL := flag.String("denylist-url", defaultDenylistURL, "URL of the list of Terraform releases to skip (empty to disable)")
+	denylistPath := flag.String("denylist", "", "path to a file listing Terraform releases to skip")
 	flag.Parse()
 
-	v, err := run(*dir, *extra, *indexURL, *denylistURL, os.Stderr)
+	var denied map[string]string
+	if *denylistPath != "" {
+		var err error
+		denied, err = readDenylist(*denylistPath, os.Stderr)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "::warning::Could not read the Terraform version deny list, resolving without it: %s\n", err)
+		}
+	}
+
+	v, err := run(*dir, *extra, *indexURL, denied, os.Stderr)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		os.Exit(1)
@@ -50,9 +56,10 @@ func main() {
 	fmt.Println(v)
 }
 
-// run resolves the Terraform version. Warnings and notices are written to log
-// as GitHub Actions workflow commands.
-func run(dir, extra, indexURL, denylistURL string, log io.Writer) (*version.Version, error) {
+// run resolves the Terraform version, skipping the releases in denied (a map
+// from version to the reason it is denied). Warnings and notices are written
+// to log as GitHub Actions workflow commands.
+func run(dir, extra, indexURL string, denied map[string]string, log io.Writer) (*version.Version, error) {
 	constraints, err := requiredVersions(dir)
 	if err != nil {
 		return nil, err
@@ -73,15 +80,10 @@ func run(dir, extra, indexURL, denylistURL string, log io.Writer) (*version.Vers
 	if err != nil {
 		return nil, err
 	}
-	if denylistURL == "" {
+	if len(denied) == 0 {
 		return best, nil
 	}
 
-	denied, err := fetchDenylist(denylistURL, log)
-	if err != nil {
-		fmt.Fprintf(log, "::warning::Could not read the Terraform version deny list, resolving without it: %s\n", err)
-		return best, nil
-	}
 	allowed := make([]*version.Version, 0, len(available))
 	for _, v := range available {
 		if _, ok := denied[v.String()]; !ok {
@@ -205,23 +207,22 @@ func fetchVersions(url string) ([]*version.Version, error) {
 	return versions, nil
 }
 
-// fetchDenylist returns the denied versions mapped to the reason they are
-// denied. Each line holds a version, optionally followed by "# reason". Blank
-// lines and lines starting with "#" are ignored, and invalid lines are skipped
-// with a warning.
-func fetchDenylist(url string, log io.Writer) (map[string]string, error) {
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Get(url)
+func readDenylist(path string, log io.Writer) (map[string]string, error) {
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("fetch %s: %s", url, resp.Status)
-	}
+	defer f.Close()
+	return parseDenylist(f, log)
+}
 
+// parseDenylist returns the denied versions mapped to the reason they are
+// denied. Each line holds a version, optionally followed by "# reason". Blank
+// lines and lines starting with "#" are ignored, and invalid lines are skipped
+// with a warning.
+func parseDenylist(r io.Reader, log io.Writer) (map[string]string, error) {
 	denied := map[string]string{}
-	scanner := bufio.NewScanner(io.LimitReader(resp.Body, 1<<20))
+	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		entry, reason, _ := strings.Cut(scanner.Text(), "#")
 		entry = strings.TrimSpace(entry)

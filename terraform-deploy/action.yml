@@ -51,7 +51,7 @@ inputs:
     required: false
     default: ""
   terraform-version-denylist:
-    description: "Whether to skip Terraform releases listed in `terraform-deploy/terraform-version-denylist.txt` on the main branch of this repository. The list is fetched at run time and ignored with a warning if it can't be read. Set to `false` to resolve from `required_version` alone."
+    description: "Whether to skip Terraform releases listed in `terraform-deploy/terraform-version-denylist.txt` on the main branch of this repository. The list is fetched at run time with the GitHub CLI and ignored with a warning if it can't be read. Set to `false` to resolve from `required_version` alone."
     required: false
     default: "true"
 
@@ -166,10 +166,20 @@ runs:
         RESOLVER_DIR: ${{ github.action_path }}/resolve-terraform-version
         EXTRA_CONSTRAINT: ${{ inputs.terraform-version-constraint }}
         USE_DENYLIST: ${{ inputs.terraform-version-denylist }}
+        GH_TOKEN: ${{ github.token }}
       run: |
         args=(-dir "$PWD" -constraint "$EXTRA_CONSTRAINT")
-        if [ "$USE_DENYLIST" != "true" ]; then
-          args+=(-denylist-url "")
+        if [ "$USE_DENYLIST" = "true" ]; then
+          # Read the deny list from main, not the action ref, so changes apply to every caller
+          # right away. It's best-effort: resolve without it if it can't be fetched.
+          denylist="$RUNNER_TEMP/terraform-version-denylist.txt"
+          if timeout 30 gh api -H "Accept: application/vnd.github.raw" \
+            "repos/oslokommune/composite-actions/contents/terraform-deploy/terraform-version-denylist.txt?ref=main" \
+            > "$denylist"; then
+            args+=(-denylist "$denylist")
+          else
+            echo "::warning::Could not fetch the Terraform version deny list, resolving without it"
+          fi
         fi
         version="$(go run -C "$RESOLVER_DIR" . "${args[@]}")"
         echo "Resolved Terraform version: $version"
