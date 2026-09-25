@@ -57,7 +57,7 @@ The action needs `python3` on the runner. GitHub-hosted runners have it, but som
 
 ## How it works
 
-The action reads the `required_version` lines in the `*.tf` files in `working-directory`, and merges them the way Terraform does: constraints from regular files add up, and an override file (`override.tf` or `*_override.tf`) that sets `required_version` replaces them. Override files are applied in file name order, so the last one wins. The action then rewrites the constraints to an npm semver range that allows the same releases:
+The action reads the `required_version` lines in the `*.tf` files in `working-directory`, and merges them the way Terraform does: constraints from regular files add up, and an override file (`override.tf` or `*_override.tf`) that sets `required_version` replaces them. Override files are applied in file name order, so the last one wins. The action then rewrites the constraints to an npm semver range, which `hashicorp/setup-terraform` can read:
 
 | Terraform | npm semver | Rewrite |
 |---|---|---|

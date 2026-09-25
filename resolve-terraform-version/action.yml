@@ -35,7 +35,7 @@ runs:
     - name: Resolve Terraform version
       # NOTE: setup-terraform evaluates version constraints with npm semver, which reads
       # Terraform's `~>`, `!=` and commas differently. Rewrite the constraints to an npm
-      # semver range that allows the same releases.
+      # semver range that setup-terraform can read.
       id: resolve
       shell: bash --noprofile --norc -euo pipefail {0}
       working-directory: ${{ inputs.working-directory }}
