@@ -168,8 +168,6 @@ def to_range(constraints, denied):
     result = intervals(base, excluded | denied)
     if denied and all(is_empty(interval) for interval in result):
         print("::warning::Ignoring deny list, because it excludes every release the configuration allows", file=sys.stderr)
-        if not base and not excluded:
-            return "latest"
         result = intervals(base, excluded)
     return " || ".join(" ".join(interval) for interval in result)
 
