@@ -283,11 +283,25 @@ func TestDenylist(t *testing.T) {
 		wantLog    string
 	}{
 		{
-			name:       "skips denied releases",
+			name:       "skips a denied release",
+			constraint: "< 1.9.3",
+			denied:     denied,
+			want:       "1.9.0",
+			wantLog:    "resolve-terraform-version: skipping denied release 1.9.2 (also broken), using 1.9.0",
+		},
+		{
+			name:       "skips several denied releases",
 			constraint: "~> 1.9.0",
 			denied:     denied,
 			want:       "1.9.0",
 			wantLog:    "resolve-terraform-version: skipping denied release 1.9.3 (breaks the S3 backend), using 1.9.0",
+		},
+		{
+			name:       "combines exclusions in required_version with the deny list",
+			constraint: "~> 1.9.0, != 1.9.3",
+			denied:     denied,
+			want:       "1.9.0",
+			wantLog:    "resolve-terraform-version: skipping denied release 1.9.2 (also broken), using 1.9.0",
 		},
 		{
 			name:       "entry without a reason",
