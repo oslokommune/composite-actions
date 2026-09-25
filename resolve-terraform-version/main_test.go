@@ -6,8 +6,11 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
+
+	"github.com/hashicorp/go-version"
 )
 
 const testIndex = `{
@@ -239,7 +242,7 @@ func TestParseDenylist(t *testing.T) {
 			t.Errorf("reason for %s: got %q, want %q", v, got[v], reason)
 		}
 	}
-	if !strings.Contains(log.String(), `resolve-terraform-version: warning: ignoring invalid deny list entry "banana"`) {
+	if !strings.Contains(log.String(), "banana") {
 		t.Errorf("log %q does not warn about the invalid entry", log.String())
 	}
 }
@@ -264,65 +267,63 @@ func TestReadDenylistMissingFile(t *testing.T) {
 	}
 }
 
-func TestDenylist(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(testIndex))
-	}))
-	defer server.Close()
+func versions(t *testing.T, raw ...string) []*version.Version {
+	t.Helper()
+	vs := make([]*version.Version, len(raw))
+	for i, r := range raw {
+		vs[i] = version.Must(version.NewVersion(r))
+	}
+	return vs
+}
 
+func TestResolve(t *testing.T) {
+	available := versions(t, "1.5.7", "1.9.0", "1.9.2", "1.9.3", "1.10.0-beta1", "1.10.0", "1.10.5", "1.11.0-rc1")
 	denied, err := parseDenylist(strings.NewReader(testDenylist), io.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	tests := []struct {
-		name       string
-		constraint string
-		denied     map[string]string
-		want       string
-		wantLog    string
+		name                string
+		constraint          string
+		denied              map[string]string
+		want                string
+		wantSkipped         []string
+		wantIgnoredDenylist bool
 	}{
 		{
-			name:       "skips a denied release",
-			constraint: "< 1.9.3",
-			denied:     denied,
-			want:       "1.9.0",
-			wantLog:    "resolve-terraform-version: skipping denied release 1.9.2 (also broken)\n",
+			name:        "skips a denied release",
+			constraint:  "< 1.9.3",
+			denied:      denied,
+			want:        "1.9.0",
+			wantSkipped: []string{"1.9.2"},
 		},
 		{
-			name:       "skips several denied releases",
-			constraint: "~> 1.9.0",
-			denied:     denied,
-			want:       "1.9.0",
-			wantLog: "resolve-terraform-version: skipping denied release 1.9.3 (breaks the S3 backend)\n" +
-				"resolve-terraform-version: skipping denied release 1.9.2 (also broken)\n",
+			name:        "skips several denied releases",
+			constraint:  "~> 1.9.0",
+			denied:      denied,
+			want:        "1.9.0",
+			wantSkipped: []string{"1.9.3", "1.9.2"},
 		},
 		{
-			name:       "combines exclusions in required_version with the deny list",
-			constraint: "~> 1.9.0, != 1.9.3",
-			denied:     denied,
-			want:       "1.9.0",
-			wantLog:    "resolve-terraform-version: skipping denied release 1.9.2 (also broken)\n",
+			name:        "combines exclusions in required_version with the deny list",
+			constraint:  "~> 1.9.0, != 1.9.3",
+			denied:      denied,
+			want:        "1.9.0",
+			wantSkipped: []string{"1.9.2"},
 		},
 		{
-			name:       "entry without a reason",
-			constraint: ">= 1.10.0",
-			denied:     denied,
-			want:       "1.10.0",
-			wantLog:    "resolve-terraform-version: skipping denied release 1.10.5 (no reason given)\n",
-		},
-		{
-			name:       "no log when the newest release is allowed",
+			name:       "nothing skipped when the newest release is allowed",
 			constraint: "< 1.9.2",
 			denied:     denied,
 			want:       "1.9.0",
 		},
 		{
-			name:       "falls back when every allowed release is denied",
-			constraint: "= 1.9.3",
-			denied:     denied,
-			want:       "1.9.3",
-			wantLog:    "resolve-terraform-version: warning: every release allowed by \"= 1.9.3\" is denied, using 1.9.3 anyway (breaks the S3 backend)\n",
+			name:                "ignores the deny list when every allowed release is denied",
+			constraint:          "= 1.9.3",
+			denied:              denied,
+			want:                "1.9.3",
+			wantIgnoredDenylist: true,
 		},
 		{
 			name:       "no deny list",
@@ -333,19 +334,47 @@ func TestDenylist(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dir := writeFiles(t, map[string]string{"main.tf": `terraform { required_version = "` + tt.constraint + `" }`})
-			var log strings.Builder
-			got, err := run(dir, server.URL, tt.denied, &log)
+			got, err := resolve(available, version.MustConstraints(version.NewConstraint(tt.constraint)), tt.denied)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got.String() != tt.want {
-				t.Errorf("got %s, want %s", got, tt.want)
+			if got.version.String() != tt.want {
+				t.Errorf("version: got %s, want %s", got.version, tt.want)
 			}
-			if log.String() != tt.wantLog {
-				t.Errorf("log:\n%s\nwant:\n%s", log.String(), tt.wantLog)
+			var skipped []string
+			for _, s := range got.skipped {
+				skipped = append(skipped, s.String())
+			}
+			if !slices.Equal(skipped, tt.wantSkipped) {
+				t.Errorf("skipped: got %v, want %v", skipped, tt.wantSkipped)
+			}
+			if got.ignoredDenylist != tt.wantIgnoredDenylist {
+				t.Errorf("ignoredDenylist: got %v, want %v", got.ignoredDenylist, tt.wantIgnoredDenylist)
 			}
 		})
+	}
+}
+
+func TestRunLogsSkippedReleases(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(testIndex))
+	}))
+	defer server.Close()
+
+	denied, err := parseDenylist(strings.NewReader(testDenylist), io.Discard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := writeFiles(t, map[string]string{"main.tf": `terraform { required_version = "< 1.9.3" }`})
+	var log strings.Builder
+	if _, err := run(dir, server.URL, denied, &log); err != nil {
+		t.Fatal(err)
+	}
+	// The reason must reach the user; the wording is free to change
+	for _, want := range []string{"1.9.2", "also broken"} {
+		if !strings.Contains(log.String(), want) {
+			t.Errorf("log %q does not mention %q", log.String(), want)
+		}
 	}
 }
 

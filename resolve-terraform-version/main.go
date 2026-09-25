@@ -63,50 +63,64 @@ func main() {
 }
 
 // run resolves the Terraform version, skipping the releases in denied (a map
-// from version to the reason it is denied). Warnings and notices are written
-// to log.
+// from version to the reason it is denied). Warnings are written to log.
 func run(dir, indexURL string, denied map[string]string, log io.Writer) (*version.Version, error) {
 	constraints, err := requiredVersions(dir)
 	if err != nil {
 		return nil, err
 	}
-
 	available, err := fetchVersions(indexURL)
 	if err != nil {
 		return nil, err
 	}
-	best, err := newestMatching(available, constraints)
+
+	r, err := resolve(available, constraints, denied)
 	if err != nil {
 		return nil, err
 	}
+	if r.ignoredDenylist {
+		fmt.Fprintf(log, "%s: warning: every release allowed by %q is denied, using %s anyway (%s)\n", progName, constraints.String(), r.version, denied[r.version.String()])
+	}
+	for _, s := range r.skipped {
+		fmt.Fprintf(log, "%s: skipping denied release %s (%s)\n", progName, s, denied[s.String()])
+	}
+	return r.version, nil
+}
+
+type resolution struct {
+	version *version.Version
+	// skipped holds the denied releases that were passed over, newest first
+	skipped []*version.Version
+	// ignoredDenylist is set when every release the constraints allow is
+	// denied, so the deny list was ignored
+	ignoredDenylist bool
+}
+
+// resolve picks the newest stable release that satisfies the constraints and
+// isn't denied. If every allowed release is denied, it ignores the deny list.
+func resolve(available []*version.Version, constraints version.Constraints, denied map[string]string) (resolution, error) {
+	best, err := newestMatching(available, constraints)
+	if err != nil {
+		return resolution{}, err
+	}
 	if len(denied) == 0 {
-		return best, nil
+		return resolution{version: best}, nil
 	}
 
 	v, err := newestMatching(available, append(slices.Clone(constraints), denyConstraints(denied)...))
 	if err != nil {
-		fmt.Fprintf(log, "%s: warning: every release allowed by %q is denied, using %s anyway (%s)\n", progName, constraints.String(), best, denied[best.String()])
-		return best, nil
+		return resolution{version: best, ignoredDenylist: true}, nil
 	}
-	for _, s := range skippedReleases(available, constraints, v) {
-		fmt.Fprintf(log, "%s: skipping denied release %s (%s)\n", progName, s, denied[s.String()])
-	}
-	return v, nil
-}
 
-// skippedReleases returns the stable releases that satisfy the constraints
-// and are newer than the chosen version, newest first. When the chosen
-// version was resolved with the deny list, these are the denied releases
-// that were skipped.
-func skippedReleases(available []*version.Version, constraints version.Constraints, chosen *version.Version) []*version.Version {
+	// Every allowed release newer than v was skipped because it is denied
 	var skipped []*version.Version
-	for _, v := range available {
-		if v.Prerelease() == "" && constraints.Check(v) && v.GreaterThan(chosen) {
-			skipped = append(skipped, v)
+	for _, a := range available {
+		if a.Prerelease() == "" && constraints.Check(a) && a.GreaterThan(v) {
+			skipped = append(skipped, a)
 		}
 	}
 	slices.SortFunc(skipped, func(a, b *version.Version) int { return b.Compare(a) })
-	return skipped
+	return resolution{version: v, skipped: skipped}, nil
 }
 
 // requiredVersions collects the required_version constraints from all
