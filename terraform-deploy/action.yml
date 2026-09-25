@@ -141,15 +141,25 @@ runs:
       with:
         ssh-private-key: ${{ inputs.github-deploy-key }}
 
-    - name: Extract Terraform version
+    - name: Set up Go
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      with:
+        go-version-file: ${{ github.action_path }}/resolve-terraform-version/go.mod
+        cache-dependency-path: ${{ github.action_path }}/resolve-terraform-version/go.sum
+
+    - name: Resolve Terraform version
+      # NOTE: setup-terraform evaluates version constraints with npm semver, which doesn't
+      # understand Terraform's `~>` operator. Resolve the constraints to a concrete version
+      # with the same library Terraform uses instead.
       id: v
       shell: bash --noprofile --norc -euo pipefail {0}
       working-directory: ${{ steps.get-stack-dir.outputs.stack-dir }}
+      env:
+        RESOLVER_DIR: ${{ github.action_path }}/resolve-terraform-version
       run: |
-        echo Extract Terraform version
-        pwd
-        ls -lah
-        echo "TERRAFORM_VERSION=$(grep required_version *.tf | sed -E 's/[^"]+"([^"]+)"+/\1/')" >> "$GITHUB_OUTPUT"
+        version="$(go run -C "$RESOLVER_DIR" . -dir "$PWD")"
+        echo "Resolved Terraform version: $version"
+        echo "TERRAFORM_VERSION=$version" >> "$GITHUB_OUTPUT"
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
