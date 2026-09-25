@@ -26,7 +26,7 @@ def write_files(files):
 class TestToRange(unittest.TestCase):
     def test_ranges(self):
         cases = [
-            # (required_version constraints, excluded versions, expected range)
+            # (required_version constraints, denied versions, expected range)
             ([">= 1.9.0"], [], ">=1.9.0"),
             (["= 1.9.2"], [], "=1.9.2"),
             (["1.9.0"], [], "=1.9.0"),
@@ -58,9 +58,9 @@ class TestToRange(unittest.TestCase):
             (["= 1.9.1"], ["1.9.2"], "=1.9.1 <1.9.2 || =1.9.1 >1.9.2"),
             ([">= 1.9.1, <= 1.9.2"], ["1.9.1"], ">=1.9.1 <=1.9.2 <1.9.1 || >=1.9.1 <=1.9.2 >1.9.1"),
         ]
-        for constraints, excluded, want in cases:
-            with self.subTest(constraints=constraints, excluded=excluded):
-                self.assertEqual(to_range(constraints, excluded), want)
+        for constraints, denied, want in cases:
+            with self.subTest(constraints=constraints, denied=denied):
+                self.assertEqual(to_range(constraints, denied), want)
 
     def test_rejects_unsupported_constraints(self):
         for constraint in ["banana", ">= 1.10.0-beta1", ">= 1.2.3.4", ">= 1.9.0 < 2.0.0"]:
