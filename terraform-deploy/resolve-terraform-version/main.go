@@ -13,7 +13,6 @@
 package main
 
 import (
-	"bufio"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -39,7 +38,7 @@ func main() {
 	dir := flag.String("dir", ".", "Terraform configuration directory to read required_version from")
 	extra := flag.String("constraint", "", `extra version constraint to apply, e.g. "!= 1.9.3"`)
 	indexURL := flag.String("index-url", defaultIndexURL, "URL of the Terraform release index")
-	denylistPath := flag.String("denylist", "", "path to a file listing Terraform releases to skip")
+	denylistPath := flag.String("denylist", "", "path to a JSON file listing Terraform releases to skip")
 	flag.Parse()
 
 	var denied map[string]string
@@ -204,6 +203,15 @@ func fetchVersions(url string) ([]*version.Version, error) {
 	return versions, nil
 }
 
+type denylist struct {
+	Denied []denylistEntry `json:"denied"`
+}
+
+type denylistEntry struct {
+	Version string `json:"version"`
+	Reason  string `json:"reason"`
+}
+
 func readDenylist(path string, log io.Writer) (map[string]string, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -214,31 +222,29 @@ func readDenylist(path string, log io.Writer) (map[string]string, error) {
 }
 
 // parseDenylist returns the denied versions mapped to the reason they are
-// denied. Each line holds a version, optionally followed by "# reason". Blank
-// lines and lines starting with "#" are ignored, and invalid lines are skipped
-// with a warning.
+// denied. The input is JSON of the form
+//
+//	{"denied": [{"version": "1.9.3", "reason": "breaks the S3 backend"}]}
+//
+// Entries with an invalid version are skipped with a warning.
 func parseDenylist(r io.Reader, log io.Writer) (map[string]string, error) {
+	var list denylist
+	if err := json.NewDecoder(r).Decode(&list); err != nil {
+		return nil, fmt.Errorf("decode deny list: %w", err)
+	}
+
 	denied := map[string]string{}
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		entry, reason, _ := strings.Cut(scanner.Text(), "#")
-		entry = strings.TrimSpace(entry)
-		if entry == "" {
-			continue
-		}
-		v, err := version.NewVersion(entry)
+	for _, entry := range list.Denied {
+		v, err := version.NewVersion(entry.Version)
 		if err != nil {
-			fmt.Fprintf(log, "::warning::Skipping invalid entry %q in the Terraform version deny list\n", entry)
+			fmt.Fprintf(log, "::warning::Skipping invalid entry %q in the Terraform version deny list\n", entry.Version)
 			continue
 		}
-		reason = strings.TrimSpace(reason)
+		reason := strings.TrimSpace(entry.Reason)
 		if reason == "" {
 			reason = "no reason given"
 		}
 		denied[v.String()] = reason
-	}
-	if err := scanner.Err(); err != nil {
-		return nil, err
 	}
 	return denied, nil
 }

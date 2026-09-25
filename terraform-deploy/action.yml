@@ -51,7 +51,7 @@ inputs:
     required: false
     default: ""
   terraform-version-denylist:
-    description: "Whether to skip Terraform releases listed in `terraform-deploy/terraform-version-denylist.txt` on the main branch of this repository. The list is fetched at run time with the GitHub CLI and ignored with a warning if it can't be read. Set to `false` to resolve from `required_version` alone."
+    description: "Whether to skip Terraform releases listed in `terraform-deploy/terraform-version-denylist.json` on the main branch of this repository. The list is fetched at run time with the GitHub CLI and ignored with a warning if it can't be read. Set to `false` to resolve from `required_version` alone."
     required: false
     default: "true"
 
@@ -172,9 +172,9 @@ runs:
         if [ "$USE_DENYLIST" = "true" ]; then
           # Read the deny list from main, not the action ref, so changes apply to every caller
           # right away. It's best-effort: resolve without it if it can't be fetched.
-          denylist="$RUNNER_TEMP/terraform-version-denylist.txt"
+          denylist="$RUNNER_TEMP/terraform-version-denylist.json"
           if timeout 30 gh api -H "Accept: application/vnd.github.raw" \
-            "repos/oslokommune/composite-actions/contents/terraform-deploy/terraform-version-denylist.txt?ref=main" \
+            "repos/oslokommune/composite-actions/contents/terraform-deploy/terraform-version-denylist.json?ref=main" \
             > "$denylist"; then
             args+=(-denylist "$denylist")
           else

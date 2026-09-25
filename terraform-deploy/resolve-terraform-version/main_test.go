@@ -173,13 +173,14 @@ func TestRunFailsOnIndexError(t *testing.T) {
 	}
 }
 
-const testDenylist = `# Terraform releases to skip
-
-1.9.3   # breaks the S3 backend
-1.10.5
-banana  # not a version
-1.9.2   # also broken
-`
+const testDenylist = `{
+  "denied": [
+    {"version": "1.9.3", "reason": "breaks the S3 backend"},
+    {"version": "1.10.5"},
+    {"version": "banana", "reason": "not a version"},
+    {"version": "1.9.2", "reason": "also broken"}
+  ]
+}`
 
 func TestParseDenylist(t *testing.T) {
 	var log strings.Builder
@@ -205,8 +206,14 @@ func TestParseDenylist(t *testing.T) {
 	}
 }
 
+func TestParseDenylistInvalidJSON(t *testing.T) {
+	if _, err := parseDenylist(strings.NewReader("1.9.3 # not JSON"), io.Discard); err == nil {
+		t.Fatal("expected error")
+	}
+}
+
 func TestReadDenylistMissingFile(t *testing.T) {
-	if _, err := readDenylist(filepath.Join(t.TempDir(), "missing.txt"), io.Discard); err == nil {
+	if _, err := readDenylist(filepath.Join(t.TempDir(), "missing.json"), io.Discard); err == nil {
 		t.Fatal("expected error")
 	}
 }
