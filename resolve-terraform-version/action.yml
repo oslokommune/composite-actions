@@ -10,7 +10,7 @@ inputs:
     description: "Whether to exclude Terraform releases listed in `resolve-terraform-version/denylist.json` on the main branch of this repository. The list is fetched at run time and ignored with a warning if it can't be read."
     required: false
     default: "true"
-  injected-denylist-filepath:
+  denylist-filepath:
     description: "Absolute path to a deny list JSON file to read instead of downloading `denylist.json` from main. For testing this action."
     required: false
     default: ""
@@ -26,7 +26,7 @@ runs:
     - name: Download deny list
       # NOTE: Read from main, not the action ref, so changes apply to every caller right away.
       # If the download fails, the resolver warns and resolves without the deny list.
-      if: inputs.use-denylist == 'true' && inputs.injected-denylist-filepath == ''
+      if: inputs.use-denylist == 'true' && inputs.denylist-filepath == ''
       continue-on-error: true
       shell: bash --noprofile --norc -euo pipefail {0}
       env:
@@ -44,7 +44,7 @@ runs:
       working-directory: ${{ inputs.working-directory }}
       env:
         RESOLVER_FILEPATH: ${{ github.action_path }}/resolve_terraform_version.py
-        DENYLIST_FILEPATH: ${{ inputs.use-denylist == 'true' && (inputs.injected-denylist-filepath || format('{0}/terraform-version-denylist.json', runner.temp)) || '' }}
+        DENYLIST_FILEPATH: ${{ inputs.use-denylist == 'true' && (inputs.denylist-filepath || format('{0}/terraform-version-denylist.json', runner.temp)) || '' }}
       run: |
         version="$(python3 "$RESOLVER_FILEPATH" --dir "$PWD" --denylist "$DENYLIST_FILEPATH")"
         echo "Terraform version range: $version"
