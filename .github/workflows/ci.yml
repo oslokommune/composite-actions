@@ -162,7 +162,7 @@ jobs:
 
           cat > test-stack-override/versions_override.tf << 'EOF'
           terraform {
-            required_version = "~> 1.9.0"
+            required_version = ">= 1.9.0"
           }
           EOF
 
@@ -176,7 +176,7 @@ jobs:
       - name: Verify the range comes from the override file only
         env:
           RANGE: ${{ steps.resolve-override.outputs.terraform-version }}
-        run: test "$RANGE" = ">=1.9.0 <1.10.0"
+        run: test "$RANGE" = ">=1.9.0"
 
       # Test case 4: with use-denylist "false", the action excludes nothing from the required_version range.
       - name: Resolve Terraform version without the deny list
