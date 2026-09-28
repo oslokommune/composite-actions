@@ -23,6 +23,7 @@ on:
       - "determine-stacks/*"
       - "detect-stale-job/*"
       - "evaluate-automerge/*"
+      - "resolve-terraform-version/*"
 
 
 jobs:
