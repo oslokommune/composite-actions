@@ -81,10 +81,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
-      # Test case 1: a constraint with != resolves to a range that setup-terraform installs from.
-      # 1.9.8 is the newest release the bounds allow, so the != has to do the work, and the upper
-      # bound keeps later 1.9.x releases from changing the answer. Assumes the deny list on main
-      # has no 1.9.x entry.
+      # Test case 1: resolve-terraform-version must exclude the release after != in required_version.
+      # versions.tf below allows 1.9.0 through 1.9.8 and excludes 1.9.8, so 1.9.7 must be installed.
+      # Assumes denylist.json on main has no 1.9.x entry.
       - name: Prepare a stack that excludes the newest allowed release
         run: |
           mkdir -p test-stack
