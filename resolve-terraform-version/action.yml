@@ -28,6 +28,8 @@ runs:
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
+        # Test hook: skip the download when the resolve step is given a local deny list.
+        [ -z "${RESOLVE_TERRAFORM_VERSION_DENYLIST_FILE:-}" ] || exit 0
         gh api -H "Accept: application/vnd.github.raw" \
           "repos/oslokommune/composite-actions/contents/resolve-terraform-version/denylist.json?ref=main" \
           > "$RUNNER_TEMP/terraform-version-denylist.json"
@@ -43,6 +45,8 @@ runs:
         RESOLVER: ${{ github.action_path }}/resolve_terraform_version.py
         DENYLIST: ${{ inputs.use-denylist == 'true' && format('{0}/terraform-version-denylist.json', runner.temp) || '' }}
       run: |
-        version="$(python3 "$RESOLVER" --dir "$PWD" --denylist "$DENYLIST")"
+        # Test hook: read a local deny list instead of the downloaded one.
+        denylist="${RESOLVE_TERRAFORM_VERSION_DENYLIST_FILE:-$DENYLIST}"
+        version="$(python3 "$RESOLVER" --dir "$PWD" --denylist "$denylist")"
         echo "Terraform version range: $version"
         echo "terraform-version=$version" >> "$GITHUB_OUTPUT"

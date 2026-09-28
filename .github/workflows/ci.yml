@@ -153,6 +153,50 @@ jobs:
       - name: Verify invalid constraint was rejected
         run: test "${{ steps.resolve-invalid.outcome }}" = "failure"
 
+      # Test case 4: setup-terraform must skip a denied release.
+      #
+      # RESOLVE_TERRAFORM_VERSION_DENYLIST_FILE points the action at a deny list in this checkout,
+      # so the test does not depend on denylist.json on main. 1.9.6 is the newest release the
+      # constraint allows, so denying it must give 1.9.5.
+      - name: Prepare a stack and a deny list that denies the newest allowed release
+        run: |
+          mkdir -p test-stack-denylist
+          cat > test-stack-denylist/versions.tf << 'EOF'
+          terraform {
+            required_version = ">= 1.9.0, < 1.9.7"
+          }
+          EOF
+          cat > test-stack-denylist/denylist.json << 'EOF'
+          {
+            "denied": [
+              { "version": "1.9.6", "reason": "E2E test" }
+            ]
+          }
+          EOF
+
+      - name: Resolve Terraform version with a local deny list
+        id: resolve-with-local-denylist
+        uses: ./resolve-terraform-version
+        env:
+          RESOLVE_TERRAFORM_VERSION_DENYLIST_FILE: ${{ github.workspace }}/test-stack-denylist/denylist.json
+        with:
+          working-directory: test-stack-denylist
+
+      - name: Setup Terraform with the range that skips the denied release
+        uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
+        with:
+          terraform_version: ${{ steps.resolve-with-local-denylist.outputs.terraform-version }}
+          terraform_wrapper: false
+
+      - name: Verify 1.9.5 was installed
+        env:
+          RANGE: ${{ steps.resolve-with-local-denylist.outputs.terraform-version }}
+        run: |
+          version="$(terraform version -json | jq -r '.terraform_version')"
+          echo "Range: $RANGE"
+          echo "Installed: $version"
+          test "$version" = "1.9.5"
+
   test-e2e-build-gp-config:
     name: Test E2E build-gp-config composite action
     runs-on: ubuntu-24.04
