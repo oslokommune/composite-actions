@@ -93,6 +93,11 @@ class TestReadRequiredVersions(unittest.TestCase):
                 ["~> 1.10.0"],
             ),
             (
+                "override.tf and other override files apply in file name order",
+                {"override.tf": 'terraform {\n  required_version = "= 1.5.7"\n}\n', "z_override.tf": 'terraform {\n  required_version = "~> 1.10.0"\n}\n'},
+                ["~> 1.10.0"],
+            ),
+            (
                 "override file with required_version wins over a later one without",
                 {"a_override.tf": 'terraform {\n  required_version = "= 1.5.7"\n}\n', "b_override.tf": 'terraform {\n  backend "s3" {}\n}\n'},
                 ["= 1.5.7"],

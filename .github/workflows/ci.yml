@@ -81,23 +81,44 @@ jobs:
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
-      # Test case 1: setup-terraform must skip a denied release.
+      # Test case 1: an empty deny list changes nothing.
       #
       # denylist-filepath points the action at a deny list in this checkout,
       # so the test does not depend on denylist.json on main.
+      - name: Prepare a stack and an empty deny list
+        run: |
+          mkdir -p test-stack-denylist
+
+          cat > test-stack-denylist/versions.tf << 'EOF'
+          terraform {
+            required_version = ">= 1.9.0, < 1.9.7"
+          }
+          EOF
+
+          cat > test-stack-denylist/empty-denylist.json << 'EOF'
+          {
+            "denied": []
+          }
+          EOF
+
+      - name: Resolve Terraform version with an empty deny list
+        id: resolve-with-empty-denylist
+        uses: ./resolve-terraform-version
+        with:
+          working-directory: test-stack-denylist
+          denylist-filepath: ${{ github.workspace }}/test-stack-denylist/empty-denylist.json
+
+      - name: Verify the range has no exclusion
+        env:
+          RANGE: ${{ steps.resolve-with-empty-denylist.outputs.terraform-version }}
+        run: test "$RANGE" = ">=1.9.0 <1.9.7"
+
+      # Test case 2: setup-terraform must skip a denied release.
       #
       # 1.9.6 is the newest release the constraint allows, so denying it must give 1.9.5.
       # Assumes Terraform 1.9.5 and 1.9.6 exist on releases.hashicorp.com. Verified in September 2026.
-      - name: Prepare a stack and a deny list that denies the newest allowed release
+      - name: Prepare a deny list that denies the newest allowed release
         run: |
-          mkdir -p test-stack-denylist
-      
-          cat > test-stack-denylist/versions.tf << 'EOF'
-          terraform {
-            required_version = ">= 1.9.0, < 1.9.7",
-          }
-          EOF
-      
           cat > test-stack-denylist/denylist.json << 'EOF'
           {
             "denied": [
@@ -128,31 +149,36 @@ jobs:
           echo "Installed: $version"
           test "$version" = "1.9.5"
 
-      # Test case 2: an empty deny list changes nothing.
-      #
-      # use-denylist is left at its default, so the action reads the injected empty deny list
-      # and must exclude nothing from the required_version range.
-      - name: Prepare an empty deny list
+      # Test case 3: required_version in override.tf replaces required_version in versions.tf.
+      - name: Prepare a stack with an override file
         run: |
-          cat > test-stack-denylist/empty-denylist.json << 'EOF'
-          {
-            "denied": []
+          mkdir -p test-stack-override
+
+          cat > test-stack-override/versions.tf << 'EOF'
+          terraform {
+            required_version = ">= 1.5.0"
           }
           EOF
 
-      - name: Resolve Terraform version with an empty deny list
-        id: resolve-with-empty-denylist
+          cat > test-stack-override/override.tf << 'EOF'
+          terraform {
+            required_version = "~> 1.9.0"
+          }
+          EOF
+
+      - name: Resolve Terraform version with an override file
+        id: resolve-override
         uses: ./resolve-terraform-version
         with:
-          working-directory: test-stack-denylist
-          denylist-filepath: ${{ github.workspace }}/test-stack-denylist/empty-denylist.json
+          working-directory: test-stack-override
+          use-denylist: "false"
 
-      - name: Verify the range has no exclusion
+      - name: Verify the range comes from the override file only
         env:
-          RANGE: ${{ steps.resolve-with-empty-denylist.outputs.terraform-version }}
-        run: test "$RANGE" = ">=1.9.0 <1.9.7"
+          RANGE: ${{ steps.resolve-override.outputs.terraform-version }}
+        run: test "$RANGE" = ">=1.9.0 <1.10.0"
 
-      # Test case 3: with use-denylist "false", the action excludes nothing from the required_version range.
+      # Test case 4: with use-denylist "false", the action excludes nothing from the required_version range.
       - name: Resolve Terraform version without the deny list
         id: resolve-without-denylist
         uses: ./resolve-terraform-version
@@ -165,7 +191,7 @@ jobs:
           RANGE: ${{ steps.resolve-without-denylist.outputs.terraform-version }}
         run: test "$RANGE" = ">=1.9.0 <1.9.7"
 
-      # Test case 4: the action passes an unsupported constraint on unchanged.
+      # Test case 5: the action passes an unsupported constraint on unchanged.
       #
       # Handling a constraint that setup-terraform can't read is up to setup-terraform.
       - name: Prepare a stack with an invalid constraint
