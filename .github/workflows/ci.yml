@@ -149,7 +149,7 @@ jobs:
           echo "Installed: $version"
           test "$version" = "1.9.5"
 
-      # Test case 3: required_version in override.tf replaces required_version in versions.tf.
+      # Test case 3: required_version in versions_override.tf replaces required_version in versions.tf.
       - name: Prepare a stack with an override file
         run: |
           mkdir -p test-stack-override
@@ -160,7 +160,7 @@ jobs:
           }
           EOF
 
-          cat > test-stack-override/override.tf << 'EOF'
+          cat > test-stack-override/versions_override.tf << 'EOF'
           terraform {
             required_version = "~> 1.9.0"
           }
