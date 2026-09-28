@@ -15,7 +15,7 @@ jobs:
     steps:
 
       - name: Run repository-dispatch composite action
-        uses: oslokommune/composite-actions/repository-dispatch@main
+        uses: oslokommune/composite-actions/repository-dispatch@99f346dc4483995035a85913a9cf0fd6e76dfd89 # main
         with:
           event_type: something
           client_payload: >
