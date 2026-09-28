@@ -120,40 +120,7 @@ jobs:
           echo "Installed: $version"
           test "$version" = "1.9.7"
 
-      # Test case 2: use-denylist "false" resolves without the deny list.
-      - name: Resolve Terraform version without the deny list
-        id: resolve-without-denylist
-        uses: ./resolve-terraform-version
-        with:
-          working-directory: test-stack
-          use-denylist: "false"
-
-      - name: Verify the range resolved without the deny list
-        env:
-          RANGE: ${{ steps.resolve-without-denylist.outputs.terraform-version }}
-        run: test "$RANGE" = ">=1.9.0 <1.9.9 <1.9.8 || >=1.9.0 <1.9.9 >1.9.8"
-
-      # Test case 3: an unsupported constraint fails the action.
-      - name: Prepare a stack with an invalid constraint
-        run: |
-          mkdir -p test-stack-invalid
-          cat > test-stack-invalid/versions.tf << 'EOF'
-          terraform {
-            required_version = "banana"
-          }
-          EOF
-
-      - name: Run resolve-terraform-version with an invalid constraint
-        id: resolve-invalid
-        uses: ./resolve-terraform-version
-        continue-on-error: true
-        with:
-          working-directory: test-stack-invalid
-
-      - name: Verify invalid constraint was rejected
-        run: test "${{ steps.resolve-invalid.outcome }}" = "failure"
-
-      # Test case 4: setup-terraform must skip a denied release.
+      # Test case 2: setup-terraform must skip a denied release.
       #
       # RESOLVE_TERRAFORM_VERSION_DENYLIST_FILE points the action at a deny list in this checkout,
       # so the test does not depend on denylist.json on main. 1.9.6 is the newest release the
@@ -196,6 +163,39 @@ jobs:
           echo "Range: $RANGE"
           echo "Installed: $version"
           test "$version" = "1.9.5"
+
+      # Test case 3: use-denylist "false" resolves without the deny list.
+      - name: Resolve Terraform version without the deny list
+        id: resolve-without-denylist
+        uses: ./resolve-terraform-version
+        with:
+          working-directory: test-stack
+          use-denylist: "false"
+
+      - name: Verify the range resolved without the deny list
+        env:
+          RANGE: ${{ steps.resolve-without-denylist.outputs.terraform-version }}
+        run: test "$RANGE" = ">=1.9.0 <1.9.9 <1.9.8 || >=1.9.0 <1.9.9 >1.9.8"
+
+      # Test case 4: an unsupported constraint fails the action.
+      - name: Prepare a stack with an invalid constraint
+        run: |
+          mkdir -p test-stack-invalid
+          cat > test-stack-invalid/versions.tf << 'EOF'
+          terraform {
+            required_version = "banana"
+          }
+          EOF
+
+      - name: Run resolve-terraform-version with an invalid constraint
+        id: resolve-invalid
+        uses: ./resolve-terraform-version
+        continue-on-error: true
+        with:
+          working-directory: test-stack-invalid
+
+      - name: Verify invalid constraint was rejected
+        run: test "${{ steps.resolve-invalid.outcome }}" = "failure"
 
   test-e2e-build-gp-config:
     name: Test E2E build-gp-config composite action
