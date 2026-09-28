@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.0](https://github.com/oslokommune/composite-actions/compare/terraform-deploy-v1.8.0...terraform-deploy-v1.9.0) (2026-09-28)
+
+
+### Features
+
+* use resolve-terraform-version action ([#292](https://github.com/oslokommune/composite-actions/issues/292)) ([492b26c](https://github.com/oslokommune/composite-actions/commit/492b26c50c4a8f24f4c71a5d0df4de5cc99e88b4))
+
 ## [1.8.0](https://github.com/oslokommune/composite-actions/compare/terraform-deploy-v1.7.3...terraform-deploy-v1.8.0) (2026-05-19)
 
 
