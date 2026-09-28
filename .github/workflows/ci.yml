@@ -72,7 +72,6 @@ jobs:
         working-directory: ./resolve-terraform-version
         run: python3 test_resolve_terraform_version.py
 
-  # Test cases that use the deny list assume denylist.json on main has no 1.9.x entry.
   test-e2e-resolve-terraform-version:
     name: Test E2E resolve-terraform-version composite action
     runs-on: ubuntu-24.04
@@ -82,8 +81,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
-      # Test case 1: resolve-terraform-version must exclude the release after != in required_version.
-      # versions.tf below allows 1.9.0 through 1.9.8 and excludes 1.9.8, so 1.9.7 must be installed.
+      # Test case 1: setup-terraform must install from a range with an excluded release.
+      # The exclusion uses != because resolve-terraform-version reads denylist.json from main,
+      # so this checkout can't add a test entry to it. Assumes main does not deny 1.9.7.
       - name: Prepare a stack that excludes the newest allowed release
         run: |
           mkdir -p test-stack
