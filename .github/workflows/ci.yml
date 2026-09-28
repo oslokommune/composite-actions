@@ -87,6 +87,7 @@ jobs:
       # so the test does not depend on denylist.json on main.
       #
       # 1.9.6 is the newest release the constraint allows, so denying it must give 1.9.5.
+      # Assumes Terraform 1.9.5 and 1.9.6 exist on releases.hashicorp.com.
       - name: Prepare a stack and a deny list that denies the newest allowed release
         run: |
           mkdir -p test-stack-denylist
