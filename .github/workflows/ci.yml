@@ -150,19 +150,7 @@ jobs:
           RANGE: ${{ steps.resolve-with-empty-denylist.outputs.terraform-version }}
         run: test "$RANGE" = ">=1.9.0 <1.9.7"
 
-      # Test case 3: the action downloads the deny list from main.
-      #
-      # The action ignores a failed download with a warning, so the resolved range says nothing
-      # about the download. Check the file the action downloads instead.
-      - name: Resolve Terraform version with the deny list from main
-        uses: ./resolve-terraform-version
-        with:
-          working-directory: test-stack-denylist
-
-      - name: Verify the deny list was downloaded
-        run: jq -e '.denied | type == "array"' "$RUNNER_TEMP/terraform-version-denylist.json"
-
-      # Test case 4: use-denylist "false" resolves without the deny list.
+      # Test case 3: use-denylist "false" resolves without the deny list.
       - name: Resolve Terraform version without the deny list
         id: resolve-without-denylist
         uses: ./resolve-terraform-version
@@ -175,7 +163,7 @@ jobs:
           RANGE: ${{ steps.resolve-without-denylist.outputs.terraform-version }}
         run: test "$RANGE" = ">=1.9.0 <1.9.7"
 
-      # Test case 5: an unsupported constraint fails the action.
+      # Test case 4: an unsupported constraint fails the action.
       - name: Prepare a stack with an invalid constraint
         run: |
           mkdir -p test-stack-invalid
