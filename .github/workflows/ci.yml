@@ -82,6 +82,7 @@ jobs:
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
       # Test case 1: setup-terraform must install from a range with an excluded release.
+      #
       # The exclusion uses != because resolve-terraform-version reads denylist.json from main,
       # so this checkout can't add a test entry to it. Assumes main does not deny 1.9.7.
       - name: Prepare a stack that excludes the newest allowed release
