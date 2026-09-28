@@ -22,14 +22,13 @@ runs:
     - name: Download deny list
       # NOTE: Read from main, not the action ref, so changes apply to every caller right away.
       # If the download fails, the resolver warns and resolves without the deny list.
-      if: inputs.use-denylist == 'true'
+      # INJECTED_DENYLIST_FILEPATH is a test hook: when the caller sets it, the resolver reads that file instead.
+      if: inputs.use-denylist == 'true' && env.INJECTED_DENYLIST_FILEPATH == ''
       continue-on-error: true
       shell: bash --noprofile --norc -euo pipefail {0}
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
-        # Test hook: skip the download when the resolve step is given a local deny list.
-        [ -z "${RESOLVE_TERRAFORM_VERSION_DENYLIST_FILE:-}" ] || exit 0
         gh api -H "Accept: application/vnd.github.raw" \
           "repos/oslokommune/composite-actions/contents/resolve-terraform-version/denylist.json?ref=main" \
           > "$RUNNER_TEMP/terraform-version-denylist.json"
@@ -42,11 +41,9 @@ runs:
       shell: bash --noprofile --norc -euo pipefail {0}
       working-directory: ${{ inputs.working-directory }}
       env:
-        RESOLVER: ${{ github.action_path }}/resolve_terraform_version.py
-        DENYLIST: ${{ inputs.use-denylist == 'true' && format('{0}/terraform-version-denylist.json', runner.temp) || '' }}
+        RESOLVER_FILEPATH: ${{ github.action_path }}/resolve_terraform_version.py
+        DENYLIST_FILEPATH: ${{ inputs.use-denylist == 'true' && (env.INJECTED_DENYLIST_FILEPATH || format('{0}/terraform-version-denylist.json', runner.temp)) || '' }}
       run: |
-        # Test hook: read a local deny list instead of the downloaded one.
-        denylist="${RESOLVE_TERRAFORM_VERSION_DENYLIST_FILE:-$DENYLIST}"
-        version="$(python3 "$RESOLVER" --dir "$PWD" --denylist "$denylist")"
+        version="$(python3 "$RESOLVER_FILEPATH" --dir "$PWD" --denylist "$DENYLIST_FILEPATH")"
         echo "Terraform version range: $version"
         echo "terraform-version=$version" >> "$GITHUB_OUTPUT"

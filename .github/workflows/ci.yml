@@ -83,7 +83,7 @@ jobs:
 
       # Test case 1: setup-terraform must skip a denied release.
       #
-      # RESOLVE_TERRAFORM_VERSION_DENYLIST_FILE points the action at a deny list in this checkout,
+      # INJECTED_DENYLIST_FILEPATH points the action at a deny list in this checkout,
       # so the test does not depend on denylist.json on main.
       #
       # 1.9.6 is the newest release the constraint allows, so denying it must give 1.9.5.
@@ -109,7 +109,7 @@ jobs:
         id: resolve-with-local-denylist
         uses: ./resolve-terraform-version
         env:
-          RESOLVE_TERRAFORM_VERSION_DENYLIST_FILE: ${{ github.workspace }}/test-stack-denylist/denylist.json
+          INJECTED_DENYLIST_FILEPATH: ${{ github.workspace }}/test-stack-denylist/denylist.json
         with:
           working-directory: test-stack-denylist
 
@@ -144,7 +144,7 @@ jobs:
         id: resolve-with-empty-denylist
         uses: ./resolve-terraform-version
         env:
-          RESOLVE_TERRAFORM_VERSION_DENYLIST_FILE: ${{ github.workspace }}/test-stack-denylist/empty-denylist.json
+          INJECTED_DENYLIST_FILEPATH: ${{ github.workspace }}/test-stack-denylist/empty-denylist.json
         with:
           working-directory: test-stack-denylist
 
