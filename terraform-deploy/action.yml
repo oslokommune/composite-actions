@@ -143,9 +143,7 @@ runs:
 
     - name: Resolve Terraform version
       id: v
-      # TODO: This digest is the head of #290, not a release. Repoint it to the next
-      # resolve-terraform-version release before merging.
-      uses: oslokommune/composite-actions/resolve-terraform-version@7bb6b175e62887786058ab3351290955e1cf303f
+      uses: oslokommune/composite-actions/resolve-terraform-version@bbc404fb035f2f4971c67fd285893c9c4e88dbe6 # resolve-terraform-version-v1.0.0
       with:
         working-directory: ${{ steps.get-stack-dir.outputs.stack-dir }}
 
