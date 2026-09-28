@@ -8,7 +8,7 @@
   "setup-ok": "1.6.3",
   "generate-tag": "1.0.2",
   "package-and-upload-artifact": "1.1.3",
-  "terraform-deploy": "1.8.0",
+  "terraform-deploy": "1.9.0",
   "determine-stacks": "1.2.3",
   "detect-stale-job": "1.0.1",
   "evaluate-automerge": "1.1.0",
