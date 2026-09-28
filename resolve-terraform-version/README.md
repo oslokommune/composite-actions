@@ -9,10 +9,11 @@ Convert the required_version constraints of a Terraform configuration to a versi
 
 ### Inputs
 
-|       Input       |                                                                                                  Description                                                                                                   |Required|Default |
-|-------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|--------|
-|`working-directory`|Terraform configuration directory to read `required_version` from (e.g., `stacks/dev/app-km`)                                                                                                                   |no      |``.``   |
-|`use-denylist`     |Whether to exclude Terraform releases listed in `resolve-terraform-version/denylist.json` on the main branch of this repository. The list is fetched at run time and ignored with a warning if it can't be read.|no      |``true``|
+|           Input            |                                                                                                  Description                                                                                                   |Required|Default |
+|----------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|--------|
+|`working-directory`         |Terraform configuration directory to read `required_version` from (e.g., `stacks/dev/app-km`)                                                                                                                   |no      |``.``   |
+|`use-denylist`              |Whether to exclude Terraform releases listed in `resolve-terraform-version/denylist.json` on the main branch of this repository. The list is fetched at run time and ignored with a warning if it can't be read.|no      |``true``|
+|`injected-denylist-filepath`|Absolute path to a deny list JSON file to read instead of downloading `denylist.json` from main. For testing this action.                                                                                       |no      |````    |
 
 ### Example
 
@@ -22,6 +23,7 @@ Convert the required_version constraints of a Terraform configuration to a versi
   with:
     # working-directory: # Optional, default: .
     # use-denylist: # Optional, default: true
+    # injected-denylist-filepath: # Optional, default: 
 ```
 
 ## Outputs

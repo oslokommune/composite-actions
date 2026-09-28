@@ -83,7 +83,7 @@ jobs:
 
       # Test case 1: setup-terraform must skip a denied release.
       #
-      # INJECTED_DENYLIST_FILEPATH points the action at a deny list in this checkout,
+      # injected-denylist-filepath points the action at a deny list in this checkout,
       # so the test does not depend on denylist.json on main.
       #
       # 1.9.6 is the newest release the constraint allows, so denying it must give 1.9.5.
@@ -93,7 +93,7 @@ jobs:
       
           cat > test-stack-denylist/versions.tf << 'EOF'
           terraform {
-            required_version = ">= 1.9.0, < 1.9.7"
+            required_version = ">= 1.9.0, < 1.9.7",
           }
           EOF
       
@@ -108,10 +108,9 @@ jobs:
       - name: Resolve Terraform version with a local deny list
         id: resolve-with-local-denylist
         uses: ./resolve-terraform-version
-        env:
-          INJECTED_DENYLIST_FILEPATH: ${{ github.workspace }}/test-stack-denylist/denylist.json
         with:
           working-directory: test-stack-denylist
+          injected-denylist-filepath: ${{ github.workspace }}/test-stack-denylist/denylist.json
 
       - name: Setup Terraform with the range that skips the denied release
         uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
@@ -143,10 +142,9 @@ jobs:
       - name: Resolve Terraform version with an empty deny list
         id: resolve-with-empty-denylist
         uses: ./resolve-terraform-version
-        env:
-          INJECTED_DENYLIST_FILEPATH: ${{ github.workspace }}/test-stack-denylist/empty-denylist.json
         with:
           working-directory: test-stack-denylist
+          injected-denylist-filepath: ${{ github.workspace }}/test-stack-denylist/empty-denylist.json
 
       - name: Verify the range has no exclusion
         env:
