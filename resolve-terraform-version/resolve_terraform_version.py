@@ -18,6 +18,10 @@ differences that this script removes:
 
 If the deny list leaves no version the configuration allows, the script
 ignores the deny list, so that a denied release never stops a pipeline.
+
+If a constraint uses syntax the script doesn't know, the script prints the
+required_version constraints unchanged and leaves it to setup-terraform to
+handle them.
 """
 import argparse
 import json
@@ -188,12 +192,16 @@ def main():
         print(f"Excluding denied release {version} ({reason})", file=sys.stderr)
 
     required = read_required_versions(args.dir)
+    constraints = [constraint for _, constraint in required]
     for name, constraint in required:
         try:
             parse(constraint)
         except ValueError as error:
-            sys.exit(f"::error::{name}: {error}")
-    print(to_range([constraint for _, constraint in required], denied))
+            # setup-terraform reports constraints it can't read, so pass them on unchanged
+            print(f"::warning::{name}: {error}. Passing required_version on unchanged, without the deny list.", file=sys.stderr)
+            print(", ".join(constraints))
+            return
+    print(to_range(constraints, denied))
 
 
 if __name__ == "__main__":

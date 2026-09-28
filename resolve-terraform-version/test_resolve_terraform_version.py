@@ -185,12 +185,18 @@ class TestMain(unittest.TestCase):
         self.assertEqual(result.stdout.strip(), ">=1.9.0 <1.10.0")
         self.assertIn("::warning::", result.stderr)
 
-    def test_fails_on_unsupported_constraint(self):
-        directory = write_files({"versions.tf": 'terraform {\n  required_version = "banana"\n}\n'})
-        result = self.run_script("--dir", directory)
-        self.assertNotEqual(result.returncode, 0)
-        self.assertEqual(result.stdout, "")
-        self.assertIn("versions.tf: unsupported required_version constraint 'banana'", result.stderr)
+    def test_passes_unsupported_constraint_on_unchanged(self):
+        directory = write_files(
+            {
+                "versions.tf": 'terraform {\n  required_version = "banana"\n}\n',
+                "providers.tf": 'terraform {\n  required_version = ">= 1.9.0"\n}\n',
+                "denylist.json": '{"denied": [{"version": "1.9.3", "reason": "broken"}]}',
+            }
+        )
+        result = self.run_script("--dir", directory, "--denylist", str(Path(directory, "denylist.json")))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.strip(), ">= 1.9.0, banana")
+        self.assertIn("::warning::versions.tf: unsupported required_version constraint 'banana'", result.stderr)
 
     def test_ignores_denylist_that_excludes_every_allowed_version(self):
         directory = write_files(

@@ -165,7 +165,9 @@ jobs:
           RANGE: ${{ steps.resolve-without-denylist.outputs.terraform-version }}
         run: test "$RANGE" = ">=1.9.0 <1.9.7"
 
-      # Test case 4: an unsupported constraint fails the action.
+      # Test case 4: the action passes an unsupported constraint on unchanged.
+      #
+      # Handling a constraint that setup-terraform can't read is up to setup-terraform.
       - name: Prepare a stack with an invalid constraint
         run: |
           mkdir -p test-stack-invalid
@@ -178,12 +180,13 @@ jobs:
       - name: Run resolve-terraform-version with an invalid constraint
         id: resolve-invalid
         uses: ./resolve-terraform-version
-        continue-on-error: true
         with:
           working-directory: test-stack-invalid
 
-      - name: Verify invalid constraint was rejected
-        run: test "${{ steps.resolve-invalid.outcome }}" = "failure"
+      - name: Verify the invalid constraint was passed on unchanged
+        env:
+          RANGE: ${{ steps.resolve-invalid.outputs.terraform-version }}
+        run: test "$RANGE" = "banana"
 
   test-e2e-build-gp-config:
     name: Test E2E build-gp-config composite action

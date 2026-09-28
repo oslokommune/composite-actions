@@ -76,7 +76,7 @@ npm semver has no `!=` and no parentheses. Instead, each excluded version cuts t
 
 A configuration without `required_version` and without exclusions gives `latest`.
 
-The action fails if a constraint uses syntax it doesn't know, such as a pre-release version (`>= 1.10.0-beta1`). This stops `setup-terraform` from getting a range it can't read, because it then silently installs the newest release.
+If a constraint uses syntax the action doesn't know, such as a pre-release version (`>= 1.10.0-beta1`), the action prints a warning and outputs the `required_version` constraints unchanged, joined with commas and without the deny list. `setup-terraform` then decides what to do with them.
 
 ### Limitations
 
