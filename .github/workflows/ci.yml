@@ -681,21 +681,6 @@ jobs:
           sudo apt-get install --yes age
           age --version
 
-  test-e2e-setup-boilerplate:
-    name: Test E2E setup-boilerplate composite action
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-
-      - name: Run setup-boilerplate
-        uses: ./setup-boilerplate
-
-      - name: Verify boilerplate is installed
-        run: boilerplate --version
-
   test-e2e-setup-ok:
     name: Test E2E setup-ok composite action
     runs-on: ubuntu-24.04
@@ -732,7 +717,6 @@ jobs:
       - test-e2e-terraform-deploy
       - test-e2e-terraform-deploy-regression-test-terraform-v1-15-0
       - test-e2e-optimize-apt-get
-      - test-e2e-setup-boilerplate
       - test-e2e-setup-ok
     runs-on: ubuntu-latest
     permissions:
