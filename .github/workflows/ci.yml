@@ -705,6 +705,7 @@ jobs:
   release-please:
     name: Run release-please
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    # Add every new test job here, or a release can go out without it passing.
     needs:
       - test-determine-stacks
       - test-evaluate-automerge
