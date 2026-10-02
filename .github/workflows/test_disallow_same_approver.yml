@@ -1,0 +1,19 @@
+name: Test disallow-same-approver
+
+on:
+
+  workflow_dispatch:
+
+jobs:
+
+  test:
+
+    name: Test disallow-same-approver
+
+    runs-on: ubuntu-latest
+    environment: test
+
+    steps:
+
+      - name: Run disallow-same-approver composite action
+        uses: oslokommune/composite-actions/disallow-same-approver@main
