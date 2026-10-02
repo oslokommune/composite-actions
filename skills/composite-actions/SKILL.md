@@ -26,7 +26,6 @@ Reusable composite GitHub Actions for CI/CD pipelines at Oslo Kommune.
 | `optimize-apt-get`                      | Speed up apt-get on runners              |
 | `package-and-upload-artifact`           | Upload artifacts to dev/prod AWS         |
 | `repository-dispatch`                   | Trigger repository dispatch events       |
-| `setup-boilerplate`                     | Install Boilerplate CLI                  |
 | `setup-ok`                              | Install ok CLI and dependencies          |
 | `terraform-deploy`                      | Deploy infrastructure via Terraform      |
 | `verify-created-release`                | Verify release was created               |
@@ -79,14 +78,6 @@ Reusable composite GitHub Actions for CI/CD pipelines at Oslo Kommune.
   with:
     ok_version: latest
     terraform_version: 1.5.7
-```
-
-**Setup Boilerplate** - Install Boilerplate CLI:
-
-```yaml
-- uses: oslokommune/composite-actions/setup-boilerplate@v1
-  with:
-    version: 0.5.16
 ```
 
 ### Image Operations
