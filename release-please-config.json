@@ -27,10 +27,6 @@
       "component": "ecs-update-and-deploy-task-definition",
       "release-type": "simple"
     },
-    "setup-boilerplate": {
-      "component": "setup-boilerplate",
-      "release-type": "simple"
-    },
     "setup-ok": {
       "component": "setup-ok",
       "release-type": "simple"
