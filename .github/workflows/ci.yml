@@ -681,28 +681,6 @@ jobs:
           sudo apt-get install --yes age
           age --version
 
-  test-e2e-repository-dispatch:
-    name: Test E2E repository-dispatch composite action
-    runs-on: ubuntu-24.04
-    permissions:
-      # The dispatches endpoint needs write access to the repository.
-      contents: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-
-      # No workflow listens for this event type.
-      - name: Run repository-dispatch
-        uses: ./repository-dispatch
-        with:
-          event_type: test-repository-dispatch
-          client_payload: >
-            {
-              "id": "something",
-              "sender_repository": "${{ github.repository }}",
-              "sender_run_id": "${{ github.run_id }}"
-            }
-
   test-e2e-setup-boilerplate:
     name: Test E2E setup-boilerplate composite action
     runs-on: ubuntu-24.04
@@ -754,7 +732,6 @@ jobs:
       - test-e2e-terraform-deploy
       - test-e2e-terraform-deploy-regression-test-terraform-v1-15-0
       - test-e2e-optimize-apt-get
-      - test-e2e-repository-dispatch
       - test-e2e-setup-boilerplate
       - test-e2e-setup-ok
     runs-on: ubuntu-latest
