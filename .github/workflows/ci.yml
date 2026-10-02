@@ -719,7 +719,7 @@ jobs:
       - test-e2e-terraform-deploy-regression-test-terraform-v1-15-0
       - test-e2e-optimize-apt-get
       - test-e2e-setup-ok
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
       pull-requests: write
