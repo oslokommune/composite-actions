@@ -213,18 +213,6 @@ Package and upload artifacts to dev/prod AWS accounts.
 
 ---
 
-## setup-boilerplate
-
-Install the Boilerplate CLI tool.
-
-### Inputs
-
-| Input | Required | Default | Description |
-|-------|----------|---------|-------------|
-| `version` | No | `0.5.16` | Boilerplate version |
-
----
-
 ## setup-ok
 
 Install the `ok` CLI and its dependencies.
