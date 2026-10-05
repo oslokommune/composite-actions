@@ -310,26 +310,6 @@ jobs:
           sudo apt-get install -y some-package
 ```
 
-## Cross-Repository Dispatch
-
-```yaml
-name: Trigger Deployment
-
-on:
-  workflow_dispatch:
-
-jobs:
-  dispatch:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: oslokommune/composite-actions/repository-dispatch@v1
-        with:
-          token: ${{ secrets.PAT_TOKEN }}
-          repository: oslokommune/deployment-repo
-          event_type: deploy
-          client_payload: '{"environment": "production", "version": "${{ github.sha }}"}'
-```
-
 ## Setup ok CLI for Local Terraform
 
 ```yaml

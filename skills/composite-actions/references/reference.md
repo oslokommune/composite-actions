@@ -213,21 +213,6 @@ Package and upload artifacts to dev/prod AWS accounts.
 
 ---
 
-## repository-dispatch
-
-Create a repository dispatch event.
-
-### Inputs
-
-| Input | Required | Default | Description |
-|-------|----------|---------|-------------|
-| `token` | No | `${{ github.token }}` | GitHub token |
-| `repository` | No | `${{ github.repository }}` | Target repository |
-| `event_type` | Yes | - | Event type name |
-| `client_payload` | No | `{}` | JSON payload |
-
----
-
 ## setup-ok
 
 Install the `ok` CLI and its dependencies.

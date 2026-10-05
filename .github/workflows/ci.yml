@@ -662,3 +662,67 @@ jobs:
           # `.*` between tokens absorbs the ANSI color escape codes Terraform
           # interleaves with the warning text in CI output.
           grep -q '│.*Warning:.*Deprecated Parameter' stdout.txt
+
+  test-e2e-optimize-apt-get:
+    name: Test E2E optimize-apt-get composite action
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Run optimize-apt-get
+        uses: ./optimize-apt-get
+
+      - name: Verify apt-get can still install a package
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes age
+          age --version
+
+  test-e2e-setup-ok:
+    name: Test E2E setup-ok composite action
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Run setup-ok
+        uses: ./setup-ok
+
+      - name: Verify the tools are installed
+        run: |
+          ok version
+          boilerplate --version
+          terraform version
+          terragrunt --version
+          yq --version
+          tfswitch --version
+
+  release-please:
+    name: Run release-please
+    if: ${{ github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+    # Add every new test job here, or a release can go out without it passing.
+    needs:
+      - test-determine-stacks
+      - test-evaluate-automerge
+      - test-terraform-deploy
+      - test-resolve-terraform-version
+      - test-e2e-resolve-terraform-version
+      - test-e2e-build-gp-config
+      - test-e2e-package-and-upload-artifact-s3
+      - test-e2e-package-and-upload-artifact-docker
+      - test-e2e-terraform-deploy
+      - test-e2e-terraform-deploy-regression-test-terraform-v1-15-0
+      - test-e2e-optimize-apt-get
+      - test-e2e-setup-ok
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Run Release Please
+        uses: googleapis/release-please-action@a02a34c4d625f9be7cb89156071d8567266a2445 # v4.2.0
