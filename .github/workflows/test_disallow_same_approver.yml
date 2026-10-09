@@ -16,4 +16,4 @@ jobs:
     steps:
 
       - name: Run disallow-same-approver composite action
-        uses: oslokommune/composite-actions/disallow-same-approver@main
+        uses: oslokommune/composite-actions/disallow-same-approver@e89ad5e146afba36f3f8a89db9d94685bb60adc4 # main
