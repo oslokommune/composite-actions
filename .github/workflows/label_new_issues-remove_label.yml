@@ -36,10 +36,9 @@ jobs:
 
       - env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REMOVE_LABEL_ON_ALL_ISSUES: ${{ github.event.inputs.remove_for_all_issues }}
+          DATE_INPUT: ${{ github.event.inputs.date }}
         run: |
-          REMOVE_LABEL_ON_ALL_ISSUES=${{ github.event.inputs.remove_for_all_issues }}
-          DATE_INPUT=${{ github.event.inputs.date }}
-          
           echo "# Inputs" >> "$GITHUB_STEP_SUMMARY"
           echo "remove_for_all_issues: $REMOVE_LABEL_ON_ALL_ISSUES" >> "$GITHUB_STEP_SUMMARY"
           echo "date: $DATE_INPUT" >> "$GITHUB_STEP_SUMMARY"
