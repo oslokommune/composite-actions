@@ -10,6 +10,10 @@ inputs:
     description: "Comma/newline-delimited list of stack patterns to ignore. Supports glob wildcards (*, **) and brace expansion ({a,b})."
     default: ""
     required: false
+  assume-changed-stacks:
+    description: "Comma/newline-delimited list of stack patterns to assume changed by default if `selected-stacks` is left unset. Supports glob wildcards (*, **) and brace expansion ({a,b})."
+    default: ""
+    required: false
   core-stacks:
     description: "Comma/newline-delimited list of stack patterns for core stacks. Supports glob wildcards (*, **) and brace expansion ({a,b}). Set to empty string to disable core stack classification."
     # GitHub Actions can't distinguish between "not provided" and "empty string"
@@ -68,6 +72,7 @@ runs:
       env:
         SELECTED_STACKS: ${{ inputs.selected-stacks }}
         IGNORED_STACKS: ${{ inputs.ignored-stacks }}
+        ASSUME_CHANGED_STACKS: ${{ inputs.assume-changed-stacks }}
         CORE_STACKS: ${{ inputs.core-stacks }}
         ADDITIONAL_CORE_STACKS: ${{ inputs.additional-core-stacks }}
         CHANGED_FILES: ${{ steps.filter.outcome == 'success' && join(fromJSON(steps.filter.outputs.all_files), ',') || '' }}
