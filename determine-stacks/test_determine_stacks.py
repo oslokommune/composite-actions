@@ -50,6 +50,7 @@ def run_main(
     changed_files: list[str] | str = "",
     selected_stacks: list[str] | str = "",
     ignored_stacks: list[str] | str = "",
+    assume_changed_stacks: list[str] | str = "",
     core_stacks: list[str] | str = DEFAULT_CORE_STACKS,
     additional_core_stacks: list[str] | str = "",
 ):
@@ -57,6 +58,7 @@ def run_main(
     os.environ["CHANGED_FILES"] = _to_str(changed_files)
     os.environ["SELECTED_STACKS"] = _to_str(selected_stacks)
     os.environ["IGNORED_STACKS"] = _to_str(ignored_stacks)
+    os.environ["ASSUME_CHANGED_STACKS"] = _to_str(assume_changed_stacks)
     os.environ["CORE_STACKS"] = _to_str(core_stacks)
     os.environ["ADDITIONAL_CORE_STACKS"] = _to_str(additional_core_stacks)
 
@@ -433,6 +435,68 @@ def test_ignored_stacks_nested():
     result = run_main(changed_files=files, ignored_stacks="stacks/prod/**")
 
     assert result["dev-core-stacks"] == ["stacks/dev/networking"]
+    assert result["prod-core-stacks"] == []
+    assert result["prod-apps-stacks"] == []
+
+
+def test_assume_changed_stacks():
+    """Assume changed stacks are checked by default."""
+    result = run_main(assume_changed_stacks=["stacks/*/app-too-tikki"])
+
+    assert result["dev-core-stacks"] == []
+    assert result["dev-apps-stacks"] == ["stacks/dev/app-too-tikki"]
+    assert result["prod-core-stacks"] == []
+    assert result["prod-apps-stacks"] == ["stacks/prod/app-too-tikki"]
+
+
+def test_assume_changed_stacks_with_changed_files():
+    """Assume changed stacks are checked along with changed stacks."""
+    result = run_main(
+        changed_files=["stacks/dev/iam/main.tf", "stacks/dev/app-too-tikki/main.tf"],
+        assume_changed_stacks=["stacks/*/app-too-tikki"],
+    )
+
+    assert result["dev-core-stacks"] == ["stacks/dev/iam"]
+    assert result["dev-apps-stacks"] == ["stacks/dev/app-too-tikki"]
+    assert result["prod-core-stacks"] == []
+    assert result["prod-apps-stacks"] == ["stacks/prod/app-too-tikki"]
+
+
+def test_assume_changed_stacks_with_selected_stacks():
+    """Assume changed stacks are not checked when selected stacks is set."""
+    result = run_main(
+        selected_stacks=["stacks/dev/iam"],
+        assume_changed_stacks=["stacks/dev/app-too-tikki"],
+    )
+
+    assert result["dev-core-stacks"] == ["stacks/dev/iam"]
+    assert result["dev-apps-stacks"] == []
+    assert result["prod-core-stacks"] == []
+    assert result["prod-apps-stacks"] == []
+
+
+def test_assume_changed_stacks_with_ignored_stacks():
+    """Assume changed stacks are ignored if ignored stacks matches."""
+    result = run_main(
+        ignored_stacks=["stacks/*/app-too-tikki"],
+        assume_changed_stacks=["stacks/dev/app-too-tikki"],
+    )
+
+    assert result["dev-core-stacks"] == []
+    assert result["dev-apps-stacks"] == []
+    assert result["prod-core-stacks"] == []
+    assert result["prod-apps-stacks"] == []
+
+
+def test_assume_changed_stacks_no_match():
+    """Assume changed stacks must match something to be included."""
+    result = run_main(
+        changed_files=["stacks/dev/iam/main.tf"],
+        assume_changed_stacks=["stacks/dev/doesnt-exist"],
+    )
+
+    assert result["dev-core-stacks"] == ["stacks/dev/iam"]
+    assert result["dev-apps-stacks"] == []
     assert result["prod-core-stacks"] == []
     assert result["prod-apps-stacks"] == []
 
