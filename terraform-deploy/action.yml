@@ -110,12 +110,23 @@ runs:
         echo "stack-dir=$full_dir" >> "$GITHUB_OUTPUT"
 
     - name: Get GitHub App token
-      if: inputs.target-repository != github.event.repository.name
+      if: inputs.target-repository != github.event.repository.name && inputs.github-client-id != ''
       uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
       id: get-token
       with:
-        app-id: ${{ inputs.github-app-id }}
         client-id: ${{ inputs.github-client-id }}
+        private-key: ${{ inputs.github-app-private-key }}
+        owner: ${{ github.repository_owner }}
+        repositories: ${{ inputs.target-repository }}
+
+    # Only for callers still on the deprecated github-app-id input. Remove
+    # together with that input.
+    - name: Get GitHub App token with app ID
+      if: inputs.target-repository != github.event.repository.name && inputs.github-client-id == ''
+      uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+      id: get-token-app-id
+      with:
+        app-id: ${{ inputs.github-app-id }}
         private-key: ${{ inputs.github-app-private-key }}
         owner: ${{ github.repository_owner }}
         repositories: ${{ inputs.target-repository }}
@@ -126,7 +137,7 @@ runs:
       id: checkout
       with:
         repository: "${{ github.repository_owner }}/${{ inputs.target-repository }}"
-        token: "${{ steps.get-token.outputs.token }}"
+        token: "${{ steps.get-token.outputs.token || steps.get-token-app-id.outputs.token }}"
         path: "${{ steps.get-stack-dir.outputs.checkout-path }}"
         fetch-depth: 1
 
@@ -164,7 +175,7 @@ runs:
       if: inputs.target-repository != github.event.repository.name
       shell: bash --noprofile --norc -euo pipefail {0}
       env:
-        GH_TOKEN: ${{ steps.get-token.outputs.token }}
+        GH_TOKEN: ${{ steps.get-token.outputs.token || steps.get-token-app-id.outputs.token }}
         LOCAL_SHA: ${{ steps.checkout.outputs.commit }}
         REPOSITORY_OWNER: ${{ github.repository_owner }}
         TARGET_REPOSITORY: ${{ inputs.target-repository }}
