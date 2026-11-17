@@ -664,8 +664,14 @@ jobs:
           grep -q '│.*Warning:.*Deprecated Parameter' stdout.txt
 
   test-e2e-optimize-apt-get:
-    name: Test E2E optimize-apt-get composite action
-    runs-on: ubuntu-24.04
+    name: Test E2E optimize-apt-get composite action (${{ matrix.runner }})
+    strategy:
+      fail-fast: false
+      matrix:
+        runner:
+          - ubuntu-24.04
+          - ubuntu-26.04
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
     steps:
