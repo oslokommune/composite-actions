@@ -8,7 +8,11 @@ runs:
   steps:
 
     - name: Disable initramfs update
-      run: sudo sed -i 's/yes/no/g' /etc/initramfs-tools/update-initramfs.conf
+      # Ubuntu 26.04 uses dracut instead of initramfs-tools, so the file is not always there
+      run: |
+        if [ -f /etc/initramfs-tools/update-initramfs.conf ]; then
+          sudo sed -i 's/yes/no/g' /etc/initramfs-tools/update-initramfs.conf
+        fi
       shell: bash
 
 
@@ -18,20 +22,32 @@ runs:
 
 
     - name: Disable fontconfig trigger
-      run: sudo sed '/fontconfig/d' -i /var/lib/dpkg/triggers/File
+      run: |
+        if [ -f /var/lib/dpkg/triggers/File ]; then
+          sudo sed '/fontconfig/d' -i /var/lib/dpkg/triggers/File
+        fi
       shell: bash
 
 
     - name: Disable install-info trigger
-      run: sudo sed '/install-info/d' -i /var/lib/dpkg/triggers/File
+      run: |
+        if [ -f /var/lib/dpkg/triggers/File ]; then
+          sudo sed '/install-info/d' -i /var/lib/dpkg/triggers/File
+        fi
       shell: bash
 
 
     - name: Disable mime related triggers
-      run: sudo sed '/mime/d' -i /var/lib/dpkg/triggers/File
+      run: |
+        if [ -f /var/lib/dpkg/triggers/File ]; then
+          sudo sed '/mime/d' -i /var/lib/dpkg/triggers/File
+        fi
       shell: bash
 
 
     - name: Disable hicolor icon theme triggers
-      run: sudo sed '/hicolor-icon-theme/d' -i /var/lib/dpkg/triggers/File
+      run: |
+        if [ -f /var/lib/dpkg/triggers/File ]; then
+          sudo sed '/hicolor-icon-theme/d' -i /var/lib/dpkg/triggers/File
+        fi
       shell: bash
