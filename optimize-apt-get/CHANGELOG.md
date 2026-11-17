@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/oslokommune/composite-actions/compare/optimize-apt-get-v1.3.0...optimize-apt-get-v1.3.1) (2026-11-17)
+
+
+### Bug fixes
+
+* work on Ubuntu 26.04 runners ([#310](https://github.com/oslokommune/composite-actions/issues/310)) ([ea2a0b0](https://github.com/oslokommune/composite-actions/commit/ea2a0b0e37e82174af1f030d7bf605ddd04ff409))
+
 ## [1.3.0](https://github.com/oslokommune/composite-actions/compare/optimize-apt-get-v1.2.0...optimize-apt-get-v1.3.0) (2023-01-09)
 
 
