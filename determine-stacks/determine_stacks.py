@@ -187,6 +187,7 @@ def expand_patterns(patterns: list[str]) -> list[str]:
 def main(writer: TextIO = sys.stdout, root: Path = Path()) -> dict:
     selected_stacks = expand_patterns(parse_string_list(os.environ.get("SELECTED_STACKS", "")))
     ignored_stacks = expand_patterns(parse_string_list(os.environ.get("IGNORED_STACKS", "")))
+    assume_changed_stacks = expand_patterns(parse_string_list(os.environ.get("ASSUME_CHANGED_STACKS", "")))
     core_stacks = expand_patterns(parse_string_list(os.environ.get("CORE_STACKS", "")))
     additional_core_stacks = expand_patterns(parse_string_list(os.environ.get("ADDITIONAL_CORE_STACKS", "")))
     changed_files = parse_string_list(os.environ.get("CHANGED_FILES", ""))
@@ -196,7 +197,7 @@ def main(writer: TextIO = sys.stdout, root: Path = Path()) -> dict:
         dirs = get_dirs_from_glob(root, selected_stacks)
     else:
         # We use changed files if no stacks are explicitly selected
-        dirs = files_to_dirs(changed_files)
+        dirs = sorted(set(files_to_dirs(changed_files)) | set(get_dirs_from_glob(root, assume_changed_stacks)))
 
     # Filter to valid Terraform stacks and exclude any that match ignored patterns
     terraform_dirs = [d for d in dirs if is_terraform_stack(root / d)]
