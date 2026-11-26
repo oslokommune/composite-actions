@@ -54,6 +54,74 @@ class TestPackageAllowList(unittest.TestCase):
         self.assertFalse(ea.evaluate(commit_message, DEFAULT_RULES, {}))
 
 
+def _lock_file_upgrade(package_file_dir):
+    """A Terraform lock file maintenance upgrade, as Renovate renders it in the
+    commit message: the package and version fields are empty."""
+    return _upgrade(
+        package_file_dir=package_file_dir,
+        dep_name="",
+        update_type="lockFileMaintenance",
+        current_value="",
+        new_value="",
+        package_name="",
+    )
+
+
+class TestLockFileMaintenance(unittest.TestCase):
+    """Lock file maintenance refreshes the lock files of all stacks in one PR."""
+
+    STACKS = ["stacks/dev/app", "stacks/prod/app"]
+
+    def _commit_message(self):
+        return _make_commit_message([_lock_file_upgrade(stack) for stack in self.STACKS])
+
+    def test_allows_when_no_stack_has_changes(self):
+        """The rules name no lockFileMaintenance policy, so it defaults to no-changes."""
+        stack_results = {stack: _result("no-changes") for stack in self.STACKS}
+        self.assertTrue(ea.evaluate(self._commit_message(), DEFAULT_RULES, stack_results))
+
+    def test_rejects_when_a_stack_has_changes(self):
+        stack_results = {"stacks/dev/app": _result("no-changes"), "stacks/prod/app": _result("additive")}
+        self.assertFalse(ea.evaluate(self._commit_message(), DEFAULT_RULES, stack_results))
+
+    def test_rule_can_turn_it_off(self):
+        rules = [{"pattern": "**", "lockFileMaintenance": "never"}]
+        stack_results = {stack: _result("no-changes") for stack in self.STACKS}
+        self.assertFalse(ea.evaluate(self._commit_message(), rules, stack_results))
+
+    def test_rule_can_allow_changes(self):
+        rules = [{"pattern": "**", "lockFileMaintenance": "additive"}]
+        stack_results = {"stacks/dev/app": _result("additive"), "stacks/prod/app": _result("no-changes")}
+        self.assertTrue(ea.evaluate(self._commit_message(), rules, stack_results))
+
+    def test_rejects_failed_plan(self):
+        stack_results = {
+            "stacks/dev/app": _result("no-changes"),
+            "stacks/prod/app": {"success": False, "hasChanges": None, "changeSeverity": None},
+        }
+        self.assertFalse(ea.evaluate(self._commit_message(), DEFAULT_RULES, stack_results))
+
+    def test_rejects_planned_stack_without_lock_file_upgrade(self):
+        stack_results = {stack: _result("no-changes") for stack in self.STACKS}
+        stack_results["stacks/dev/unrelated"] = _result("no-changes")
+        self.assertFalse(ea.evaluate(self._commit_message(), DEFAULT_RULES, stack_results))
+
+    def test_ignores_upgraded_directories_that_were_not_planned(self):
+        """Renovate lists one upgrade per Terraform file, also in directories that are not stacks."""
+        upgrades = [
+            _lock_file_upgrade("stacks/dev/app"),
+            _lock_file_upgrade("stacks/dev/app"),
+            _lock_file_upgrade("modules/networking"),
+        ]
+        stack_results = {"stacks/dev/app": _result("no-changes")}
+        self.assertTrue(ea.evaluate(_make_commit_message(upgrades), DEFAULT_RULES, stack_results))
+
+    def test_other_update_types_still_need_the_allowed_package(self):
+        upgrades = [_upgrade(package_name="", update_type="patch")]
+        stack_results = {"stacks/dev/app": _result("no-changes")}
+        self.assertFalse(ea.evaluate(_make_commit_message(upgrades), DEFAULT_RULES, stack_results))
+
+
 class TestPatternMatching(unittest.TestCase):
     def test_first_match_wins_prod(self):
         """prod pattern matches first, so major=never applies."""

@@ -1,9 +1,9 @@
 name: "Evaluate automerge"
-description: "Evaluate whether Renovate upgrades to golden-path-boilerplate are safe to automerge"
+description: "Evaluate whether Renovate upgrades to golden-path-boilerplate and Terraform lock file maintenance are safe to automerge"
 
 inputs:
   rules:
-    description: "JSON array of automerge rules. Each rule: {pattern, major?, minor?, patch?}. Policies name the most severe 'changeSeverity' value they tolerate: 'never' < 'no-changes' < 'additive' < 'non-destructive' < 'any-changes'. First matching pattern wins. Unspecified types default to 'no-changes'."
+    description: "JSON array of automerge rules. Each rule: {pattern, major?, minor?, patch?, lockFileMaintenance?}. Policies name the most severe 'changeSeverity' value they tolerate: 'never' < 'no-changes' < 'additive' < 'non-destructive' < 'any-changes'. First matching pattern wins. Unspecified types default to 'no-changes'."
     required: true
   stack-results:
     description: "JSON object mapping each planned stack to its result, as produced by the Terraform PR workflow. Reads 'success' and 'changeSeverity': the most severe kind of change in the stack's plan ('no-changes', 'additive', 'non-destructive' or 'any-changes'). A failed stack or an unrecognized value blocks automerge; a successful stack with a missing or null changeSeverity is treated as 'any-changes'."

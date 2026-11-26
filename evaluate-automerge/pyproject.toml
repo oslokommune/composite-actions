@@ -1,7 +1,7 @@
 [project]
 name = "evaluate-automerge"
 version = "0.1.0"
-description = "Evaluate whether golden-path-boilerplate upgrades are safe to automerge"
+description = "Evaluate whether Renovate upgrades are safe to automerge"
 requires-python = ">=3.13"
 dependencies = []
 
