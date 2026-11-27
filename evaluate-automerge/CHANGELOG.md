@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.0](https://github.com/oslokommune/composite-actions/compare/evaluate-automerge-v1.1.0...evaluate-automerge-v1.2.0) (2026-11-27)
+
+
+### Features
+
+* allow automerge of Terraform lock file maintenance when the plans allow it ([3adfc11](https://github.com/oslokommune/composite-actions/commit/3adfc117b194eae2796f66d7c0678c7f53bddb20))
+* allow automerge of Terraform lock file maintenance when the plans allow it ([161e41f](https://github.com/oslokommune/composite-actions/commit/161e41f811f54e66b01e2bb6b9c9f20a26a41d0b))
+
 ## [1.1.0](https://github.com/oslokommune/composite-actions/compare/evaluate-automerge-v1.0.2...evaluate-automerge-v1.1.0) (2026-09-16)
 
 
