@@ -10,6 +10,6 @@
   "terraform-deploy": "1.9.0",
   "determine-stacks": "1.2.3",
   "detect-stale-job": "1.0.1",
-  "evaluate-automerge": "1.1.0",
+  "evaluate-automerge": "1.2.0",
   "resolve-terraform-version": "1.0.0"
 }
