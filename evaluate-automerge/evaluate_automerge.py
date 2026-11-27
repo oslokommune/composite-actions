@@ -1,4 +1,10 @@
-"""Evaluate whether Renovate upgrades to golden-path-boilerplate are safe to automerge.
+"""Evaluate whether Renovate upgrades are safe to automerge.
+
+Two kinds of upgrades are eligible: golden-path-boilerplate template upgrades
+(update types major, minor and patch), and Terraform lock file maintenance
+(update type lockFileMaintenance), which refreshes the lock files of all
+stacks. Lock file maintenance has no package, so it is identified by its
+update type alone.
 
 Parses structured upgrade info from the commit message and evaluates every
 planned stack against the automerge rules and Terraform plan results.
@@ -44,6 +50,7 @@ class Rule(TypedDict):
     major: NotRequired[str]
     minor: NotRequired[str]
     patch: NotRequired[str]
+    lockFileMaintenance: NotRequired[str]
 
 
 def parse_upgrades(
@@ -134,6 +141,7 @@ def evaluate(
     rules: list[Rule],
     stack_results: dict[str, dict],
     allowed_package: str = "oslokommune/golden-path-boilerplate",
+    lock_file_maintenance: str = "lockFileMaintenance",
     companion_suffix: str = "-data",
 ) -> bool:
     """Returns True only if every planned stack is eligible for automerge."""
@@ -145,10 +153,14 @@ def evaluate(
     if not stack_results:
         return False
 
-    # Maps packageFileDir to its update types (major, minor, patch)
+    # Maps packageFileDir to its update types (major, minor, patch, lockFileMaintenance)
     update_types_by_dir: dict[str, set[str]] = {}
     for upgrade in upgrades:
-        if upgrade.get("packageName") != allowed_package:
+        # Lock file maintenance has no package; Renovate renders its packageName as ""
+        if (
+            upgrade.get("packageName") != allowed_package
+            and upgrade.get("updateType") != lock_file_maintenance
+        ):
             return False
         update_types_by_dir.setdefault(upgrade["packageFileDir"], set()).add(
             upgrade["updateType"]
@@ -186,7 +198,7 @@ def evaluate(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Evaluate whether golden-path-boilerplate upgrades are safe to automerge"
+        description="Evaluate whether Renovate upgrades are safe to automerge"
     )
     parser.add_argument("--commit-message", required=True, help="Full commit message")
     parser.add_argument("--rules", required=True, help="JSON array of automerge rules")
